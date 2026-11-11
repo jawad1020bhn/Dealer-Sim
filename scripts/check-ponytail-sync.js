@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Adapted from DietrichGebert/ponytail@96608e0 scripts/check-rule-copies.js (MIT).
-// Fails when a host rule file drifts from AGENTS.md, or when a load-bearing rule
-// disappears from AGENTS.md or the ponytail SKILL.md.
+// Fails when a host rule file drifts from AGENTS.md, when upstream's self-referential
+// aside is back in AGENTS.md, or when a load-bearing rule disappears from AGENTS.md
+// or the ponytail SKILL.md.
 //
 //   node scripts/check-ponytail-sync.js
 'use strict';
@@ -20,8 +21,15 @@ function stripFrontmatter(text) {
 }
 
 const agents = read('AGENTS.md');
-// The trailing aside is ponytail-repo-only, so the host copies leave it out.
-const canonical = agents.replace(/\n\n\(Yes, this file also applies[\s\S]*?\)$/, '').trim();
+
+let failed = false;
+
+// Upstream's last paragraph only makes sense in ponytail's own repo; scripts/update-ponytail.sh
+// strips it. If it is back, the rule text was copied without the strip step.
+if (agents.includes('agents working on the ponytail repo')) {
+  console.error('AGENTS.md carries upstream\'s ponytail-repo aside; run scripts/update-ponytail.sh.');
+  failed = true;
+}
 
 // Compact copies: same body as AGENTS.md, host-specific frontmatter stripped.
 const copies = [
@@ -34,10 +42,8 @@ const copies = [
   ['.kiro/steering/ponytail.md', stripFrontmatter],
 ];
 
-let failed = false;
-
 for (const [relPath, normalize] of copies) {
-  if (normalize(read(relPath)) !== canonical) {
+  if (normalize(read(relPath)) !== agents) {
     console.error(`${relPath} drifted from AGENTS.md`);
     failed = true;
   }
