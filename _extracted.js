@@ -855,13 +855,8 @@ A.acceptOffer=(id,ask,mode)=>{
   const o=S.offers[i],c=S.clients.find(x=>x.id===o.client);
   ask=ask||o.offer;
   const dep=S.depot[o.cid][o.p];
-  /* position: take the buyer's own price but deliver only what clears their floor */
-  if(mode==='grade'){
-    if(dep.qty+1e-6<o.qty)return{ok:false,msg:'Need '+fmtU(o.qty)+' at '+DISTRICTS[o.cid].short+' to hold this position.'};
-    if(dep.purity<o.minGrade)return{ok:false,msg:'Your stock is '+fmtP(dep.purity,0)+'; their floor is '+fmtP(o.minGrade,0)+'.'};
-    ask=o.offer;
-  }
-  /* position: fill half now at the ask, leave the rest for the next window */
+  /* position: fill half now at the ask, leave the rest for the next window (a real fork when
+     two buyers want the same stock; it costs the other half's exposure to TTL) */
   if(mode==='split')o.qty=Math.max(1,Math.round(o.qty*.5));
   if(dep.qty+1e-6<o.qty)return{ok:false,msg:'Need '+fmtU(o.qty)+' '+PRODUCTS[o.p].code+' at '+DISTRICTS[o.cid].short+'. Dispatch stock first.'};
   if(dep.purity<o.minGrade)return{ok:false,msg:'Buyer requires '+fmtP(o.minGrade)+' purity; depot is '+fmtP(dep.purity)+'.'};
@@ -2063,7 +2058,6 @@ UI.offerModal=function(id){
     hint:'Accepting settles instantly. A failed counter damages mood and loyalty.',
     footer:'<button class="btn danger" data-m="decline">Decline</button><span class="spacer"></span>'+
       '<button class="btn" data-m="accept" '+(stockOK?'':'disabled')+'>ACCEPT '+fmtC(o.offer*o.qty)+'</button>'+
-      '<button class="btn" data-m="grade" '+(stockOK?'':'disabled')+'>TAKE THEIR PRICE, KEEP THE GRADE</button>'+
       '<button class="btn" data-m="split" '+(stockOK?'':'disabled')+'>SPLIT THE ORDER</button>'+
       '<button class="btn primary" data-m="counter" '+(stockOK?'':'disabled')+'>COUNTER-Offer</button>',
     onMount:(m,close)=>{
@@ -2079,7 +2073,6 @@ UI.offerModal=function(id){
       range.addEventListener('input',upd);upd();
       m.querySelector('[data-m="accept"]').addEventListener('click',()=>{close();UI.act(A.acceptOffer(o.id,o.offer,'accept'));});
       m.querySelector('[data-m="counter"]').addEventListener('click',()=>{const ask=+range.value;close();UI.act(A.acceptOffer(o.id,ask,'counter'));});
-      m.querySelector('[data-m="grade"]').addEventListener('click',()=>{close();UI.act(A.acceptOffer(o.id,o.offer,'grade'));});
       m.querySelector('[data-m="split"]').addEventListener('click',()=>{close();UI.act(A.acceptOffer(o.id,o.offer,'split'));});
       m.querySelector('[data-m="decline"]').addEventListener('click',()=>{close();A.declineOffer(o.id);UI.render(true);UI.toast('Request declined','The buyer has gone.','','');});
     }});

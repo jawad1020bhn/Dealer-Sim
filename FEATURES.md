@@ -50,12 +50,16 @@ This is no longer only a brief. The first stage was implemented and is verified 
 | Grade is monetised (row 1) | `gradeValue(p,purity)` drives direct deals and listings; measured **+22.8%** revenue for .95 vs .52 grade at the same ask |
 | Deal memory (row 3) | `c.mem` (max 8), `remember()`, `memScore()`; an offer's price and TTL bend with it |
 | Named buyers for every tier (row 4) | `weightedPref()` replaces `pref:ri(0,4)`; measured offers reaching **all 8 products** |
-| Counter-offer as a position (row 5) | `mode` accepts `'counter'`, `'grade'`, `'split'`; sharpness scales the roll |
+| Counter-offer as a position (row 5) | `mode` accepts `'counter'` and `'split'`; sharpness scales the roll. A third mode (`'grade'`) was built, measured identical to accepting, and deleted — gate 1 applies to my own work |
 | The operator has a body (rows 15–16) | `S.you` + `youSharp()`; `sleep`/`eat` verbs; ten trading verbs refuse while `downtime>0` |
 | Population replaced by attribution (row 12, hole 3) | churn now introduces a contact *through* the one who left |
 | Holes 5 and 6 repaired | forecast sees `dossier.evidence` and uses `>=` on the audit threshold; threads capped at 24; `W.lots` no longer leaks |
 | Ornament state deleted (demolition list) | `wind`, `pressure`, `seaBreeze`, `moon`, `week`, `chatter`, `transit`, `sharedShifts`, `campMorale`, `blackMarketVolume` are gone from state; a test fails if they return |
 | Build can no longer drift | `_build.js` regenerates the HTML from `_extracted.js`; `node _build.js --check` runs inside the test suite |
+
+Measured as a fork, not just shipped: holding a full order vs splitting it on the same stock gives
+**80,785 / 122 deals** versus **36,868 / 112 deals** over 300 hours — the split costs real money and
+buys real exposure, which is what a decision is supposed to do.
 
 Not done yet: law (#21–25), knowledge gating (#9), routes (#26–29), money layers (#30–32),
 supply damage (#33–35), the nightly page (#36). Each stays in Part 2 with its gate intact.
