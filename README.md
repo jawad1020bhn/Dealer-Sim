@@ -23,7 +23,7 @@ This repo uses [Ponytail](https://github.com/DietrichGebert/ponytail) — a skil
 | `.github/copilot-instructions.md` | GitHub Copilot Chat in the editors. |
 | `scripts/check-ponytail-sync.js` | Fails if a rule copy drifts from `AGENTS.md`. |
 | `scripts/update-ponytail.sh` | Re-vendors everything from upstream and re-pins the notice. |
-| `tests/check-ponytail-sync.test.js` | Proves the check fails when it should. |
+| `tests/` | Proves the check fails when it should, and that the update script vendors cleanly. |
 | `.github/workflows/ponytail-sync.yml` | Runs both on every push and pull request. |
 
 `.claude/skills/` is the Claude Code project-skill path and is also read by other hosts that discover `SKILL.md` folders (Freebuff, and any agent you point at the directory). Hosts without skill support get the rules from whichever rule file above they read. The seven rule files are copies of the same text as `AGENTS.md`, so run the check after touching any of them:

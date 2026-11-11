@@ -38,7 +38,7 @@ fs.writeFileSync(to, text.trimEnd() + "\n");
 ' "$src/AGENTS.md" AGENTS.md
 
 version=$(node -p "require('$src/package.json').version")
-commit=$(git -C "$src" rev-parse HEAD)
+commit=$(git -C "$src" rev-parse HEAD 2>/dev/null || echo unknown)
 node -e '
 const fs = require("fs");
 const [, file, version, commit] = process.argv;
