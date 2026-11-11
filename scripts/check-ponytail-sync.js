@@ -4,7 +4,7 @@
 //   - AGENTS.md is the canonical rule text and carries no upstream repo-specific aside
 //   - any host rule file that exists still matches AGENTS.md
 //   - the ten load-bearing rules are present in AGENTS.md and skills/ponytail/SKILL.md
-//   - .claude/skills resolves to ./skills, so skill hosts still find the one folder
+//   - .claude/skills mirrors skills/ byte for byte, as real files (skill hosts skip symlinks)
 //
 //   node scripts/check-ponytail-sync.js
 'use strict';
@@ -55,14 +55,24 @@ for (const [relPath, normalize] of optionalCopies) {
   }
 }
 
-// Skill hosts that only look in .claude/skills must still see the one folder.
-const link = path.join(root, '.claude/skills');
-if (!fs.existsSync(link)) {
-  console.error('.claude/skills is missing; restore it with: ln -s ../skills .claude/skills');
+// Skill discovery in Claude Code and friends walks .claude/skills and skips symlinks, so the
+// host path must hold real files. They are a mirror of skills/, and this is what keeps them equal.
+const SKILLS = ['ponytail', 'ponytail-review', 'ponytail-audit', 'ponytail-debt', 'ponytail-gain', 'ponytail-help'];
+const hostRoot = path.join(root, '.claude/skills');
+if (fs.existsSync(hostRoot) && fs.lstatSync(hostRoot).isSymbolicLink()) {
+  console.error('.claude/skills is a symlink; skill discovery skips it. Run scripts/update-ponytail.sh.');
   failed = true;
-} else if (fs.realpathSync(link) !== fs.realpathSync(path.join(root, 'skills'))) {
-  console.error('.claude/skills does not resolve to ./skills; it must be a link, not a copy');
-  failed = true;
+}
+for (const name of SKILLS) {
+  const canonicalPath = path.join('skills', name, 'SKILL.md');
+  const hostPath = path.join('.claude/skills', name, 'SKILL.md');
+  if (!fs.existsSync(path.join(root, hostPath))) {
+    console.error(`${hostPath} is missing; run scripts/update-ponytail.sh.`);
+    failed = true;
+  } else if (read(hostPath) !== read(canonicalPath)) {
+    console.error(`${hostPath} drifted from ${canonicalPath}`);
+    failed = true;
+  }
 }
 
 // SKILL.md is the runtime source of truth and is longer than the compact body,
@@ -98,5 +108,5 @@ if (failed) {
 
 console.log(
   `skills/ is intact; ${copies} host rule cop${copies === 1 ? 'y' : 'ies'} match AGENTS.md; ` +
-    `${INVARIANTS.length} rule invariants present.`
+    `${SKILLS.length} skills mirrored to .claude/skills; ${INVARIANTS.length} rule invariants present.`
 );

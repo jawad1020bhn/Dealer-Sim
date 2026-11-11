@@ -17,6 +17,9 @@ fi
 for s in ponytail ponytail-review ponytail-audit ponytail-debt ponytail-gain ponytail-help; do
   mkdir -p "skills/$s"
   cp "$src/skills/$s/SKILL.md" "skills/$s/SKILL.md"
+  # Skill hosts skip symlinks, so .claude/skills holds real copies of skills/.
+  mkdir -p ".claude/skills/$s"
+  cp "skills/$s/SKILL.md" ".claude/skills/$s/SKILL.md"
 done
 
 # Host rule files are opt-in: a copy that exists is refreshed, a missing one stays missing.
