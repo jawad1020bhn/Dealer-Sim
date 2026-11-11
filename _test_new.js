@@ -209,6 +209,57 @@ T('actions coverage',()=>{
   }
 });
 T('world actions',()=>{UI.act(NL.actions.serviceGear());UI.act(NL.actions.seedRumor());});
+/* ---- the decision layer: each test fails if the feature is ever quietly removed ---- */
+T('grade is worth money',()=>{
+  NL.newGame(777,{settings:{autosave:false,autopause:false,sound:false}});
+  const st=NL.getState();NL.step(24);
+  const o={id:1,client:st.clients[0].id,cid:0,p:0,qty:5,offer:50,wtp:60,minGrade:.5,trait:'cautious',ttl:9};
+  st.depot[0][0]={qty:50,purity:.52,cost:10};st.offers=[Object.assign({},o)];
+  const before=st.dirty;NL.actions.acceptOffer(1,50,'accept');const low=st.dirty-before;
+  st.depot[0][0]={qty:50,purity:.95,cost:10};st.offers=[Object.assign({},o,{id:2,client:st.clients[0].id})];
+  NL.actions.acceptOffer(2,50,'accept');const high=st.dirty-before-low;
+  if(!(high>low*1.15))throw new Error('grade 0.95 paid '+high.toFixed(1)+' vs 0.52 paid '+low.toFixed(1));
+});
+T('deal memory is written and reprices',()=>{
+  const st=NL.getState();const c=st.clients.find(x=>x.mem&&x.mem.length);
+  if(!c)throw new Error('no buyer remembered a deal');
+  if(!NL.memScore(c))throw new Error('memory has no score');
+});
+T('every product tier has named buyers',()=>{
+  NL.newGame(4242,{settings:{autosave:false,autopause:false,sound:false}});
+  const st=NL.getState();const seen=new Set();
+  for(let i=0;i<4000&&seen.size<8;i++){NL.step(1);for(const o of st.offers)seen.add(o.p);if(st.offers.length>12)st.offers.length=0;}
+  if(seen.size<7)throw new Error('buyers only wanted products '+[...seen].join(','));
+});
+T('the operator can be put out of action',()=>{
+  NL.newGame(99,{settings:{autosave:false,autopause:false,sound:false}});
+  NL.step(10);const r=NL.actions.sleep(8);
+  if(!r.ok)throw new Error('sleep refused: '+r.msg);
+  const blocked=NL.actions.postListing(0,0,5,40,'manual');
+  if(blocked.ok)throw new Error('trading was allowed while asleep');
+  NL.step(9);
+  if(!NL.actions.postListing(0,0,0,0,'manual').ok)throw new Error('still blocked after sleeping');
+});
+T('ornament state stays deleted',()=>{
+  const st=NL.getState();
+  const bad=['wind','pressure','seaBreeze'].filter(k=>k in st.world.climate)
+    .concat(Object.keys(st.world.crew).filter(k=>k==='sharedShifts'||k==='campMorale'))
+    .concat(Object.keys(st.world.economy).filter(k=>k==='blackMarketVolume'))
+    .concat(Object.keys(st.world.calendar).filter(k=>k==='moon'||k==='week'))
+    .concat(Object.keys(st.world.district[0]).filter(k=>k==='chatter'||k==='transit'));
+  if(bad.length)throw new Error('readout-only state came back: '+bad.join(','));
+});
+T('bounded arrays stay bounded',()=>{
+  NL.newGame(5,{settings:{autosave:false,autopause:false,sound:false}});
+  const st=NL.getState();
+  for(let i=0;i<200;i++){NL.step(1);st.world.dossier.reports.push({t:st.tick,d:0,p:0,strength:2,ttl:400});}
+  if(st.world.dossier.threads.length>24)throw new Error('threads grew to '+st.world.dossier.threads.length);
+  if(Object.keys(st.world.lots).length>st.lots.length)throw new Error('lot condition map leaks dead lots');
+});
+T('build is not stale',()=>{
+  const {execSync}=require('child_process');
+  execSync('node _build.js --check',{stdio:'pipe'});
+});
 T('key Q radial',()=>{
   UI.closeAllModals();doc.getElementById('palette').classList.remove('show');
   dispatch(doc,'keydown',{key:'q'});

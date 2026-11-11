@@ -1007,7 +1007,28 @@ function newGame(seed,opts){
 function nid(){return S.nextId++;}
 function mkLot(p,qty,purity,cost,age){return{id:nid(),p,qty,purity,cost,age:age||0,tag:'L'+String(S.nextId).padStart(3,'0'),born:S.tick,locked:0};}
 function mkCourier(){return{id:nid(),name:pick(FIRST)+' '+pick(LAST),skill:rr(.34,.62),stealth:rr(.36,.66),stamina:rr(.55,.85),precision:rr(.35,.65),wage:ri(90,150),loyalty:rr(.45,.7),morale:rr(.62,.85),fatigue:rr(.02,.2),xp:0,status:'Idle',eta:0,dest:-1,payload:null,runs:0,earned:0,restT:0,trainT:0};}
-function mkClient(i){const d=i%ND,keys=Object.keys(TRAITS);return{id:nid(),name:pick(FIRST)+' '+pick(LAST),district:d,trait:pick(keys),pref:ri(0,4),budget:rr(180,900)*(1+DISTRICTS[d].wealth*.4),loyalty:rr(.08,.32),mood:rr(.55,.9),patience:rr(.6,1.3),cooldown:ri(2,20),deals:0,spent:0,churn:0,lastSeen:S.tick};}
+/* ---------- the operator: a person on the same clock as the crew ---------- */
+function mkYou(){return{tired:.2,hunger:.45,stress:.2,hours:12,downtime:0,cause:'',meals:0};}
+function you(){if(!S.you)S.you=mkYou();return S.you;}
+/* 1 = sharp, .45 = wrecked. Every social roll scales with it. */
+function youSharp(){const Y=you();return clamp(1-Y.tired*.25-Y.hunger*.18-Y.stress*.15,.45,1);}
+function blocked(){const Y=you();return Y.downtime>0?{ok:false,msg:'Out of action for '+Y.downtime+'h — '+Y.cause+'.'}:null;}
+function updateYou(){
+  const Y=you();Y.hours++;
+  Y.hunger=clamp(Y.hunger+.021,0,1);
+  Y.tired=clamp(Y.tired+.019+(Y.hours>18?.012:0),0,1);
+  Y.stress=clamp(Y.stress+.004-(Y.hunger>.8?.008:0)+nrm()*.002,0,1);
+  if(Y.downtime>0&&--Y.downtime===0){Y.tired=clamp(Y.tired-.34,0,1);pushLog('you','Back on your feet after '+Y.cause+'.');Y.cause='';}
+}
+/* every tier has named buyers: weight the district's own bias across all eight goods */
+function weightedPref(d){
+  const B=DISTRICTS[clamp(d||0,0,ND-1)].bias;let tot=0;
+  for(let p=0;p<NP;p++)tot+=B[p];
+  let r=rnd()*tot;
+  for(let p=0;p<NP;p++){r-=B[p];if(r<=0)return p;}
+  return NP-1;
+}
+function mkClient(i){const d=i%ND,keys=Object.keys(TRAITS);return{id:nid(),name:pick(FIRST)+' '+pick(LAST),district:d,trait:pick(keys),pref:weightedPref(d),alt:weightedPref(d),mem:[],budget:rr(180,900)*(1+DISTRICTS[d].wealth*.4),loyalty:rr(.08,.32),mood:rr(.55,.9),patience:rr(.6,1.3),cooldown:ri(2,20),deals:0,spent:0,churn:0,lastSeen:S.tick};}
 
 /* ------------------------------ derived values --------------------------- */
 function up(id){return S.upgrades[id]||1;}
@@ -1043,6 +1064,15 @@ function netWorth(s){
   for(let d=0;d<ND;d++)for(let p=0;p<NP;p++){const x=s.depot[d][p];if(x.qty>0)v+=x.qty*markPrice(p,x.purity)*.65;}
   v+=Object.values(s.upgrades).reduce((a,l)=>a+l*200,0);
   return v;
+}
+/* what a lot's grade is worth relative to street grade (.70) — the spread the market already quotes */
+function gradeValue(p,purity){return markPrice(p,purity)/markPrice(p,.70);}
+/* bounded deal memory: what you charged, what grade you delivered, whether you refused */
+function remember(c,rec){if(!c)return;c.mem=c.mem||[];c.mem.push(rec);if(c.mem.length>8)c.mem.shift();}
+function memScore(c){
+  if(!c||!c.mem||!c.mem.length)return 0;
+  let v=0;for(const m of c.mem){v+=m.k==='price'?clamp(m.v,-1,1):m.k==='grade'?clamp(m.v,-1,1):m.k==='refuse'?-.3:m.k==='deal'?.1:0;}
+  return clamp(v/Math.max(3,c.mem.length),-1,1);
 }
 function markPrice(p,purity){
   const b=PRODUCTS[p].base;return b*clamp(.45+purity*.72,.5,1.35);
@@ -1101,6 +1131,7 @@ function step(n){
     S.tick++;S.stats.ticks++;S.hour=S.tick%24;S.day=Math.floor(S.tick/24)+1;
     S.diag.solverIter=0;S.diag.agentUpdates=0;
     advanceTime();
+    updateYou();
     updateMacro();
     updateWEATHER();
     worldTick();
@@ -1256,21 +1287,26 @@ function updateClients(){
     c.budget=clamp(c.budget+rr(3,11)*(1+DISTRICTS[c.district].wealth*.5),60,4200);
     c.mood=clamp(c.mood+(.72-c.mood)*.03+nrm()*.012,.1,1);
     c.churn=clamp(c.churn+(c.mood<.35?.008:-.004),0,1);
-    if(c.churn>.98){S.clients=S.clients.filter(x=>x!==c);pushNews('NETWork',c.name+' left the network.','bad');continue;}
+    if(c.churn>.98){
+      S.clients=S.clients.filter(x=>x!==c);pushNews('NETWork',c.name+' left the network.','bad');
+      if(chance(.55)){const nc=mkClient(S.clients.length);S.clients.push(nc);pushNews('NETWork','A quiet introduction: '+nc.name+' came in through '+c.name+"'s circle.",'info');}
+      continue;
+    }
     if(c.cooldown>0){c.cooldown--;continue;}
     const D=S.districts[c.district];
-    const pref=c.pref<NP?c.pref:0;
+    const pref=chance(.22)&&c.alt!=null&&c.alt<NP?c.alt:(c.pref<NP?c.pref:0);
+    const mem=memScore(c);
     const pull=D.demand[pref]*(.5+c.loyalty*.6)*(1+S.rep/220)*(1/S.macro);
     const rate=.075*pull*(c.mood+.2);
     if(S.offers.length<14&&chance(clamp(rate,0,.42))){
       const trait=TRAITS[c.trait];
       const market=D.price[pref];
       const qty=clamp(Math.round(rr(2,9)*trait.qty*(1+c.loyalty*.5)*(1+DISTRICTS[c.district].wealth*.35)),1,44);
-      const wtp=market*rr(.92,1.24)*trait.wtp*(1+c.loyalty*.22)*S.mods.wtpBonus*rr(.9,1.1);
+      const wtp=market*rr(.92,1.24)*trait.wtp*(1+c.loyalty*.22)*S.mods.wtpBonus*rr(.9,1.1)*(1+mem*.07);
+      const minGrade=clamp(.48+trait.haggle*.06+rr(-.08,.14),.3,.9);
       const offered=r2(wtp*rr(.72,.88));
       S.offers.push({id:nid(),client:c.id,cid:c.district,p:pref,qty,offer:offered,wtp:r2(wtp),
-        minGrade:clamp(.48+trait.haggle*.06+rr(-.08,.14),.3,.9),
-        ttl:ri(5,13),expires:S.tick+ri(5,13),trait:c.trait,t:S.tick});
+        minGrade,ttl:Math.max(3,ri(5,13)+(mem<-.2?-3:0)),expires:S.tick+ri(5,13),trait:c.trait,t:S.tick,mem});
       c.cooldown=ri(6,16);c.lastSeen=S.tick;
       S.diag.agentUpdates++;
     }
@@ -1296,7 +1332,7 @@ function updateListings(){
     const dep=S.depot[d][p];
     const purity=dep.purity;
     if(purity<.35)continue;
-    const gross=r2(sold*L.ask*(.90+.10*purity));
+    const gross=r2(sold*L.ask*clamp(gradeValue(p,purity),.85,1.18));
     L.qty=r2(Math.max(0,L.qty-sold));dep.qty=r2(Math.max(0,dep.qty-sold));
     if(L.qty<=0){L.enabled=false;}
     credit(gross,PRODUCTS[p].code+' retail · '+DISTRICTS[d].short,'retail');
@@ -1352,7 +1388,9 @@ function updateCouriers(){
         c.status='Idle';c.dest=-1;c.morale=clamp(c.morale+.01,0,1);
       }
     }
-    if(c.morale<.12&&c.status==='Idle'&&chance(.006)){
+    /* camp morale is now the crew's collective patience: it decides resignations, not a badge */
+    const camp=mean(S.couriers.map(q=>q.morale));
+    if((c.morale<.12||camp<.22)&&c.status==='Idle'&&chance(.006+(camp<.22?.012:0))){
       S.couriers=S.couriers.filter(x=>x!==c);
       pushNews('Crew',c.name+' resigned. Morale had collapsed.','bad');
       toast('Crew resignation',c.name+' left the outfit.','bad');
@@ -1525,14 +1563,16 @@ function computeForecast(paths){
       dirty+=rev;cash-=cost;
       const recon=Math.min(dirty,S.mods.reconCap/24*4);dirty-=recon;cash+=recon*(1-S.mods.reconFee);
       heat=clamp(heat+(mean(S.districts.map(d=>d.heat))*.82+S.scrutiny*8+S.activity-heat)*.30+rev*.0009*S.mods.heatGen-.35*S.mods.heatDecay+R.norm()*.35,0,100);
-      if(heat>S.mods.auditThreshold&&R.next()<.03){audit++;cash-=600*S.mods.auditSeverity;heat-=26;}
+      /* the world layer moves inside the path too, so a curfew or a case can show up in the band */
+      if(S.world){const ev=S.world.dossier.evidence*.004+(S.world.events.curfewLike||0);heat=clamp(heat+ev+R.norm()*.2,0,100);}
+      if(heat>=S.mods.auditThreshold&&R.next()<.03){audit++;cash-=600*S.mods.auditSeverity;heat-=26;}
       worth=cash+dirty-S.debt;
       fan[h].push(worth);heatFan[h].push(heat);
     }
   }
   const q=(a,p)=>{a=a.slice().sort((x,y)=>x-y);return a[Math.min(a.length-1,Math.floor(a.length*p))]||0;};
   S.forecast={
-    at:S.tick,paths,H,
+    at:S.tick,paths,H,ran:paths,
     p10:fan.map(a=>q(a,.10)),p50:fan.map(a=>q(a,.50)),p90:fan.map(a=>q(a,.90)),
     heat:heatFan.map(a=>q(a,.50)),
     endWorth:fan[H-1].slice().sort((a,b)=>a-b),
@@ -1547,17 +1587,31 @@ function computeForecast(paths){
 /* ------------------------------ player actions --------------------------- */
 const A={};
 A.setSpeed=v=>{S.speed=v;S.paused=false;};
+A.sleep=h=>{
+  const b=blocked();if(b)return b;
+  h=clamp(Math.round(h||8),4,12);
+  const Y=you();Y.downtime=h;Y.cause='sleeping';Y.hours=0;
+  pushLog('you','Sleeping for '+h+'h. The city keeps moving.');
+  return{ok:true,msg:'Asleep for '+h+'h. Nothing trades while you are under.'};
+};
+A.eat=()=>{
+  const b=blocked();if(b)return b;
+  if(S.cash<6)return{ok:false,msg:'A hot meal costs ¤6.'};
+  spend(6,'A meal','living');
+  const Y=you();Y.hunger=clamp(Y.hunger-.5,0,1);Y.stress=clamp(Y.stress-.06,0,1);Y.meals++;
+  if(Y.downtime<1){Y.downtime=1;Y.cause='a meal';}
+  pushLog('you','Ate. Hunger '+fmtP(Y.hunger,0)+'.');
+  return{ok:true,msg:'Fed. Hunger now '+fmtP(Y.hunger,0)+'.'};
+};
 A.togglePause=()=>{S.paused=!S.paused;};
-A.buyFeed=(kind,qty)=>{
-  qty=Math.max(1,Math.round(qty));const cost=r2(S.feedPrice[kind]*qty);
+A.buyFeed=(kind,qty)=>{const b=blocked();if(b)return b;const cost=r2(S.feedPrice[kind]*qty);
   if(cost>S.cash)return{ok:false,msg:'Insufficient liquid cash.'};
   if(S.feed[kind]+qty>9000)return{ok:false,msg:'Feedstock silo at capacity.'};
   spend(cost,'Bought '+fmtN(qty)+' '+kind+' feedstock','procure');S.feed[kind]+=qty;
   pushLog('ops','Procured '+fmtN(qty)+' '+kind+' for '+fmtC(cost)+'.');
   return{ok:true,msg:'Procured '+fmtN(qty)+' units.'};
 };
-A.startJob=(p,qty,target)=>{
-  qty=Math.max(1,Math.round(qty));target=clamp(target,.4,S.mods.maxGrade);
+A.startJob=(p,qty,target)=>{const b=blocked();if(b)return b;target=clamp(target,.4,S.mods.maxGrade);
   if(S.jobs.length>=S.mods.labSlots)return{ok:false,msg:'All lab slots occupied.'};
   const needB=Math.ceil(qty*(1.15+target*.45)),needA=Math.ceil(qty*(.42+target*.75)),needK=Math.ceil(qty/8);
   if(S.feed.base<needB||S.feed.additive<needA||S.feed.packs<needK)return{ok:false,msg:'Missing inputs: '+fmtN(needB)+' base / '+fmtN(needA)+' additive / '+fmtN(needK)+' packs.'};
@@ -1570,8 +1624,7 @@ A.startJob=(p,qty,target)=>{
   pushLog('lab','Queued '+PRODUCTS[p].key+' · '+fmtU(qty)+' · target '+fmtP(target)+'.',{p});
   return{ok:true,msg:'Job queued · '+(3+qty/18+target*4).toFixed(1)+'h.'};
 };
-A.dispatch=(lotId,qty,d,courierId)=>{
-  qty=Math.max(.5,Math.round(qty*10)/10);
+A.dispatch=(lotId,qty,d,courierId)=>{const b=blocked();if(b)return b;qty=Math.max(.5,Math.round(qty*10)/10);
   const lot=S.lots.find(l=>l.id===lotId);if(!lot)return{ok:false,msg:'Lot no longer exists.'};
   if(qty>lot.qty+.001)return{ok:false,msg:'Not enough units in that lot.'};
   const c=S.couriers.find(x=>x.id===courierId);if(!c||c.status!=='Idle')return{ok:false,msg:'Courier unavailable.'};
@@ -1584,8 +1637,7 @@ A.dispatch=(lotId,qty,d,courierId)=>{
   pushLog('ops','Dispatch '+c.name+' → '+DISTRICTS[d].short+' · '+fmtU(qty)+' '+PRODUCTS[lot.p].code+' · ETA '+eta+'h.',{d,p:lot.p});
   return{ok:true,msg:c.name+' outbound · ETA '+eta+'h.'};
 };
-A.postListing=(d,p,qty,ask,mode)=>{
-  const dep=S.depot[d][p],L=S.listings[d][p];
+A.postListing=(d,p,qty,ask,mode)=>{const b=blocked();if(b)return b;const dep=S.depot[d][p],L=S.listings[d][p];
   qty=Math.max(0,Math.round(qty*10)/10);
   if(qty>dep.qty+.001)return{ok:false,msg:'Only '+fmtU(dep.qty)+' available at this depot.'};
   L.qty=qty;L.ask=r2(ask);L.mode=mode||'manual';L.enabled=qty>0&&ask>0;
@@ -1597,10 +1649,19 @@ A.acceptOffer=(id,ask,mode)=>{
   const o=S.offers[i],c=S.clients.find(x=>x.id===o.client);
   ask=ask||o.offer;
   const dep=S.depot[o.cid][o.p];
+  /* position: take the buyer's own price but deliver only what clears their floor */
+  if(mode==='grade'){
+    if(dep.qty+1e-6<o.qty)return{ok:false,msg:'Need '+fmtU(o.qty)+' at '+DISTRICTS[o.cid].short+' to hold this position.'};
+    if(dep.purity<o.minGrade)return{ok:false,msg:'Your stock is '+fmtP(dep.purity,0)+'; their floor is '+fmtP(o.minGrade,0)+'.'};
+    ask=o.offer;
+  }
+  /* position: fill half now at the ask, leave the rest for the next window */
+  if(mode==='split')o.qty=Math.max(1,Math.round(o.qty*.5));
   if(dep.qty+1e-6<o.qty)return{ok:false,msg:'Need '+fmtU(o.qty)+' '+PRODUCTS[o.p].code+' at '+DISTRICTS[o.cid].short+'. Dispatch stock first.'};
   if(dep.purity<o.minGrade)return{ok:false,msg:'Buyer requires '+fmtP(o.minGrade)+' purity; depot is '+fmtP(dep.purity)+'.'};
   let p=1;
-  if(mode==='counter')p=offerOdds(o,ask);
+  if(mode==='counter')p=offerOdds(o,ask)*youSharp();
+  if(o.ttl<=2)p*=.7;                            /* a late answer is a worse answer */
   const success=rnd()<p;
   S.offers.splice(i,1);
   if(!success){
@@ -1610,7 +1671,10 @@ A.acceptOffer=(id,ask,mode)=>{
     pushLog('deal','Counter refused by '+(c?c.name:'client')+' at '+fmtC(ask,2)+'.',{d:o.cid,p:o.p});
     return{ok:true,success:false,msg:'Buyer walked away. Relationship damaged.'};
   }
-  const gross=r2(ask*o.qty);
+  /* the buyer pays for the grade they asked for; above spec pays a premium, below spec is not possible */
+  const purity=clamp(dep.purity,0,1);
+  const gFactor=clamp(gradeValue(o.p,purity)/gradeValue(o.p,o.minGrade),.8,1.25);
+  const gross=r2(ask*o.qty*gFactor);
   dep.qty=r2(Math.max(0,dep.qty-o.qty));
   const L=S.listings[o.cid][o.p];L.qty=Math.min(L.qty,dep.qty);if(L.qty<=0)L.enabled=false;
   credit(gross,'Direct deal · '+PRODUCTS[o.p].code+' · '+DISTRICTS[o.cid].short,'deal');
@@ -1622,14 +1686,28 @@ A.acceptOffer=(id,ask,mode)=>{
   S.rep=clamp(S.rep+.18+o.qty*.002,0,100);
   const t=TRAITS[o.trait]||TRAITS.cautious;
   D.heat=clamp(D.heat+o.qty*.055*(1+B_Risk(o.cid))*t.heat*S.mods.heatGen,0,100);
-  if(c){c.deals++;c.spent+=gross;c.budget=Math.max(40,c.budget-gross);c.loyalty=clamp(c.loyalty+.055+o.qty*.001,0,1);c.mood=clamp(c.mood+.09,0,1);c.cooldown=ri(8,25);c.lastSeen=S.tick;}
+  if(c){
+    c.deals++;c.spent+=gross;c.budget=Math.max(40,c.budget-gross);c.loyalty=clamp(c.loyalty+.055+o.qty*.001,0,1);c.mood=clamp(c.mood+.09,0,1);c.cooldown=ri(8,25);c.lastSeen=S.tick;
+    /* memory is written here and priced into the next offer */
+    remember(c,{t:S.tick,k:'price',v:(o.wtp*.86-ask)/Math.max(1,o.wtp*.14),p:o.p,qty:o.qty});
+    remember(c,{t:S.tick,k:'deal'});
+    if(purity<o.minGrade+.04)remember(c,{t:S.tick,k:'grade',v:-.45,p:o.p});
+    else if(purity>o.minGrade+.14)remember(c,{t:S.tick,k:'grade',v:.4,p:o.p});
+  }
   for(const ct of S.contracts)if(!ct.done&&ct.d===o.cid&&ct.p===o.p)ct.qty+=o.qty;
   pushLog('deal','Deal closed · '+fmtU(o.qty)+' '+PRODUCTS[o.p].code+' @ '+fmtC(ask,2)+' → '+fmtC(gross),{d:o.cid,p:o.p});
   return{ok:true,success:true,msg:'Settled '+fmtC(gross)+' (unreconciled).'};
 };
-A.declineOffer=id=>{const o=S.offers.find(x=>x.id===id);if(!o)return;S.offers=S.offers.filter(x=>x!==o);const c=S.clients.find(x=>x.id===o.client);if(c){c.mood=clamp(c.mood-.02,0,1);c.cooldown=ri(6,16);}};
-A.hireCourier=()=>{
-  if(S.couriers.length>=S.mods.maxCouriers)return{ok:false,msg:'Roster cap reached. Upgrade Logistics.'};
+A.declineOffer=id=>{
+  const o=S.offers.find(x=>x.id===id);if(!o)return;
+  S.offers=S.offers.filter(x=>x!==o);
+  const c=S.clients.find(x=>x.id===o.client);
+  if(c){const mem=memScore(c);c.mood=clamp(c.mood-.02,0,1);c.cooldown=ri(6,16);
+    remember(c,{t:S.tick,k:'refuse',p:o.p});
+    if(mem>.3)c.loyalty=clamp(c.loyalty+.004,0,1);   /* a good relationship survives a no */
+  }
+};
+A.hireCourier=()=>{const b=blocked();if(b)return b;if(S.couriers.length>=S.mods.maxCouriers)return{ok:false,msg:'Roster cap reached. Upgrade Logistics.'};
   if(S.cash<600)return{ok:false,msg:'Recruiting fee is ¤600.'};
   spend(600,'Recruitment fee','hire');S.couriers.push(mkCourier());
   pushNews('Crew',S.couriers[S.couriers.length-1].name+' joined the roster.','good');
@@ -1643,8 +1721,7 @@ A.courierAction=(id,act,val)=>{
   if(act==='wage'){c.wage=clamp(Math.round(val),60,600);c.morale=clamp(c.morale+.04,0,1);return{ok:true,msg:'Daily wage set to '+fmtC(c.wage)+'.'};}
   return{ok:false,msg:'Unknown action.'};
 };
-A.buyUpgrade=id=>{
-  const u=UPGRADES.find(x=>x.id===id);if(!u)return{ok:false,msg:'Unknown upgrade.'};
+A.buyUpgrade=id=>{const b=blocked();if(b)return b;const u=UPGRADES.find(x=>x.id===id);if(!u)return{ok:false,msg:'Unknown upgrade.'};
   const lv=S.upgrades[id];if(lv>=u.max)return{ok:false,msg:'Already at maximum tier.'};
   const cost=Math.round(u.base*Math.pow(u.mult,lv));
   if(S.cash<cost)return{ok:false,msg:'Requires '+fmtC(cost)+' liquid cash.'};
@@ -1652,8 +1729,7 @@ A.buyUpgrade=id=>{
   pushNews('Asset',u.key+' upgraded to tier '+(lv+1)+'.','good');
   return{ok:true,msg:u.key+' → tier '+(lv+1)+'.'};
 };
-A.research=id=>{
-  const r=RESEARCH.find(x=>x.id===id);if(!r)return{ok:false,msg:'Unknown node.'};
+A.research=id=>{const b=blocked();if(b)return b;const r=RESEARCH.find(x=>x.id===id);if(!r)return{ok:false,msg:'Unknown node.'};
   if(S.research[id])return{ok:false,msg:'Already unlocked.'};
   for(const q of r.req)if(!S.research[q])return{ok:false,msg:'Prerequisite missing: '+RESEARCH.find(x=>x.id===q).key+'.'};
   if(S.points<r.cost)return{ok:false,msg:'Needs '+r.cost+' analysis points (you have '+Math.floor(S.points)+').'};
@@ -1695,8 +1771,7 @@ A.diplomacy=(rid,act)=>{
   }
   return{ok:false,msg:'Unknown action.'};
 };
-A.layLow=()=>{
-  if(S.cooldown>0)return{ok:false,msg:'Already lying low.'};
+A.layLow=()=>{const b=blocked();if(b)return b;if(S.cooldown>0)return{ok:false,msg:'Already lying low.'};
   S.cooldown=12;S.heat=clamp(S.heat-9,0,100);
   for(const L of S.listings)for(const l of L)l.enabled=false;
   for(let d=0;d<ND;d++)S.districts[d].heat=clamp(S.districts[d].heat*.82,0,100);
@@ -1737,7 +1812,7 @@ function serializeSettings(){return JSON.stringify(S?S.settings:{});}
 Object.assign(NL,{
   PRODUCTS,DISTRICTS,EDGES,WEATHER,TOD,TRAITS,UPGRADES,RESEARCH,Happenings,OBJECTIVES,
   newGame,step,serialize,deserialize,serializeSettings,computeForecast,priceOptimiser,optimalAsk,offerOdds,
-  netWorth,markPrice,distTravel,available,stockTotal,depotTotal,capacityUsed,fmtN,fmtC,fmtP,fmtU,fmtHour,fmtTick,
+  netWorth,markPrice,gradeValue,memScore,youSharp,you,distTravel,available,stockTotal,depotTotal,capacityUsed,fmtN,fmtC,fmtP,fmtU,fmtHour,fmtTick,
   esc,clamp,lerp,mean,std,hashStr,r2,r3,up,has,recomputeMods,pushLog,pushNews,poisson,
   getState:()=>S,actions:A,NP,ND,
   _setState:o=>{S=o;recomputeMods();}
@@ -2309,7 +2384,8 @@ V.overview=function(){
       '<div class="grid g4">'+['Tick '+S.tick,'Market '+S.diag.solverIter+' it/h','Variation '+r3(S.diag.entropy),'People '+fmtN(S.clients.length+S.couriers.length+ND*NP)].map(t=>'<div class="card"><div class="t num">'+t+'</div></div>').join('')+'</div>'+
       '<div class="divider"></div><div class="statline"><span>Last tick compute</span><b>'+r3(S.diag.lastMs)+' ms</b></div><div class="statline"><span>State hash</span><b>'+S.diag.hash+'</b></div><div class="statline"><span>chance thread cursor</span><b>0x'+(S.rs>>>0).toString(16).toUpperCase()+'</b></div>','','06 · notes')+
       panel('A few things you can do',
-        '<div class="row wrap" style="gap:6px"><button class="btn sm" data-act="rest8">Rest 8h</button><button class="btn sm" data-act="forecast">Refresh outlook</button><button class="btn sm" data-act="recon">Settle</button><button class="btn sm" data-act="gounlock">RESEARCH</button><button class="btn sm" data-act="save">Save</button></div>'+
+        UI.youStrip()+
+    '<div class="row wrap" style="gap:6px"><button class="btn sm" data-act="rest8">Rest 8h</button><button class="btn sm" data-act="forecast">Refresh outlook</button><button class="btn sm" data-act="recon">Settle</button><button class="btn sm" data-act="gounlock">RESEARCH</button><button class="btn sm" data-act="save">Save</button></div>'+
         '<div class="notice" style="margin-top:10px">Tip: press <span class="kbd">Ctrl</span>+<span class="kbd">K</span> for the command palette. <span class="kbd">F2</span> reveals the analyst layer with raw market figures.</div>','','07 · actions')+'</div>';
 };
 
@@ -2721,6 +2797,22 @@ UI.districtSheet=function(d){
 };
 
 /* ------------------------------ negotiation ------------------------------ */
+/* the operator's own state, on the screen where hours are spent */
+UI.youStrip=function(){
+  const Y=you(),sh=youSharp();
+  const tag=(k,v,warn)=>'<span class="chip" style="font-size:9px;padding:2px 7px'+(warn?';color:var(--rd)':'')+'">'+k+' '+fmtP(v,0)+'</span>';
+  const body=Y.downtime>0
+    ?'<span class="tag r">Out of action · '+Y.downtime+'h · '+esc(Y.cause)+'</span><span class="spacer"></span><span class="tiny dim">Actions are refused until you are on your feet.</span>'
+    :tag('Tired',Y.tired,Y.tired>.65)+tag('Hunger',Y.hunger,Y.hunger>.7)+tag('Stress',Y.stress,Y.stress>.6)+
+     '<span class="chip" style="font-size:9px;padding:2px 7px;color:var(--cy)">Sharp '+fmtP(sh,0)+'</span>'+
+     '<span class="spacer"></span>'+
+     '<button class="btn ghost sm" data-act="eat" style="font-size:8px">Eat ¤6 · 1h</button>'+
+     '<button class="btn ghost sm" data-act="sleep4" style="font-size:8px">Sleep 4h</button>'+
+     '<button class="btn ghost sm" data-act="sleep8" style="font-size:8px">Sleep 8h</button>';
+  return'<div class="row wrap" style="gap:5px;margin-bottom:8px;padding:6px 8px;background:#171513;border:1px solid var(--line);border-left:2px solid var(--cy2);border-radius:2px"'+''+'>'+
+    '<span class="cap" style="font-size:8px;margin-right:3px">You</span>'+body+'</div>';
+};
+
 UI.offerModal=function(id){
   const o=S.offers.find(x=>x.id===id);if(!o){UI.toast('Offer expired','That request has lapsed.','warn');return;}
   const c=S.clients.find(x=>x.id===o.client)||{name:'Unknown',loyalty:.2,mood:.5,budget:0,deals:0};
@@ -2739,7 +2831,10 @@ UI.offerModal=function(id){
     '<div class="statline"><span>Prior deals</span><b>'+c.deals+'</b></div>'+
     '<div class="statline adv"><span>Hidden WTP estimate</span><b>'+fmtC(o.wtp,2)+'</b></div>'+
     '<div class="statline adv"><span>Haggle coefficient</span><b>'+t.haggle.toFixed(2)+'</b></div>'+
-    '<div class="statline adv"><span>Patience</span><b>'+t.patience.toFixed(2)+'</b></div></div>'+
+    '<div class="statline adv"><span>Patience</span><b>'+t.patience.toFixed(2)+'</b></div>'+
+    '<div class="divider"></div>'+
+    '<div class="statline"><span>What they remember</span><b class="'+(o.mem<-.15?'down':o.mem>.15?'up':'')+'">'+(o.mem<-.15?'Wary':o.mem>.15?'Favourable':'No history')+'</b></div>'+
+    (c.mem&&c.mem.length?'<div class="tiny dim" style="margin-top:4px">'+c.mem.slice(-3).reverse().map(m=>fmtTick(m.t)+' · '+(m.k==='price'?(m.v>0?'you charged above their read':'you left money on the table'):m.k==='grade'?(m.v>0?'above the grade they asked':'only just made grade'):m.k==='refuse'?'you said no':'settled clean')).join('<br>')+'</div>':'<div class="tiny dim" style="margin-top:4px">First time at your door.</div>')+'</div>'+
     '<div class="notice adv" style="margin-top:9px">Success = σ( 2.1·(WTP−ask)/(.085·WTP) + 1.5·loyalty − .85·haggle + rep/190 + research ). Your analyst desk estimates WTP with noise.</div></div>'+
     '<div><h4>Offer terms</h4><div class="card">'+
     '<div class="statline"><span>Commodity</span><b style="color:'+pr.color+'">'+pr.key+'</b></div>'+
@@ -2747,6 +2842,7 @@ UI.offerModal=function(id){
     '<div class="statline"><span>Buyer offer / unit</span><b>'+fmtC(o.offer,2)+'</b></div>'+
     '<div class="statline"><span>Offer total</span><b>'+fmtC(o.offer*o.qty)+'</b></div>'+
     '<div class="statline"><span>Minimum purity</span><b>'+fmtP(o.minGrade,0)+'</b></div>'+
+    '<div class="statline"><span>Grade premium at '+fmtP(dep.purity,0)+'</span><b class="'+(dep.purity>o.minGrade+.14?'up':dep.purity<o.minGrade+.04?'down':'')+'">×'+r3(clamp(gradeValue(o.p,dep.purity)/gradeValue(o.p,o.minGrade),.8,1.25))+'</b></div>'+
     '<div class="statline"><span>Expires in</span><b class="'+(o.ttl<=3?'down':'')+'">'+o.ttl+'h</b></div>'+
     '<div class="divider"></div><div class="statline"><span>Depot stock</span><b>'+fmtU(dep.qty)+'</b></div>'+
     '<div class="statline"><span>Depot purity</span><b>'+fmtP(dep.purity,1)+'</b></div>'+
@@ -2761,6 +2857,8 @@ UI.offerModal=function(id){
     hint:'Accepting settles instantly. A failed counter damages mood and loyalty.',
     footer:'<button class="btn danger" data-m="decline">Decline</button><span class="spacer"></span>'+
       '<button class="btn" data-m="accept" '+(stockOK?'':'disabled')+'>ACCEPT '+fmtC(o.offer*o.qty)+'</button>'+
+      '<button class="btn" data-m="grade" '+(stockOK?'':'disabled')+'>TAKE THEIR PRICE, KEEP THE GRADE</button>'+
+      '<button class="btn" data-m="split" '+(stockOK?'':'disabled')+'>SPLIT THE ORDER</button>'+
       '<button class="btn primary" data-m="counter" '+(stockOK?'':'disabled')+'>COUNTER-Offer</button>',
     onMount:(m,close)=>{
       const range=m.querySelector('#nego-range');
@@ -2775,6 +2873,8 @@ UI.offerModal=function(id){
       range.addEventListener('input',upd);upd();
       m.querySelector('[data-m="accept"]').addEventListener('click',()=>{close();UI.act(A.acceptOffer(o.id,o.offer,'accept'));});
       m.querySelector('[data-m="counter"]').addEventListener('click',()=>{const ask=+range.value;close();UI.act(A.acceptOffer(o.id,ask,'counter'));});
+      m.querySelector('[data-m="grade"]').addEventListener('click',()=>{close();UI.act(A.acceptOffer(o.id,o.offer,'grade'));});
+      m.querySelector('[data-m="split"]').addEventListener('click',()=>{close();UI.act(A.acceptOffer(o.id,o.offer,'split'));});
       m.querySelector('[data-m="decline"]').addEventListener('click',()=>{close();A.declineOffer(o.id);UI.render(true);UI.toast('Request declined','The buyer has gone.','','');});
     }});
 };
@@ -3057,6 +3157,9 @@ UI.handleAction=function(act,n,e){
     case'research':UI.act(A.research(at('data-id','')));break;
     case'laylow':UI.act(A.layLow());break;
     case'rest8':UI.rest();break;
+    case'eat':UI.act(A.eat());break;
+    case'sleep4':UI.act(A.sleep(4));break;
+    case'sleep8':UI.act(A.sleep(8));break;
     case'save':UI.save(true);break;
     case'load':UI.confirm('Return to a saved story?','The current hour will be replaced.','Continue',()=>UI.load());break;
     case'export':UI.exportSave();break;
@@ -3326,13 +3429,13 @@ function makeWCourier(c){
 function initWorld(s){
   const W={
     v:2,
-    calendar:{dow:0,week:1,monthDay:1,payday:false,holiday:'',daylight:0,moon:rr(.1,.9)},
-    climate:{temp:13+rr(-3,3),humidity:rr(.45,.7),wind:rr(.5,3),rain:0,groundWet:0,
-      visibility:.92,pressure:1012+rr(-8,8),heatIndex:0,seaBreeze:rr(0,.3)},
+    calendar:{dow:0,monthDay:1,payday:false,holiday:'',daylight:0},
+    climate:{temp:13+rr(-3,3),humidity:rr(.45,.7),rain:0,groundWet:0,
+      visibility:.92,heatIndex:0},
     district:[],clients:[],couriers:[],rivals:[],
-    crew:{affinity:[],campMorale:.72,incidents:0,sharedShifts:0},
+    crew:{affinity:[],incidents:0},
     economy:{cpi:1,liquidity:1,wageIndex:1,consumerPower:[],wholesaleLead:0,credit:.12,
-      rentIndex:1,blackMarketVolume:rr(.5,.8)},
+      rentIndex:1},
     dossier:{threads:[],reports:[],evidence:0,witnesses:0,lastInspection:-999},
     honor:{reliability:.5,discretion:.55,fairness:.5,generosity:.35,ruthlessness:.2,code:.5},
     gear:{rigWear:.02,vehicle:.96,sealant:.94,packaging:.96,maintenanceDue:0,lastService:0},
@@ -3346,7 +3449,7 @@ function initWorld(s){
   for(let d=0;d<ND;d++){
     W.district.push({patrol:rr(.25,.5),patrolShift:0,footfall:1,noise:rr(.1,.3),lighting:.85,
       streetLight:.9,garbage:rr(.1,.35),complaints:rr(0,.2),mood:rr(.45,.65),
-      chatter:rr(.1,.4),construction:0,curfew:0,transit:1,flooding:0,
+      construction:0,curfew:0,flooding:0,
       demandBias:rr(.97,1.03),riskBias:rr(.95,1.05),lastFestival:-999});
     W.rumors.nodes.push({topic:'Quiet',strength:0,ttl:0,origin:d});
     W.economy.consumerPower.push(rr(.9,1.1));
@@ -3377,21 +3480,17 @@ function worldTick(){
   W.stats.hours++;
   /* --- 1. calendar: weekday, pay cycles, civic holidays, daylight, moon --- */
   cal.dow=Math.floor(S.tick/24)%7;
-  cal.week=Math.floor(S.tick/(24*7))+1;
   cal.monthDay=(S.day-1)%30+1;
   cal.payday=(cal.monthDay===5||cal.monthDay===20);
   cal.holiday=cal.monthDay===1?'Local holiday':cal.monthDay===15?'Mid-month fair':cal.monthDay===28?'Founders day':'';
   cal.daylight=clamp(Math.sin((h-6)/12*PI),0,1);
-  cal.moon=clamp(.5+.5*Math.sin(S.tick/168+1.3),0,1);
   if(cal.payday&&h===9)wlog('calendar','Payday: district purchasing power rises.');
   if(cal.holiday&&h===8)wlog('calendar',cal.holiday+' begins; footfall up, scrutiny relaxed.');
   /* --- 2. climate: OU temperature, humidity, pressure, wind, rain, wet ground --- */
   const seasonal=Math.sin((S.tick/(24*30))*2*PI)*8;
-  const tempTarget=12+seasonal+cal.daylight*7+cl.seaBreeze*2;
+  const tempTarget=12+seasonal+cal.daylight*7;
   cl.temp=clamp(cl.temp+.22*(tempTarget-cl.temp)+nrm()*.32,-9,39);
   cl.humidity=clamp(cl.humidity+.08*(.60+(S.weather===2||S.weather===4?.14:0)-cl.humidity)+nrm()*.012,.16,.99);
-  cl.pressure=clamp(cl.pressure+.06*(1013-cl.pressure)+nrm()*1.05,978,1046);
-  cl.wind=clamp(cl.wind+.12*(1.6+(1013-cl.pressure)*.06-cl.wind)+nrm()*.16,.1,13);
   cl.rain=clamp(cl.rain*(S.weather===2||S.weather===4?.94:.80)+(S.weather===2?.10:S.weather===4?.19:0)+rr(0,.006),0,1);
   cl.groundWet=clamp(cl.groundWet*.984+cl.rain*.022,0,1);
   cl.visibility=clamp(1-cl.rain*.40-(S.weather===3?.34:0)-(1-cal.daylight)*.10-(1-cl.humidity)*.02,.10,1);
@@ -3419,7 +3518,6 @@ function worldTick(){
     wd.flooding=clamp(wd.flooding*.965+((B.key==='Lowlight'||B.key==='Docklands')?cl.groundWet*.014:0),0,1);
     wd.garbage=clamp(wd.garbage*.995+(W.events.garbageStrike>0?.004:.0006),0,1);
     wd.complaints=clamp(wd.complaints*.996+wd.noise*.0009+D.heat*.000015,0,1);
-    wd.chatter=clamp(wd.chatter*.985+rr(0,.004),0,1);
     wd.mood=clamp(wd.mood+(.55-wd.mood)*.018+(cal.payday?.008:0)+(cal.holiday?.006:0)+nrm()*.005,0,1);
     wd.construction=Math.max(0,wd.construction-1);
     wd.curfew=Math.max(0,wd.curfew-1);
@@ -3487,10 +3585,7 @@ function worldTick(){
     const shared=(S.couriers[i].status===S.couriers[j].status)?1:0;
     W.crew.affinity[i][j]=clamp(W.crew.affinity[i][j]+(shared?.0008:-.0004)+nrm()*.0006,.05,1);
     W.crew.affinity[j][i]=W.crew.affinity[i][j];
-    if(shared)W.crew.sharedShifts++;
   }
-  const crewMood=mean(S.couriers.map(c=>c.morale));
-  W.crew.campMorale=clamp(W.crew.campMorale*.96+crewMood*.04-(W.gear.maintenanceDue?.002:0),0,1);
   /* --- 8. rival logistics: shipments with lead times, boss mood, meets --- */
   for(let i=0;i<S.rivals.length;i++){
     const r=S.rivals[i];W.rivals[i]=W.rivals[i]||{bossMood:.5,shipmentEta:20,pipeline:[],meetT:30,accountant:.6,lastShipment:-999};
@@ -3511,7 +3606,6 @@ function worldTick(){
   e.wageIndex=clamp(e.wageIndex+(1-e.wageIndex)*.003+nrm()*.002,.85,1.3);
   e.credit=clamp(e.credit+(.12-e.credit)*.01+nrm()*.003,.02,.4);
   e.rentIndex=clamp(e.rentIndex+(e.cpi-e.rentIndex)*.004,.9,1.2);
-  e.blackMarketVolume=clamp(e.blackMarketVolume*.97+.03*clamp(S.stats.unitsSold/1000,.2,2)+nrm()*.004,.2,2);
   e.wholesaleLead=Math.max(0,e.wholesaleLead-1);
   if(chance(.002)){e.wholesaleLead=ri(6,20);wlog('economy','Wholesale lead times extend '+e.wholesaleLead+'h.');}
   for(let d=0;d<ND;d++){
@@ -3558,6 +3652,7 @@ function worldTick(){
     const d=+key;
     if(byD[d]>3.2&&!dossier.threads.some(t=>t.d===d&&t.ttl>0)){
       dossier.threads.push({id:nid(),d:d,p:ri(0,NP-1),strength:byD[d],ttl:ri(50,140),firstT:S.tick,lastT:S.tick});
+      if(dossier.threads.length>24)dossier.threads.splice(0,dossier.threads.length-24);
       W.stats.evidenceChains++;W.stats.dossierChains++;
       wlog('dossier','Evidence chain opened for '+DISTRICTS[d].short+'.');
     }
@@ -3585,7 +3680,8 @@ function worldTick(){
     lotMap[l.id]=q;
     if(q.integrity<.96)l.purity=clamp(l.purity-.00002,0,1);
   }
-  W.lots=lotMap;
+  const liveLots={};for(const l of S.lots)if(lotMap[l.id])liveLots[l.id]=lotMap[l.id];
+  W.lots=liveLots;
   for(let d=0;d<ND;d++)for(let p=0;p<NP;p++){
     const q=W.depotCond[d][p],dep=S.depot[d][p];
     q.moisture=clamp(q.moisture+cl.humidity*.00022+W.district[d].flooding*.0004,0,1);
@@ -3689,8 +3785,7 @@ function worldPostTick(){
 }
 
 /* ------------------------------- player action ------------------------------- */
-A.serviceGear=function(){
-  const W=ensureWorld();if(!W)return{ok:false,msg:'No world state.'};
+A.serviceGear=()=>{const b=blocked();if(b)return b;const W=ensureWorld();if(!W)return{ok:false,msg:'No world state.'};
   const cost=Math.round(180+W.gear.rigWear*900+(1-W.gear.vehicle)*520+(1-W.gear.sealant)*260);
   if(S.cash<cost)return{ok:false,msg:'Full service requires '+fmtC(cost)+' liquid cash.'};
   spend(cost,'Workshop service & re-sealing','maintenance');
@@ -3749,8 +3844,8 @@ UI.worldSummary=function(){
   const patrol=mean(W.district.map(x=>x.patrol));
   const rum=W.rumors.nodes.reduce((a,b)=>b.strength>a.strength?b:a,{topic:'Quiet',strength:0});
   const lines=[
-    ['Date',WDAYS[cal.dow]+' · week '+cal.week+' · day '+cal.monthDay+(cal.payday?' · Payday':'')],
-    ['Conditions',WEATHER[S.weather].key+' · '+fmtN(cl.temp,1)+'°C · humidity '+fmtP(cl.humidity,0)+' · wind '+fmtN(cl.wind,1)+' · visibility '+fmtP(cl.visibility,0)],
+    ['Date',WDAYS[cal.dow]+' · day '+cal.monthDay+(cal.payday?' · Payday':cal.holiday?' · '+cal.holiday:'')],
+    ['Conditions',WEATHER[S.weather].key+' · '+fmtN(cl.temp,1)+'°C · humidity '+fmtP(cl.humidity,0)+' · visibility '+fmtP(cl.visibility,0)+' · transit '+WEATHER[S.weather].speed.toFixed(2)+'×'],
     ['Streets','patrol '+fmtP(patrol,0)+' · footfall '+fmtN(mean(W.district.map(x=>x.footfall)),2)+' · complaints '+fmtP(mean(W.district.map(x=>x.complaints)),1)],
     ['Word on the street',rum.strength>.2?rum.topic+' (strength '+fmtP(rum.strength,0)+', seeded in '+DISTRICTS[rum.origin].short+')':'nothing significant'],
     ['Your standing',(H.code>.6?'trusted':H.code>.45?'mixed':'notorious')+' · reliability '+fmtP(H.reliability,0)+' · discretion '+fmtP(H.discretion,0)],
@@ -3811,7 +3906,7 @@ UI.worldPanelHTML=function(){
   /* economy + honor + climate */
   acc.push(['Money, weather & standing',
     '<div class="grid g2" style="gap:9px"><div>'+
-    [['CPI',r3(e.cpi)],['Liquidity',r3(e.liquidity)],['Wage index',r3(e.wageIndex)],['Credit tightness',fmtP(e.credit,1)],['Wholesale lead',e.wholesaleLead+'h'],['Black-market volume',r3(e.blackMarketVolume)],['Pressure',r3(cl.pressure)+' hPa'],['Wind',fmtN(cl.wind,1)+' m/s'],['Ground wetness',fmtP(cl.groundWet,0)],['Moonlight',fmtP(cal.moon,0)]].map(q=>'<div class="statline"><span>'+q[0]+'</span><b>'+q[1]+'</b></div>').join('')+'</div><div>'+
+    [['CPI',r3(e.cpi)],['Liquidity',r3(e.liquidity)],['Wage index',r3(e.wageIndex)],['Credit tightness',fmtP(e.credit,1)],['Wholesale lead',e.wholesaleLead+'h'],['Visibility',fmtP(cl.visibility,0)],['Transit factor',WEATHER[S.weather].speed.toFixed(2)+'×'],['Snow load',fmtP(cl.rain,0)],['Ground wetness',fmtP(cl.groundWet,0)],['Your sharpness',fmtP(youSharp(),0)]].map(q=>'<div class="statline"><span>'+q[0]+'</span><b>'+q[1]+'</b></div>').join('')+'</div><div>'+
     Standing.map(k=>'<div style="margin-bottom:4px"><div class="row tiny dim"><span>'+k+'</span><span class="spacer"></span><span class="num">'+fmtP(H[k],0)+'</span></div>'+barHTML(H[k],'v')+'</div>').join('')+
     '<div class="statline" style="margin-top:5px"><span>Composite code</span><b>'+fmtP(H.code,1)+'</b></div>'+barHTML(H.code,'g')+'</div></div>'+
     '<div class="divider"></div><div class="cap">Quiet effects ('+W.mods.length+')</div><div class="row wrap" style="gap:4px;margin-top:5px">'+
