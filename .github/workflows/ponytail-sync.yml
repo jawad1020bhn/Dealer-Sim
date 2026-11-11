@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Rule copies match AGENTS.md
+      - name: Check skills/, link and rule copies
         run: node scripts/check-ponytail-sync.js
-      - name: Tests
+      - name: Script tests
         run: node --test
