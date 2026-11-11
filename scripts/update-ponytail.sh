@@ -15,17 +15,15 @@ if [ -z "$src" ]; then
 fi
 
 for s in ponytail ponytail-review ponytail-audit ponytail-debt ponytail-gain ponytail-help; do
-  mkdir -p ".claude/skills/$s"
-  cp "$src/skills/$s/SKILL.md" ".claude/skills/$s/SKILL.md"
+  mkdir -p "skills/$s"
+  cp "$src/skills/$s/SKILL.md" "skills/$s/SKILL.md"
 done
 
-cp "$src/.cursor/rules/ponytail.mdc" .cursor/rules/ponytail.mdc
-cp "$src/.windsurf/rules/ponytail.md" .windsurf/rules/ponytail.md
-cp "$src/.clinerules/ponytail.md" .clinerules/ponytail.md
-cp "$src/.agents/rules/ponytail.md" .agents/rules/ponytail.md
-cp "$src/.qoder/rules/ponytail.md" .qoder/rules/ponytail.md
-cp "$src/.kiro/steering/ponytail.md" .kiro/steering/ponytail.md
-cp "$src/.github/copilot-instructions.md" .github/copilot-instructions.md
+# Host rule files are opt-in: a copy that exists is refreshed, a missing one stays missing.
+for rel in .cursor/rules/ponytail.mdc .windsurf/rules/ponytail.md .clinerules/ponytail.md \
+  .agents/rules/ponytail.md .qoder/rules/ponytail.md .kiro/steering/ponytail.md .github/copilot-instructions.md; do
+  if [ -e "$rel" ]; then cp "$src/$rel" "$rel"; fi
+done
 
 # Upstream's last paragraph is about ponytail's own repo, so it is dropped here.
 # scripts/check-ponytail-sync.js fails if it ever comes back.

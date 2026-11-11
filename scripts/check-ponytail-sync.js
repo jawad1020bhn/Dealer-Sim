@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // Adapted from DietrichGebert/ponytail@96608e0 scripts/check-rule-copies.js (MIT).
-// Fails when a host rule file drifts from AGENTS.md, when upstream's self-referential
-// aside is back in AGENTS.md, or when a load-bearing rule disappears from AGENTS.md
-// or the ponytail SKILL.md.
+// Guards the vendored install:
+//   - AGENTS.md is the canonical rule text and carries no upstream repo-specific aside
+//   - any host rule file that exists still matches AGENTS.md
+//   - the ten load-bearing rules are present in AGENTS.md and skills/ponytail/SKILL.md
+//   - .claude/skills resolves to ./skills, so skill hosts still find the one folder
 //
 //   node scripts/check-ponytail-sync.js
 'use strict';
@@ -31,8 +33,9 @@ if (agents.includes('agents working on the ponytail repo')) {
   failed = true;
 }
 
-// Compact copies: same body as AGENTS.md, host-specific frontmatter stripped.
-const copies = [
+// Host rule files are optional: the install keeps one folder, and a host that needs its own
+// path gets a copy. Any copy that exists must equal AGENTS.md, frontmatter aside.
+const optionalCopies = [
   ['.cursor/rules/ponytail.mdc', stripFrontmatter],
   ['.windsurf/rules/ponytail.md', text => text.trim()],
   ['.clinerules/ponytail.md', text => text.trim()],
@@ -42,11 +45,24 @@ const copies = [
   ['.kiro/steering/ponytail.md', stripFrontmatter],
 ];
 
-for (const [relPath, normalize] of copies) {
+let copies = 0;
+for (const [relPath, normalize] of optionalCopies) {
+  if (!fs.existsSync(path.join(root, relPath))) continue;
+  copies += 1;
   if (normalize(read(relPath)) !== agents) {
     console.error(`${relPath} drifted from AGENTS.md`);
     failed = true;
   }
+}
+
+// Skill hosts that only look in .claude/skills must still see the one folder.
+const link = path.join(root, '.claude/skills');
+if (!fs.existsSync(link)) {
+  console.error('.claude/skills is missing; restore it with: ln -s ../skills .claude/skills');
+  failed = true;
+} else if (fs.realpathSync(link) !== fs.realpathSync(path.join(root, 'skills'))) {
+  console.error('.claude/skills does not resolve to ./skills; it must be a link, not a copy');
+  failed = true;
 }
 
 // SKILL.md is the runtime source of truth and is longer than the compact body,
@@ -66,7 +82,7 @@ const INVARIANTS = [
   'accessibility',
 ];
 
-for (const [label, text] of [['.claude/skills/ponytail/SKILL.md', read('.claude/skills/ponytail/SKILL.md')], ['AGENTS.md', agents]]) {
+for (const [label, text] of [['skills/ponytail/SKILL.md', read('skills/ponytail/SKILL.md')], ['AGENTS.md', agents]]) {
   for (const phrase of INVARIANTS) {
     if (!text.includes(phrase)) {
       console.error(`${label} is missing rule invariant: "${phrase}"`);
@@ -80,4 +96,7 @@ if (failed) {
   process.exit(1);
 }
 
-console.log(`Rule copies match AGENTS.md; ${INVARIANTS.length} rule invariants present in SKILL.md and AGENTS.md.`);
+console.log(
+  `skills/ is intact; ${copies} host rule cop${copies === 1 ? 'y' : 'ies'} match AGENTS.md; ` +
+    `${INVARIANTS.length} rule invariants present.`
+);
