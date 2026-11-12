@@ -59,3 +59,6 @@ Files:
   Amiens and AVS, clubs that Football Life 27 and EA FC 27 no longer carry. Evidence: FC 26 and the Transfermarkt
   profiles of `salimt/football-datasets` (both September 2025), no other club in either 2026/27 source.
   Run it on the output of `task19.py`: `python3 task20.py <in data.dat> <out data.dat>`; ends with a self-check.
+- `task21.py` — 10 free agents join their real 2026/27 club (table `NAMED`, from a web check in November 2026 of the
+  best-rated free agents). In a full squad the weakest reserve is released.
+  Run it on the output of `task20.py`: `python3 task21.py <in data.dat> <out data.dat>`; ends with a self-check.
