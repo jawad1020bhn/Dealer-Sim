@@ -48,3 +48,8 @@ Files:
   `dec17 "pes database/EDIT00000000 (pes 2017)" orig`. Run it on the output of `task16.py`:
   `python3 task17.py <in data.dat> <orig/data.dat> <out data.dat>`; ends with a self-check of the written file.
   Scanned faces are files of the game tied to the player id; an edit file cannot add them.
+- `task18.py` — the 22 clubs whose main formation had three centre-backs with a full-back on one side and a winger on
+  the other: both wide men become RMF / LMF at the same depth (RB / LB where Football Life 27 plays full-backs), and a
+  starter not rated A for the new role is raised to A. Needs the decrypted Football Life 27 save
+  (`dec21 EDIT00000000 fl FL_key.bin`). Run it on the output of `task17.py`:
+  `python3 task18.py <in data.dat> <out data.dat> <fl/data.dat>`; ends with a self-check of the written file.
