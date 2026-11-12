@@ -11,7 +11,7 @@ Sources expected under `$PES_WORK` (default `/home/user/pes-work/`):
   (narendradarel/Praktikum-Dataset-EAFC27), `src/fc26.csv` (`data/players.csv` of ismailoksuz/EAFC26-DataHub).
 - `src/mouhbnms_football-player-scouting` (mouhbnms/football-player-scouting): `Data/players.csv`, EA's complete FC 27
   list (17,849 men, ratings 47–91, snapshot 2026-09-12). Used by task 12.
-- `src/fpl` (olbauday/FPL-Core-Insights): Premier League 2026/27 player statistics per gameweek. Used by task 14.
+- `src/fpl` (olbauday/FPL-Core-Insights): Premier League 2026/27 player statistics per gameweek. Used by task 14 and task 15.
 
 Files:
 
@@ -32,3 +32,8 @@ Files:
   without an EA rating, form values, registered positions of starters, Premier League form rises and nine hand-built
   legends. Run it on the output of `task12.py --older`:
   `python3 task14.py <in data.dat> <out data.dat>`; ends with a self-check of the written file.
+- `task15.py` — squads and line-ups, no rating of an existing player changes: transfers (Football Life 27 squads, the
+  "has joined" notes of the fantasy data, EA FC 27 for clubs FL 27 lacks), missing players written into unused records,
+  Premier League line-ups from minutes, starters out of position at top-five clubs, Premier League set-piece takers and
+  shirt numbers as in FL 27. Run it on the output of `task14.py`:
+  `python3 task15.py <in data.dat> <out data.dat>`; ends with a self-check of the written file.
