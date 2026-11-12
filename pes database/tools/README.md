@@ -24,3 +24,6 @@ Files:
 - `task13.py` — five classic teams (World Cup Heroes, Modern Champions, FC Icons, UCL Legends, Cult Heroes) from the
   Football Life 27 classic players the file lacks. Run it on the output of `task12.py`:
   `python3 task13.py <in data.dat> <out data.dat>`; ends with a self-check of the written file.
+- `task12.py --older` — the same for players aged 24 or over (EA FC 27 rating where EA lists the player, no estimate;
+  nationality only where the national squad or EA agrees with Football Life 27). Run it on the output of `task13.py`:
+  `python3 task12.py <in data.dat> <out data.dat> --older`.
