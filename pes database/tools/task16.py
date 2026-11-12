@@ -42,6 +42,7 @@ def dup(q, c, t):
                 if norm(p['name']) == n and close: return i
                 continue
             if i in here and close: return i
+            if norm(p['name']) == n and len(tx) >= 2 and (i in here or (p['nation'] == x['nation'] and abs(p['height'] - x['height']) <= 2)): return i   # age wrong in the file
             if tp <= tx or tx <= tp:
                 if min(len(tp), len(tx)) >= 2 and da <= 3 and abs(p['height'] - x['height']) <= 4: return i
                 if close and p['nation'] == x['nation'] and GROUP[POS[p['reg_pos']]] == g: return i
@@ -119,6 +120,9 @@ seen = collections.defaultdict(list)
 for i, p in N.items():
     if i not in leg: seen[(norm(p['name']), p['nation'], p['age'])].append(i)
 twice = [N[v[0]]['name'] for v in seen.values() if len(v) > 1 and set(v) & built]
+byname = collections.defaultdict(list)
+for i, p in N.items(): byname[norm(p['name'])].append(i)
+twice += [N[i]['name'] for i in built for j in byname[norm(N[i]['name'])] if j != i and club.get(j, -1) == club.get(i, -2)]
 assert not twice, ('a built player is in the file twice', twice)
 
 # ------------------------------------------------------------------ report
