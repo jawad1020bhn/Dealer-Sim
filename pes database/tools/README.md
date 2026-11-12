@@ -53,3 +53,5 @@ Files:
   starter not rated A for the new role is raised to A. Needs the decrypted Football Life 27 save
   (`dec21 EDIT00000000 fl FL_key.bin`). Run it on the output of `task17.py`:
   `python3 task18.py <in data.dat> <out data.dat> <fl/data.dat>`; ends with a self-check of the written file.
+- `task19.py` — registered positions set by hand (table `NAMED`: Gnabry and Karl of Bayern to RMF); the overall stays.
+  Run it on the output of `task18.py`: `python3 task19.py <in data.dat> <out data.dat>`; ends with a self-check.
