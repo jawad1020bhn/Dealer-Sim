@@ -62,3 +62,9 @@ Files:
 - `task21.py` — 10 free agents join their real 2026/27 club (table `NAMED`, from a web check in November 2026 of the
   best-rated free agents). In a full squad the weakest reserve is released.
   Run it on the output of `task20.py`: `python3 task21.py <in data.dat> <out data.dat>`; ends with a self-check.
+- `task22.py` — check of player skills, playing styles and COM playing styles, with corrections: the two goalkeeper
+  skills (bit 18 is Low Punt Trajectory, bit 20 is GK Long Throw; the source save had them crossed) are swapped on every
+  record, and Orchestrator (stored as Anchor Man) or Creative Playmaker on a player who plays CMF or AMF becomes
+  Classic No. 10, the style PES 2017 switches on there. Prints the comparison with Football Life 27 and the styles
+  that still have no effect. Later tasks must call `fldb.to17(q, fixed=True)`.
+  Run it on the output of `task21.py`: `python3 task22.py <in data.dat> <out data.dat>`; ends with a self-check.
