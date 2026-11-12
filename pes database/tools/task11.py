@@ -83,59 +83,14 @@ for t in pes.teams:
     if (a and a[0][0] in TOP27 and a[0][1] >= 8) or (b and b[0][0] in TOP26 and b[0][1] >= 8): top.append(t)
 
 # ------------------------------------------------------------------ ratings
-def fromdb(q):
-    """FL database record -> PES 2017 ability fields."""
-    o = {k: q[k] for k in ['age', 'reg_pos', 'form', 'weak_use', 'weak_acc', 'injury', 'foot'] + STATS17}
-    o['play_style'] = {18: 4, 19: 4, 20: 8, 21: 11}.get(q['play_style'], q['play_style'])
-    for n in POS: o['pp_' + n] = q['pp_' + n]
-    o['pp_' + POS[q['reg_pos']]] = 2
-    for bit, lab in SKILL.items(): o[bit] = int(lab in q['skills'])
-    return o
-SKILL = dict(zip(['sk%d' % i for i in range(28)] + ['com%d' % i for i in range(7)],
-    ['Scissors Feint', 'Flip Flap', 'Marseille Turn', 'Sombrero', 'Cut Behind & Turn', 'Scotch Move', 'Heading', 'Long Range Drive', 'Knuckle Shot',
-     'Acrobatic Finishing', 'Heel Trick', 'First-time Shot', 'One-touch Pass', 'Weighted Pass', 'Pinpoint Crossing', 'Outside Curler', 'Rabona',
-     'Low Lofted Pass', 'GK Long Throw', 'Long Throw', 'GK Low Punt', 'Gamesmanship', 'Man Marking', 'Track Back', 'Acrobatic Clear', 'Captaincy',
-     'Super-Sub', 'Fighting Spirit', 'Trickster', 'Mazing Run', 'Speeding Bullet', 'Incisive Run', 'Long Ball Expert', 'Early Cross', 'Long Ranger']))
-EXP = {'BODY': ['body_ctrl', 'phys'], 'GK1': ['gk', 'cover'], 'GK2': ['catching', 'clearing', 'reflex'], 'ONE': []}
-def _retarget(p, target):
-    col = p['reg_pos']
-    ks = [k for row, w in sorted(rate.ROWS, key=lambda r: -r[1][col]) if w[col] for k in EXP.get(row, [row])]
-    for _ in range(80):                                   # uniform steps
-        o = rate.overall(p)
-        if o == target: return True
-        s = 1 if o < target else -1
-        q = dict(p)
-        for k in ks: q[k] = max(40, min(99, q[k] + s))
-        if (rate.overall(q) - target) * s > 0: break       # would overshoot: finish stat by stat
-        if q == p: return False
-        p.update(q)
-    for _ in range(4):
-        for k in ks:
-            o = rate.overall(p)
-            if o == target: return True
-            p[k] = max(40, min(99, p[k] + (1 if o < target else -1)))
-    return rate.overall(p) == target
-def retarget(p, target):
-    """Shift the abilities that count at the registered position until the overall equals target. Where the blend
-    table jumps over the target, nudge the abilities that do not count there (they only move the mean) and retry."""
-    col = p['reg_pos']
-    zs = [k for row, w in rate.ROWS[:16] if not w[col] for k in EXP.get(row, [row])] if col else []
-    for dz in (0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5, -6, 6, -8, 8):
-        q = dict(p)
-        for k in zs: q[k] = max(40, min(99, q[k] + dz))
-        if _retarget(q, target): p.update(q); return True
-    return False
+fromdb = fldb.to17
+retarget = rate.retarget
 
 # estimate: FL 27 abilities read with the 2017 formula run about 3 above EA; map through the median FC 27 rating
 cal = collections.defaultdict(list)
 for i, q in link.items():
     if c27[i] and rate.overall(P[i]) == c27[i]['ovr']: cal[rate.overall(fromdb(D[q]))].append(c27[i]['ovr'])
-EST = {}; last = 40
-for r in range(40, 110):
-    v = sorted(x for k in (r - 1, r, r + 1) for x in cal.get(k, []))
-    last = max(last, v[len(v) // 2]) if len(v) >= 15 else (last + 1 if EST else r - 3)
-    EST[r] = min(r, last)
-for r in range(40, 71): EST[r] = r - 3            # below 71 the sample is cut off at EA's 60 floor: keep the 71+ offset
+EST = rate.est_table(cal)
 CAP = lambda age: 8 if age <= 19 else 6 if age <= 21 else 4
 def target_for(card27, card26, age, est, cur=None):
     """FC 27, else (age <= 23) the estimate held between last year's rating and that + cap, else FC 26, else estimate."""

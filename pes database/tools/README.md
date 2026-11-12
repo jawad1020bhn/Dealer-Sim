@@ -9,6 +9,8 @@ Sources expected under `$PES_WORK` (default `/home/user/pes-work/`):
   (`encrypter.c` for `enc17`, `-DUSE_PES21_MASTER_KEY` for `dec21`; the Football Life save also needs its key file).
 - `src/pesforge` (Binz120/pesforge), `src/flko` (choepd/FL27-player-names-ko), `src/fc27repo`
   (narendradarel/Praktikum-Dataset-EAFC27), `src/fc26.csv` (`data/players.csv` of ismailoksuz/EAFC26-DataHub).
+- `src/mouhbnms_football-player-scouting` (mouhbnms/football-player-scouting): `Data/players.csv`, EA's complete FC 27
+  list (17,849 men, ratings 47–91, snapshot 2026-09-12). Used by task 12.
 
 Files:
 
@@ -17,3 +19,5 @@ Files:
 - `rate.py` — PES 2017 overall formula and FC 27 / FC 26 tables. Self-check: `python3 rate.py <data.dat>`.
 - `task11.py` — missing players, youngsters, wing starters, managers and tactics.
   `python3 task11.py <in data.dat> <FL data.dat> <out data.dat>`; ends with a self-check of the written file.
+- `task12.py` — players aged 23 or under: EA FC 27 rating and Football Life 27 info. Run it on the output of `task11.py`:
+  `python3 task12.py <in data.dat> <out data.dat>`; ends with a self-check of the written file.

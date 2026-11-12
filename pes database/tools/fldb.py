@@ -13,6 +13,20 @@ KEY = {'Offensive Awareness': 'atk', 'Ball Control': 'ball_ctrl', 'Dribbling': '
        'Age': 'age', 'Height (cm)': 'height', 'Weight (kg)': 'weight', 'Nationality': 'nation', 'Playing Style': 'play_style',
        'Registered Position': 'reg_pos', 'Form': 'form', 'Weak Foot Usage': 'weak_use', 'Weak Foot Accuracy': 'weak_acc',
        'Injury Resistance': 'injury', 'Stronger Foot': 'foot'}
+from lib import POS, STATS17
+def to17(q):
+    """FL database record -> PES 2017 ability fields."""
+    o = {k: q[k] for k in ['age', 'reg_pos', 'form', 'weak_use', 'weak_acc', 'injury', 'foot'] + STATS17}
+    o['play_style'] = {18: 4, 19: 4, 20: 8, 21: 11}.get(q['play_style'], q['play_style'])
+    for n in POS: o['pp_' + n] = q['pp_' + n]
+    o['pp_' + POS[q['reg_pos']]] = 2
+    for bit, lab in SKILL.items(): o[bit] = int(lab in q['skills'])
+    return o
+SKILL = dict(zip(['sk%d' % i for i in range(28)] + ['com%d' % i for i in range(7)],
+    ['Scissors Feint', 'Flip Flap', 'Marseille Turn', 'Sombrero', 'Cut Behind & Turn', 'Scotch Move', 'Heading', 'Long Range Drive', 'Knuckle Shot',
+     'Acrobatic Finishing', 'Heel Trick', 'First-time Shot', 'One-touch Pass', 'Weighted Pass', 'Pinpoint Crossing', 'Outside Curler', 'Rabona',
+     'Low Lofted Pass', 'GK Long Throw', 'Long Throw', 'GK Low Punt', 'Gamesmanship', 'Man Marking', 'Track Back', 'Acrobatic Clear', 'Captaincy',
+     'Super-Sub', 'Fighting Spirit', 'Trickster', 'Mazing Run', 'Speeding Bullet', 'Incisive Run', 'Long Ball Expert', 'Early Cross', 'Long Ranger']))
 def load():
     """-> players by id, squads {team: [(player, shirt number)]}, team names {team: name}."""
     t = pesdb.PlayerTable(pesdb.table_blob(CPK, 'Player')); en = {}
