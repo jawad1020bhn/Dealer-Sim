@@ -75,3 +75,9 @@ Files:
   `$PES_WORK/src`, `lucianomurr/asta-fantacalcio` (FBref and Understat 2025-26), `turkensar/optiscout-football-dss`
   (FBref 2026-27) and `mouhbnms/football-player-scouting` (EA FC 27 PlayStyles).
   Run it on the output of `task22.py`: `python3 task23.py <in data.dat> <out data.dat>`; ends with a self-check.
+- `task24.py` — club managers as of 12 November 2026 (table `NAMED`): all clubs of the Premier League, La Liga,
+  Serie A, Bundesliga and Ligue 1 were compared with the Transfermarkt 2026/27 manager lists and the Wikipedia
+  "managerial changes" tables, the second divisions of the same five countries in part. 32 clubs change (14 in the
+  five leagues, 18 below); name and nationality are written into the club's manager record. A club without a head
+  coach keeps the last one (Manchester United, Crystal Palace, Lens).
+  Run it on the output of `task23.py`: `python3 task24.py <in data.dat> <out data.dat>`; ends with a self-check.
