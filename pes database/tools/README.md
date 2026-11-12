@@ -21,3 +21,6 @@ Files:
   `python3 task11.py <in data.dat> <FL data.dat> <out data.dat>`; ends with a self-check of the written file.
 - `task12.py` — players aged 23 or under: EA FC 27 rating and Football Life 27 info. Run it on the output of `task11.py`:
   `python3 task12.py <in data.dat> <out data.dat>`; ends with a self-check of the written file.
+- `task13.py` — five classic teams (World Cup Heroes, Modern Champions, FC Icons, UCL Legends, Cult Heroes) from the
+  Football Life 27 classic players the file lacks. Run it on the output of `task12.py`:
+  `python3 task13.py <in data.dat> <out data.dat>`; ends with a self-check of the written file.
