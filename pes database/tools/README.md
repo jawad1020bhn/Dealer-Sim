@@ -37,3 +37,14 @@ Files:
   Premier League line-ups from minutes, starters out of position at top-five clubs, Premier League set-piece takers and
   shirt numbers as in FL 27. Run it on the output of `task14.py`:
   `python3 task15.py <in data.dat> <out data.dat>`; ends with a self-check of the written file.
+- `task16.py` — more missing players. A record may be overwritten if it is a free agent, no source knows its name, it is
+  rated 69 or lower, and the player written into it is rated 70 or higher. Football Life 27 squad members join their
+  club (starting elevens stay), the others become free agents. It runs the set-up part of `task15.py` from its source,
+  so both files must stay in this folder. Run it on the output of `task15.py`:
+  `python3 task16.py <in data.dat> <out data.dat>`; ends with a self-check of the written file.
+- `task17.py` — appearance of every player that was written into another player's record (skin colour, face shape,
+  facial hair, hair, build) from `PlayerAppearance` of the Football Life 27 database (`pesdb.py` of pesforge reads it),
+  and the "edited" flags of those records. It needs the original save decrypted too, to see who each record used to be:
+  `dec17 "pes database/EDIT00000000 (pes 2017)" orig`. Run it on the output of `task16.py`:
+  `python3 task17.py <in data.dat> <orig/data.dat> <out data.dat>`; ends with a self-check of the written file.
+  Scanned faces are files of the game tied to the player id; an edit file cannot add them.
