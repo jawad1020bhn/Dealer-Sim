@@ -1,0 +1,265 @@
+id	name	club	plays (* = starter)	overall	style before	new style	skills added	COM styles added	based on	evidence
+70516	Marius Bülter	1. FC Köln	LWF	74	Dummy Runner	Prolific Winger	Malicia		2025-26 1597', 2026-27 477', EA FC 27	style: kp90 1.48, sp 68, vi 68, crs90 2.08 | Malicia: fouled 3.2 times per 90
+118496	Luka Lochoshvili	1. FC Köln	CB*	71	The Destroyer		Acrobatic Clear		2026-27 616', EA FC 27	style: sp 51, lp 50 | Acrobatic Clear: PlayStyle Block
+169919	Leopold Querfeld	1. FC Union Berlin	CB	77	The Destroyer	Build Up		Long Ball Expert	2025-26 2705', 2026-27 336', EA FC 27	style: PlayStyle Long Ball Pass, bu90 0.13, sp 72, lp 74 | COM Long Ball Expert: PlayStyle Long Ball Pass
+129962	Jeong Woo-Yeong	1. FC Union Berlin	LWF*	73	Hole Player	Prolific Winger			2025-26 1197', 2026-27 464', EA FC 27	style: kp90 0.46, sp 74, vi 72, crs90 2.13
+120514	Robert Skov	1. FC Union Berlin	LB*	72	Prolific Winger	Offensive Full-back			2025-26 220', 2026-27 1', EA FC 27	style: cr 83
+70860	Tim Skarke	1. FC Union Berlin	CF	72	Prolific Winger	Dummy Runner	Super-sub; Long Range Drive	Long Ranger; Speeding Bullet	2025-26 623', 2026-27 369', EA FC 27	style: g90 0.27, height 181 | Super-sub: 22 of 30 matches from the bench, 5 goals + assists | Long Range Drive: PlayStyle Finesse Shot | COM Long Ranger: PlayStyle Power Shot | COM Speeding Bullet: PlayStyle Rapid
+71044	Oluwaseun Ogbemudia	1. FC Union Berlin	CB	63	The Destroyer				EA FC 27	no change: sp 58, lp 51
+59554	Dominik Kohr	1. FSV Mainz 05	CB*	75	Anchor Man			Long Ball Expert	2025-26 2338', 2026-27 79', EA FC 27	style: PlayStyle Long Ball Pass, bu90 0.23, sp 68, lp 64 | COM Long Ball Expert: PlayStyle Long Ball Pass
+109872	Pervis Estupiñán	AC Milan	LMF*	78	Offensive Full-back	Box-to-Box			2025-26 1034', 2026-27 397', EA FC 27	style: ic 78
+182294	Silvano Vos	AC Milan	DMF	68	Box-to-Box					left alone: fewer than 900 minutes and no EA card
+166272	Valeri Vladimirov	AC Milan	CB	66	The Destroyer					left alone: fewer than 900 minutes and no EA card
+100414	Patrick Ciurria	AC Monza	AMF*	72	Prolific Winger	Hole Player			EA FC 27	style: vi 69, sp 73, fin 69
+132598	Idrissa Touré	AC Monza	DMF*	71	Box-to-Box	Anchor Man			2025-26 2279', 2026-27 25', EA FC 27	style: sp 72, kp90 0.79, sh90 1.13
+179305	Jan Ziółkowski	AC Monza	CB*	70	The Destroyer				2025-26 517', EA FC 27	no change: sp 67, lp 53
+165123	Lorenzo Lucchesi	AC Monza	CB	68	The Destroyer				2026-27 676', EA FC 27	no change: sp 62, lp 58
+158777	Leonardo Colombo	AC Monza	DMF	65	Box-to-Box	Anchor Man			2026-27 184', EA FC 27	style: sp 68
+179715	Yvan Maye	AC Monza	CB	64	The Destroyer				2026-27 56'	left alone: fewer than 900 minutes and no EA card
+159565	Arthur Atta	ACF Fiorentina	DMF*	76	Hole Player	Build Up	Cut Behind & Turn		2025-26 2557', 2026-27 332', EA FC 27	style: sp 80, lp 77, kp90 1.19, bu90 0.29, sh90 2.12 | Cut Behind & Turn: PlayStyle Technical
+141530	Radu Drăguşin	ACF Fiorentina	CB	74	The Destroyer				2025-26 517', 2026-27 810', EA FC 27	no change: sp 69, lp 60
+142080	Marin Pongračić	ACF Fiorentina	CB*	73	The Destroyer				2025-26 2918', 2026-27 208', EA FC 27	no change: bu90 0.20, sp 70, lp 63
+160977	Éli Junior Kroupi	AFC Bournemouth	SS	80	Hole Player	Goal Poacher			2025-26 1672', 2026-27 27', EA FC 27	style: g90 0.58, xg90 0.39
+127315	Bafodé Diakité	AFC Bournemouth	CB	79	The Destroyer	Build Up			2025-26 1277', 2026-27 9', EA FC 27	style: bu90 0.27, sp 75, lp 69
+123303	Tyler Adams	AFC Bournemouth	DMF*	79	Box-to-Box	The Destroyer			2025-26 1772', 2026-27 639', EA FC 27	style: def90 2.11, ic 83, st 82, ag 85
+181288	Malcom Dacosta	AFC Bournemouth	DMF	60	Box-to-Box					left alone: fewer than 900 minutes and no EA card
+110555	Axel Tuanzebe	AJ Auxerre	CB*	73	The Destroyer				2025-26 1201', 2026-27 540'	no change: bu90 0.16, sp 75, lp 75
+162323	Clément Akpa	AJ Auxerre	CB*	73	The Destroyer				2025-26 1944', 2026-27 796', EA FC 27	no change: bu90 0.11, sp 70, lp 48
+162216	Christ Makosso	AJ Auxerre	CB	67	The Destroyer				2026-27 546', EA FC 27	no change: sp 60, lp 50
+176342	Telli Siwe	AJ Auxerre	CB	66	The Destroyer				2025-26 315', EA FC 27	no change: sp 58, lp 37
+179440	Alvin Petit Dol	AJ Auxerre	CB	59	The Destroyer				EA FC 27	no change: sp 48, lp 32
+141619	Vanderson	AS Monaco	RWF*	77	Offensive Full-back	Prolific Winger	Track Back; Cut Behind & Turn		2025-26 616', 2026-27 753', EA FC 27	style: sp 76, vi 74, crs90 3.59 | Track Back: tackles + interceptions 3.7 per 90 | Cut Behind & Turn: PlayStyle Technical
+126820	Mohammed Salisu	AS Monaco	CB*	76	The Destroyer		Heading		2025-26 1080', 2026-27 66', EA FC 27	style: bu90 0.27, sp 70, lp 58 | Heading: PlayStyle Aerial Fortress
+158577	Christian Mawissa	AS Monaco	CB	75	The Destroyer				2025-26 1191', 2026-27 74', EA FC 27	no change: bu90 0.24, sp 71, lp 56
+157226	Edan Diop	AS Monaco	LMF	68	Creative Playmaker	Hole Player			2026-27 247', EA FC 27	style: ic 36
+181443	Daryl Leunga Leunga	AS Monaco	CB	66	The Destroyer					left alone: fewer than 900 minutes and no EA card
+165057	Daniele Ghilardi	AS Roma	CB	74	The Destroyer				2025-26 1097', 2026-27 253', EA FC 27	no change: bu90 0.21, sp 62, lp 53
+140032	Ousmane Camara	Angers SCO	CB*	75	The Destroyer				2025-26 2718', 2026-27 663', EA FC 27	no change: bu90 0.23, sp 73, lp 66
+159563	Emmanuel Biumla	Angers SCO	CB	70	The Destroyer				2025-26 387', 2026-27 128', EA FC 27	no change: sp 66, lp 55
+111207	Gabriel Magalhães	Arsenal FC	CB*	89	The Destroyer	Build Up	Acrobatic Clear		2025-26 2751', 2026-27 810', EA FC 27	style: bu90 0.27, sp 79, lp 76 | Acrobatic Clear: PlayStyle Block
+108959	Declan Rice	Arsenal FC	DMF*	88	Box-to-Box	The Destroyer	Pinpoint Crossing		2025-26 3094', 2026-27 760', EA FC 27	style: def90 2.25, ic 86, st 87, ag 85 | Pinpoint Crossing: crosses 3.8 per 90 with assists
+148009	Cristhian Mosquera	Arsenal FC	CB	78	The Destroyer	Build Up			2025-26 994', 2026-27 168', EA FC 27	style: bu90 0.48, sp 73, lp 70
+159414	Brayden Clarke	Arsenal FC	CB	66	The Destroyer					left alone: fewer than 900 minutes and no EA card
+176011	Modou Cissé	Aston Villa FC	CB	68	The Destroyer				EA FC 27	no change: sp 65, lp 61
+107935	Franck Kessié	Atalanta BC	DMF*	80	Box-to-Box				2026-27 243'	left alone: fewer than 900 minutes and no EA card
+157943	Isak Hien	Atalanta BC	CB*	79	The Destroyer				2025-26 1970', EA FC 27	no change: bu90 0.29, sp 65, lp 58
+174931	Relja Obrić	Atalanta BC	CB	71	The Destroyer				2026-27 251'	left alone: fewer than 900 minutes and no EA card
+124996	Dani Vivian	Athletic Club de Bilbao	CB*	82	The Destroyer	Build Up			2025-26 2564', 2026-27 180', EA FC 27	style: PlayStyle Long Ball Pass, bu90 0.23, sp 72, lp 67
+106958	Yeray Álvarez	Athletic Club de Bilbao	CB	80	The Destroyer	Build Up	Weighted Pass	Long Ball Expert	2025-26 513', 2026-27 407', EA FC 27	style: PlayStyle Pinged Pass, sp 80, lp 79 | Weighted Pass: PlayStyle Pinged Pass | COM Long Ball Expert: PlayStyle Pinged Pass
+138325	Aitor Paredes	Athletic Club de Bilbao	CB	78	The Destroyer		Heading		2025-26 1630', 2026-27 488', EA FC 27	style: bu90 0.22, sp 73, lp 62 | Heading: 4 goals as a centre-back
+165289	Unai Egiluz	Athletic Club de Bilbao	CB	70	The Destroyer				EA FC 27	no change: sp 63, lp 48
+179652	Adrián Pérez	Athletic Club de Bilbao	RMF	68	Prolific Winger					left alone: fewer than 900 minutes and no EA card
+142238	Robert Andrich	Bayer 04 Leverkusen	CB	78	The Destroyer	Build Up			2025-26 2546', 2026-27 172', EA FC 27	style: bu90 0.51, sp 77, lp 77
+114016	Martin Terrier	Bayer 04 Leverkusen	SS	77	Hole Player	Goal Poacher	Acrobatic Finishing		2025-26 675', 2026-27 40', EA FC 27	style: fin 77, vi 77 | Acrobatic Finishing: PlayStyle Acrobatic
+110827	Jonas Hofmann	Bayer 04 Leverkusen	RMF	76	Prolific Winger	Box-to-Box	Weighted Pass		2025-26 1013', 2026-27 77', EA FC 27	style: PlayStyle Incisive Pass, ic 75 | Weighted Pass: PlayStyle Incisive Pass
+179711	Montrell Culbreath	Bayer 04 Leverkusen	RMF	70	Prolific Winger	Hole Player			2025-26 736', EA FC 27	style: ic 41
+141218	Martin Vitík	Bologna FC 1909	CB	75	The Destroyer				2025-26 1325', 2026-27 113', EA FC 27	no change: bu90 0.11, sp 69, lp 62
+114780	Nicolò Casale	Bologna FC 1909	CB*	74	The Destroyer				2025-26 678', 2026-27 438', EA FC 27	no change: sp 69, lp 63
+181917	Eivind Helland	Bologna FC 1909	CB	68	The Destroyer				2025-26 484', 2026-27 313', EA FC 27	no change: sp 67, lp 58
+130524	Nathan Collins	Brentford FC	CB	79	The Destroyer		Acrobatic Clear		2025-26 2975', 2026-27 196', EA FC 27	style: bu90 0.26, sp 70, lp 66 | Acrobatic Clear: PlayStyle Block
+140865	Vitaly Janelt	Brentford FC	CMF*	78	Anchor Man	The Destroyer			2025-26 1443', 2026-27 719', EA FC 27	style: def90 5.26, ic 80, st 77, ag 78
+164717	Gustavo Nunes	Brentford FC	LMF	67	Prolific Winger	Hole Player			EA FC 27	style: ic 27
+114088	Ferdi Kadıoğlu	Brighton & Hove Albion FC	RWF*	80	Offensive Full-back	Prolific Winger	Fighting Spirit		EA FC 27	style: sp 78, vi 76 | Fighting Spirit: PlayStyle Relentless
+153932	Mats Wieffer	Brighton & Hove Albion FC	RB*	79	Box-to-Box	Offensive Full-back	Acrobatic Clear		2025-26 1903', 2026-27 183', EA FC 27	style: xa90 0.13, cr 75 | Acrobatic Clear: PlayStyle Block
+123446	Pascal Struijk	Brighton & Hove Albion FC	CB	76	The Destroyer		Heading		2025-26 2936', 2026-27 155', EA FC 27	style: bu90 0.19, sp 75, lp 70 | Heading: PlayStyle Aerial Fortress
+140851	Femi Azeez	Brighton & Hove Albion FC	LMF	75	Creative Playmaker	Hole Player	Long Range Drive; Heading; Pinpoint Crossing	Early Cross	EA FC 27	style: ic 33 | Long Range Drive: PlayStyle Finesse Shot | Heading: PlayStyle Precision Header | Pinpoint Crossing: PlayStyle Whipped Pass | COM Early Cross: PlayStyle Whipped Pass
+47406	Rubén García	CA Osasuna	RMF	77	Creative Playmaker	Hole Player	Track Back; Cut Behind & Turn		2025-26 2229', 2026-27 591', EA FC 27	style: ic 38, def90 2.13, g90 0.06, sh90 1.31 | Track Back: tackles + interceptions 2.1 per 90 | Cut Behind & Turn: PlayStyle Technical
+157826	Roberto Arroyo	CA Osasuna	SS	65	Target Man					left alone: fewer than 900 minutes and no EA card
+181468	Unai Santos	CA Osasuna	CB	65	The Destroyer				2026-27 207'	left alone: fewer than 900 minutes and no EA card
+124124	Yukinari Sugawara	Cagliari Calcio	RMF*	75	Offensive Full-back	Box-to-Box	Pinpoint Crossing		2025-26 2428', 2026-27 235', EA FC 27	style: ic 73 | Pinpoint Crossing: PlayStyle Whipped Pass
+130116	Mattia Felici	Cagliari Calcio	LMF*	72	Prolific Winger	Hole Player			2025-26 412', 2026-27 38', EA FC 27	style: ic 52
+157850	Raphael Kofler	Cagliari Calcio	CB	69	The Destroyer		Man Marking		2026-27 130', EA FC 27	style: sp 66, lp 63 | Man Marking: PlayStyle Jockey
+178091	Yael Trepy	Cagliari Calcio	SS	63	Hole Player	Dummy Runner			2025-26 91', 2026-27 28', EA FC 27	style: fin 63, vi 55
+179487	Antoni Franke	Cagliari Calcio	CB	60	The Destroyer					left alone: fewer than 900 minutes and no EA card
+126046	Reece James	Chelsea FC	DMF*	84	Offensive Full-back	The Destroyer	Man Marking		2025-26 1963', 2026-27 293', EA FC 27	style: ic 85, st 84, ag 83 | Man Marking: PlayStyle Jockey
+117087	Pedro Neto	Chelsea FC	RMF*	81	Prolific Winger	Hole Player			2025-26 2631', 2026-27 678', EA FC 27	style: ic 40, def90 1.99, g90 0.22, sh90 1.71
+159401	Jorrel Hato	Chelsea FC	LMF*	78	Offensive Full-back	Box-to-Box	Man Marking; Weighted Pass	Long Ball Expert	2025-26 1148', 2026-27 411', EA FC 27	style: PlayStyle Pinged Pass, ic 77 | Man Marking: PlayStyle Jockey | Weighted Pass: PlayStyle Pinged Pass | COM Long Ball Expert: PlayStyle Pinged Pass
+163543	Aaron Anselmino	Chelsea FC	CB	72	The Destroyer				2025-26 384', EA FC 27	no change: sp 69, lp 66
+110599	Ademola Lookman	Club Atlético de Madrid	SS*	83	Hole Player	Goal Poacher			2025-26 1412', 2026-27 606', EA FC 27	style: g90 0.27, xg90 0.47
+111280	Cristian Romero	Club Atlético de Madrid	CB*	82	The Destroyer	Build Up	Weighted Pass	Long Ball Expert	2025-26 1868', 2026-27 433', EA FC 27	style: PlayStyle Pinged Pass, bu90 0.21, sp 76, lp 70 | Weighted Pass: PlayStyle Pinged Pass | COM Long Ball Expert: PlayStyle Pinged Pass
+41082	Koke	Club Atlético de Madrid	DMF	81	Box-to-Box	Build Up	Fighting Spirit		2025-26 2219', 2026-27 449', EA FC 27	style: PlayStyle Long Ball Pass, Tiki Taka, sp 84 | Fighting Spirit: PlayStyle Relentless
+112009	Robin Le Normand	Club Atlético de Madrid	CB	81	The Destroyer	Build Up	Heading		2025-26 1789', 2026-27 378', EA FC 27	style: bu90 0.50, sp 81, lp 73 | Heading: PlayStyle Aerial Fortress
+141911	Martin Baturina	Como 1907	LWF*	79	Hole Player	Creative Playmaker	Weighted Pass		2025-26 1569', 2026-27 440', EA FC 27	style: PlayStyle Incisive Pass, kp90 3.48, sp 83, vi 80 | Weighted Pass: PlayStyle Incisive Pass
+115104	Alberto Dossena	Como 1907	CB	73	The Destroyer				2025-26 859', EA FC 27	no change: sp 65, lp 58
+103125	Edoardo Goldaniga	Como 1907	CB	72	The Destroyer				2025-26 15', EA FC 27	no change: sp 61, lp 58
+164852	Willy Kambwala	Como 1907	CB	72	The Destroyer				2025-26 86', 2026-27 53', EA FC 27	no change: sp 69, lp 62
+178104	Cristiano De Paoli	Como 1907	CB	60	The Destroyer					left alone: fewer than 900 minutes and no EA card
+114556	Gustavo Hamer	Coventry City FC	LMF	75	Creative Playmaker	Box-to-Box	Long Range Drive; Weighted Pass		2026-27 53', EA FC 27	style: PlayStyle Incisive Pass, ic 72 | Long Range Drive: PlayStyle Finesse Shot | Weighted Pass: PlayStyle Incisive Pass
+138149	Bobby Thomas	Coventry City FC	CB	74	The Destroyer		Heading	Long Ball Expert	2026-27 676', EA FC 27	style: PlayStyle Long Ball Pass, sp 61, lp 62 | Heading: PlayStyle Aerial Fortress | COM Long Ball Expert: PlayStyle Long Ball Pass
+114201	Ismaïla Sarr	Crystal Palace FC	AMF*	81	Prolific Winger	Hole Player			2025-26 2174', 2026-27 17', EA FC 27	style: g90 0.25, xg90 0.38, sh90 1.97, kp90 0.78
+134798	Tyrick Mitchell	Crystal Palace FC	LMF*	79	Defensive Full-back	Box-to-Box	Acrobatic Clear; Man Marking; Pinpoint Crossing		2025-26 3251', 2026-27 779', EA FC 27	style: ic 78, def90 2.66 | Acrobatic Clear: PlayStyle Block | Man Marking: PlayStyle Jockey | Pinpoint Crossing: PlayStyle Whipped Pass
+170408	Anan Khalaili	Crystal Palace FC	RMF*	78	Prolific Winger	Box-to-Box			2026-27 681', EA FC 27	style: ic 66, def90 3.57
+124840	Dwight McNeil	Crystal Palace FC	LMF	76	Prolific Winger	Hole Player	Weighted Pass		2025-26 1168', 2026-27 268', EA FC 27	style: PlayStyle Incisive Pass, ic 46, g90 0.00, sh90 1.69 | Weighted Pass: PlayStyle Incisive Pass
+140789	Chadi Riad	Crystal Palace FC	CB	74	The Destroyer	Build Up			2025-26 552', 2026-27 71', EA FC 27	style: sp 74, lp 68
+177931	George King	Crystal Palace FC	CB	62	The Destroyer					left alone: fewer than 900 minutes and no EA card
+181411	Joél Drakes-Thomas	Crystal Palace FC	RMF	62	Prolific Winger	Hole Player			2025-26 9', EA FC 27	style: ic 28
+116709	Facundo Garcés	Deportivo Alavés	CB*	73	The Destroyer				2025-26 793'	left alone: fewer than 900 minutes and no EA card
+182248	Ville Koski	Deportivo Alavés	CB	68	The Destroyer				2025-26 282', 2026-27 909', EA FC 27	no change: sp 59, lp 48
+142217	Hugo Novoa	Deportivo Alavés	RMF	64	Prolific Winger	Hole Player		Speeding Bullet	2026-27 91', EA FC 27	style: ic 49 | COM Speeding Bullet: PlayStyle Rapid
+58839	José María Giménez	Deportivo La Coruña	CB*	82	The Destroyer	Build Up			2025-26 1178', 2026-27 634', EA FC 27	style: bu90 0.26, sp 75, lp 72
+176242	Otávio	Eintracht Frankfurt	CB	63	The Destroyer				2026-27 6', EA FC 27	no change: sp 64, lp 54
+43613	Timothy Chandler	Eintracht Frankfurt	RB	63	Prolific Winger				2025-26 11', 2026-27 26'	left alone: fewer than 900 minutes and no EA card
+134757	Germán Valera	Elche CF	LMF*	76	Prolific Winger	Box-to-Box	Pinpoint Crossing	Incisive Run; Early Cross	2025-26 2857', 2026-27 905', EA FC 27	style: ic 70, def90 1.49 | Pinpoint Crossing: PlayStyle Whipped Pass | COM Incisive Run: PlayStyle Quick Step | COM Early Cross: PlayStyle Whipped Pass
+117289	Tete Morente	Elche CF	LMF	71	Prolific Winger	Hole Player	Pinpoint Crossing; Heading		2025-26 1788', 2026-27 523', EA FC 27	style: ic 55, def90 1.55, g90 0.04, sh90 1.21 | Pinpoint Crossing: crosses 5.0 per 90 with assists | Heading: PlayStyle Aerial Fortress
+108955	Grady Diangana	Elche CF	RMF*	70	Creative Playmaker	Hole Player			2025-26 926', 2026-27 13', EA FC 27	style: ic 32, g90 0.10, sh90 1.53
+118973	Bambo Diaby	Elche CF	CB	67	The Destroyer				2025-26 102', EA FC 27	no change: sp 62, lp 54
+101781	James Tarkowski	Everton FC	CB*	83	The Destroyer				2025-26 3330', 2026-27 720', EA FC 27	no change: PlayStyle Long Ball Pass, bu90 0.15, sp 66, lp 73
+71013	Noahkai Banks	FC Augsburg	CB	72	The Destroyer				2025-26 1725', 2026-27 360', EA FC 27	no change: bu90 0.19, sp 65, lp 56
+146874	Calvin Brackelmann	FC Augsburg	CB	71	The Destroyer		Heading	Long Ball Expert	2026-27 535', EA FC 27	style: PlayStyle Long Ball Pass, sp 64, lp 67 | Heading: PlayStyle Aerial Fortress | COM Long Ball Expert: PlayStyle Long Ball Pass
+116655	Dayot Upamecano	FC Bayern München	CB*	87	The Destroyer	Build Up			2025-26 1794', 2026-27 675', EA FC 27	style: PlayStyle Pinged Pass, bu90 0.69, sp 79, lp 78
+176197	Lennart Karl	FC Bayern München	RMF	77	Prolific Winger	Hole Player	Long Range Drive; Weighted Pass		2025-26 1281', 2026-27 255', EA FC 27	style: PlayStyle Incisive Pass, ic 34, g90 0.35, sh90 2.87 | Long Range Drive: PlayStyle Finesse Shot | Weighted Pass: PlayStyle Incisive Pass
+178003	Benedikt Wimmer	FC Bayern München	CB	67	The Destroyer					left alone: fewer than 900 minutes and no EA card
+147633	Théo Le Bris	FC Lorient	RMF	74	Prolific Winger	Hole Player			2025-26 1893', 2026-27 274', EA FC 27	style: ic 64, g90 0.08, sh90 0.87
+168146	Nathaniel Adjei	FC Lorient	CB	70	The Destroyer				2025-26 835', 2026-27 704', EA FC 27	no change: sp 63, lp 56
+161444	Panos Katseris	FC Lorient	RMF	70	Prolific Winger	Hole Player			2025-26 747', 2026-27 176', EA FC 27	style: ic 63, g90 0.10, sh90 0.78
+146799	Formose Mendy	FC Lorient	CB*	68	The Destroyer				2025-26 135', EA FC 27	no change: sp 65, lp 56
+181461	Izak Akakpo	FC Lorient	CB	60	The Destroyer					left alone: fewer than 900 minutes and no EA card
+179124	Lucas Leaudais	FC Lorient	CB	60	The Destroyer					left alone: fewer than 900 minutes and no EA card
+179123	Stevan Siba	FC Lorient	CB	60	The Destroyer					left alone: fewer than 900 minutes and no EA card
+134547	Ilario Monterisi	Frosinone Calcio	CB*	70	The Destroyer			Long Ball Expert	2026-27 535', EA FC 27	style: PlayStyle Long Ball Pass, sp 63, lp 52 | COM Long Ball Expert: PlayStyle Long Ball Pass
+158764	Gabriele Calvani	Frosinone Calcio	CB	69	The Destroyer				2026-27 782', EA FC 27	no change: sp 62, lp 55
+172065	Matteo Cichella	Frosinone Calcio	DMF	68	Box-to-Box	Anchor Man			EA FC 27	style: sp 71
+153832	Patrizio Masini	Frosinone Calcio	DMF	68	Box-to-Box	The Destroyer	Acrobatic Clear		2025-26 1413', 2026-27 657', EA FC 27	style: def90 3.97, ic 68, st 69, ag 67 | Acrobatic Clear: PlayStyle Block
+165299	Omar Fayed	Frosinone Calcio	CB	65	The Destroyer				2026-27 28', EA FC 27	no change: sp 57, lp 61
+179202	Wisdom Amey	Frosinone Calcio	CB	61	The Destroyer				2026-27 28', EA FC 27	no change: sp 59, lp 42
+116066	Sander Berge	Fulham FC	DMF*	79	Box-to-Box	Build Up	Fighting Spirit	Long Ball Expert	2025-26 2905', 2026-27 648', EA FC 27	style: PlayStyle Pinged Pass, sp 81, lp 78, kp90 0.64, bu90 0.28, sh90 0.48 | Fighting Spirit: PlayStyle Relentless | COM Long Ball Expert: PlayStyle Pinged Pass
+128740	Leo Østigård	Genoa CFC	CB*	76	The Destroyer				2025-26 2622', 2026-27 875', EA FC 27	no change: bu90 0.20, sp 69, lp 58
+147191	Johan Vásquez	Genoa CFC	CB*	75	The Destroyer				2025-26 3215', 2026-27 788', EA FC 27	no change: PlayStyle Long Ball Pass, bu90 0.17, sp 69, lp 60
+162431	A. Marcandalli	Genoa CFC	CB*	72	The Destroyer				2025-26 2597', 2026-27 756', EA FC 27	no change: bu90 0.14, sp 67, lp 50
+179822	David Puczka	Genoa CFC	LMF	68	Prolific Winger	Box-to-Box			2026-27 141', EA FC 27	style: ic 65
+107722	Dakonam Djené	Getafe CF	CB*	77	The Destroyer				2025-26 2578', 2026-27 801', EA FC 27	no change: bu90 0.09, sp 76, lp 72
+128175	Abdelkabir Abqar	Getafe CF	CB	74	The Destroyer				2025-26 1437', 2026-27 204', EA FC 27	no change: bu90 0.02, sp 69, lp 65
+165733	Sebastián Boselli	Getafe CF	CB*	74	The Destroyer				2025-26 380', 2026-27 249', EA FC 27	no change: sp 68, lp 64
+139768	Saba Sazonov	Getafe CF	CB	73	The Destroyer				2026-27 160', EA FC 27	no change: sp 70, lp 60
+41100	Juanmi	Getafe CF	LMF	71	Prolific Winger	Hole Player			2025-26 179', EA FC 27	style: ic 26
+119133	Albert Sambi Lokonga	Hamburger SV	DMF*	77	Box-to-Box	Build Up			2025-26 1710', 2026-27 430', EA FC 27	style: sp 80, lp 78, kp90 1.31, bu90 0.23, sh90 0.88
+71070	Nicolai Remberg	Hamburger SV	DMF	75	Box-to-Box	Anchor Man	Heading		2025-26 2880', 2026-27 400', EA FC 27	style: sp 72, kp90 0.41, sh90 0.58 | Heading: PlayStyle Aerial Fortress
+71163	Louis Lemke	Hamburger SV	LB	62	Extra Frontman				2025-26 1', 2026-27 323'	left alone: fewer than 900 minutes and no EA card
+71162	Shafiq Nandja	Hamburger SV	CB	59	The Destroyer				2025-26 15', 2026-27 297', EA FC 27	no change: sp 45, lp 38
+128523	Felix Mambimbi	Havre AC	SS*	67	Hole Player	Dummy Runner			2025-26 530', EA FC 27	style: fin 65, vi 58
+175954	Stephan Zagadou	Havre AC	CB	67	The Destroyer				2025-26 495', EA FC 27	no change: sp 59, lp 47
+181456	Yanis Monkolot	Havre AC	CB	60	The Destroyer					left alone: fewer than 900 minutes and no EA card
+122538	Hidemasa Morita	Hull City AFC	DMF	78	Box-to-Box	Build Up	Weighted Pass; Fighting Spirit		2026-27 110', EA FC 27	style: PlayStyle Incisive Pass, sp 80, lp 77 | Weighted Pass: PlayStyle Incisive Pass | Fighting Spirit: PlayStyle Relentless
+159560	Nobel Mendy	Hull City AFC	CB*	75	The Destroyer				2025-26 1797', 2026-27 429', EA FC 27	no change: bu90 0.17, sp 67, lp 58
+142784	Sorba Thomas	Hull City AFC	RMF	75	Prolific Winger	Hole Player	Cut Behind & Turn	Mazing Run	2026-27 273', EA FC 27	style: ic 45 | Cut Behind & Turn: PlayStyle Technical | COM Mazing Run: PlayStyle Technical
+115236	Regan Slater	Hull City AFC	DMF*	72	Box-to-Box	Anchor Man			2026-27 764', EA FC 27	style: def90 1.65, sp 73
+104682	Semi Ajayi	Hull City AFC	CB*	70	The Destroyer				2026-27 783', EA FC 27	no change: sp 61, lp 61
+107686	Federico Dimarco	Internazionale Milano	LMF*	86	Offensive Full-back	Box-to-Box		Speeding Bullet	2025-26 2698', 2026-27 569', EA FC 27	style: ic 83, def90 1.42 | COM Speeding Bullet: PlayStyle Rapid
+169227	Leonardo Bovio	Internazionale Milano	CB	64	The Destroyer					left alone: fewer than 900 minutes and no EA card
+117999	Dara O'shea	Ipswich Town FC	CB*	75	The Destroyer			Long Ball Expert	2026-27 810', EA FC 27	style: PlayStyle Long Ball Pass, sp 67, lp 66 | COM Long Ball Expert: PlayStyle Long Ball Pass
+121553	Cédric Kipré	Ipswich Town FC	CB	74	The Destroyer				EA FC 27	no change: sp 61, lp 54
+153087	Abdoul Ouattara	Ipswich Town FC	RMF	73	Creative Playmaker	Hole Player	Track Back		2025-26 1768', 2026-27 495', EA FC 27	style: ic 46, def90 2.55, g90 0.12, sh90 1.23 | Track Back: tackles + interceptions 2.5 per 90
+60893	Chuba Akpom	Ipswich Town FC	SS	71	Hole Player	Dummy Runner			2026-27 119', EA FC 27	style: fin 71, vi 60
+151778	Kasey McAteer	Ipswich Town FC	RMF	71	Prolific Winger	Hole Player			2026-27 45', EA FC 27	style: ic 43
+118316	Teun Koopmeiners	Juventus FC	DMF	78	Box-to-Box	Build Up			2025-26 1827', 2026-27 335', EA FC 27	style: sp 84, lp 85, kp90 0.80, bu90 0.34, sh90 1.46
+153099	Alexsandro	LOSC Lille	CB*	78	The Destroyer	Build Up			2025-26 509', 2026-27 720', EA FC 27	style: sp 75, lp 72
+155475	Basar Önal	LOSC Lille	LMF	74	Prolific Winger	Hole Player			2026-27 209', EA FC 27	style: ic 18
+181485	Stephane Noumbissie	LOSC Lille	CB	60	The Destroyer					left alone: fewer than 900 minutes and no EA card
+109536	Samuel Yohou	Le Mans FC	CB*	70	The Destroyer				2026-27 556', EA FC 27	no change: sp 60, lp 58
+162327	Lucas Bretelle	Le Mans FC	DMF	64	Box-to-Box	The Destroyer			2026-27 582', EA FC 27	style: def90 4.33, ic 62, st 64, ag 81
+125394	Jaka Bijol	Leeds United FC	CB	77	The Destroyer	Build Up			2025-26 1890', 2026-27 260', EA FC 27	style: PlayStyle Long Ball Pass, bu90 0.21, sp 75, lp 74
+182531	Rhys Chadwick	Leeds United FC	DMF	60	Box-to-Box	Anchor Man			EA FC 27	style: sp 63
+180259	Huseini Nakoha	Levante UD	CB	60	The Destroyer					left alone: fewer than 900 minutes and no EA card
+132544	Ronald Araújo	Liverpool FC	CB	80	The Destroyer	Build Up	Heading; Man Marking		2025-26 1071', 2026-27 575', EA FC 27	style: bu90 0.47, sp 75, lp 66 | Heading: PlayStyle Aerial Fortress | Man Marking: PlayStyle Jockey
+162622	Giovanni Leoni	Liverpool FC	CB	71	The Destroyer				EA FC 27	no change: sp 65, lp 60
+164703	James McConnell	Liverpool FC	DMF	68	Box-to-Box	Anchor Man			EA FC 27	style: sp 75
+180303	Wellity Lucky	Liverpool FC	CB	66	The Destroyer					left alone: fewer than 900 minutes and no EA card
+140816	Elliot Anderson	Manchester City FC	DMF*	84	Box-to-Box	The Destroyer	Malicia; Heading; Acrobatic Clear; Fighting Spirit; Cut Behind & Turn	Mazing Run	2025-26 3331', 2026-27 697', EA FC 27	style: def90 3.23, ic 82, st 84, ag 86 | Malicia: fouled 3.6 times per 90 | Heading: PlayStyle Aerial Fortress | Acrobatic Clear: PlayStyle Block | Fighting Spirit: PlayStyle Relentless | Cut Behind & Turn: PlayStyle Technical | COM Mazing Run: PlayStyle Technical
+164876	Abdukodir Khusanov	Manchester City FC	CB	82	The Destroyer	Build Up			2025-26 1432', 2026-27 462', EA FC 27	style: bu90 0.45, sp 75, lp 70
+158740	Kobbie Mainoo	Manchester United	DMF*	81	Box-to-Box	Build Up			2025-26 1662', 2026-27 478', EA FC 27	style: sp 82, lp 78, kp90 1.22, bu90 0.54, sh90 0.80
+153467	Carlos Baleba	Manchester United	DMF	80	Box-to-Box	The Destroyer	Cut Behind & Turn		2025-26 1652', 2026-27 233', EA FC 27	style: ic 82, st 81, ag 80 | Cut Behind & Turn: PlayStyle Technical
+125984	Jens Cajuste	Málaga CF	DMF*	73	Box-to-Box	Anchor Man	Weighted Pass		2026-27 20', EA FC 27	style: PlayStyle Pinged Pass, sp 73 | Weighted Pass: PlayStyle Pinged Pass
+100057	Einar Galilea	Málaga CF	CB	69	The Destroyer				2026-27 647', EA FC 27	no change: sp 53, lp 45
+118361	Juan Berrocal	Málaga CF	CB*	69	The Destroyer		Heading		2026-27 106', EA FC 27	style: sp 65, lp 58 | Heading: PlayStyle Aerial Fortress
+61177	Dan Burn	Newcastle United FC	CB	79	The Destroyer	Build Up	Long Throw		2025-26 2199', 2026-27 92', EA FC 27	style: bu90 0.20, sp 75, lp 68 | Long Throw: PlayStyle Long Throw
+112583	Nikola Milenković	Nottingham Forest FC	CB*	80	The Destroyer				2025-26 3375', 2026-27 450', EA FC 27	no change: bu90 0.21, sp 70, lp 66
+117644	Jonathan Clauss	OGC Nice	RMF*	77	Offensive Full-back	Box-to-Box	Long Throw		2025-26 2530', 2026-27 742', EA FC 27	style: ic 71, def90 1.58 | Long Throw: PlayStyle Long Throw
+59840	Laurent Abergel	OGC Nice	DMF*	76	Box-to-Box	Build Up		Long Ball Expert	2025-26 2318', EA FC 27	style: PlayStyle Incisive Pass, Long Ball Pass, sp 81, lp 79, kp90 0.58, bu90 0.26, sh90 0.85 | COM Long Ball Expert: PlayStyle Long Ball Pass
+126566	Sofiane Diop	OGC Nice	LMF*	76	Creative Playmaker	Hole Player	Long Range Drive; Weighted Pass		2025-26 2130', 2026-27 373', EA FC 27	style: PlayStyle Incisive Pass, ic 56, g90 0.25, sh90 2.12 | Long Range Drive: PlayStyle Finesse Shot | Weighted Pass: PlayStyle Incisive Pass
+173904	Everton Pereira	OGC Nice	DMF	64	Box-to-Box	Anchor Man			2025-26 135', 2026-27 113', EA FC 27	style: sp 68
+148012	Cj Egan-Riley	Olympique de Marseille	RB*	75	Extra Frontman	Defensive Full-back			2025-26 624', 2026-27 794', EA FC 27	style: PlayStyle Long Ball Pass, crs90 0.11, cr 54
+180388	Rayan Ouro Bang Na	Olympique de Marseille	CB	59	The Destroyer					left alone: fewer than 900 minutes and no EA card
+151772	Diego Coppola	Paris FC	CB*	75	The Destroyer				2025-26 1364', 2026-27 810', EA FC 27	no change: bu90 0.21, sp 71, lp 64
+140739	Otávio	Paris FC	CB	73	The Destroyer	Build Up			2025-26 1901', 2026-27 389', EA FC 27	style: bu90 0.27, sp 68, lp 66
+152458	Willian Pacho	Paris Saint-Germain	CB*	89	The Destroyer	Build Up			2025-26 1914', 2026-27 540', EA FC 27	style: bu90 0.62, sp 79, lp 69
+108239	Fabián Ruiz	Paris Saint-Germain	DMF*	86	Box-to-Box	Build Up			2025-26 1131', 2026-27 416', EA FC 27	style: PlayStyle Tiki Taka, sp 88
+148172	Maghnes Akliouche	Paris Saint-Germain	RMF	81	Creative Playmaker	Hole Player	Track Back		2025-26 2400', 2026-27 549', EA FC 27	style: ic 48, def90 2.30, g90 0.21, sh90 1.77 | Track Back: tackles + interceptions 2.3 per 90
+120922	Pontus Almqvist	Parma Calcio 1913	AMF*	71	Prolific Winger	Hole Player			2025-26 457', 2026-27 96', EA FC 27	style: vi 60, sp 66, fin 72
+126623	Lautaro Valenti	Parma Calcio 1913	CB*	69	The Destroyer		Long Throw		2025-26 2252', 2026-27 45', EA FC 27	style: bu90 0.17, sp 63, lp 56 | Long Throw: PlayStyle Long Throw
+181916	Dominik Drobnič	Parma Calcio 1913	CB	60	The Destroyer				2026-27 405'	left alone: fewer than 900 minutes and no EA card
+180476	Bernardo Conde	Parma Calcio 1913	CB	57	The Destroyer					left alone: fewer than 900 minutes and no EA card
+116649	Willi Orban	RB Leipzig	CB*	83	The Destroyer	Build Up	Acrobatic Clear		2025-26 2949', 2026-27 720', EA FC 27	style: bu90 0.48, sp 74, lp 68 | Acrobatic Clear: PlayStyle Block
+145746	Sebastián Cáceres	RC Celta de Vigo	CB	75	The Destroyer		Man Marking		2026-27 316', EA FC 27	style: sp 67, lp 61 | Man Marking: PlayStyle Jockey
+158576	Ismaëlo Ganiou	RC Lens	CB	77	The Destroyer				2025-26 2014', 2026-27 438', EA FC 27	no change: sp 69, lp 54
+107604	Florian Sotoca	RC Lens	SS	74	Hole Player	Creative Playmaker			2025-26 507', 2026-27 326', EA FC 27	style: fin 75, vi 77
+175424	Nidal Čelik	RC Lens	CB	71	The Destroyer				2025-26 616', EA FC 27	no change: sp 64, lp 51
+173064	Kyllian Antonio	RC Lens	CB	69	The Destroyer				2025-26 190', 2026-27 509', EA FC 27	no change: sp 63, lp 52
+175904	Souleymane Sagnan	RC Lens	CB	66	The Destroyer				2026-27 246', EA FC 27	no change: sp 59, lp 53
+139965	Ismaël Doukouré	RC Strasbourg Alsace	CB*	77	The Destroyer	Build Up			2025-26 2072', 2026-27 314', EA FC 27	style: bu90 0.34, sp 77, lp 72
+143939	Dário Essugo	RC Strasbourg Alsace	DMF*	75	Box-to-Box	Anchor Man			2025-26 30', 2026-27 381', EA FC 27	style: sp 74
+172362	Sebastian Nanasi	RC Strasbourg Alsace	LMF	75	Creative Playmaker	Hole Player			2025-26 1050', 2026-27 408', EA FC 27	style: ic 32, g90 0.43, sh90 1.67
+167228	Oso	RC Strasbourg Alsace	LMF	73	Prolific Winger	Box-to-Box	Pinpoint Crossing		2025-26 1408', 2026-27 784', EA FC 27	style: ic 69, def90 2.30 | Pinpoint Crossing: PlayStyle Whipped Pass
+169946	Jeyland Mitchell	RC Strasbourg Alsace	CB	70	The Destroyer				2026-27 640', EA FC 27	no change: sp 53, lp 46
+118191	Unai Núñez	RCD Espanyol	CB*	75	The Destroyer		Heading		2025-26 2176', 2026-27 449', EA FC 27	style: bu90 0.21, sp 72, lp 60 | Heading: PlayStyle Aerial Fortress
+131612	Jofre Carreras	RCD Espanyol	RMF	73	Prolific Winger	Hole Player			2025-26 930', 2026-27 21', EA FC 27	style: ic 41, g90 0.09, sh90 2.37
+182841	Adama Timera	RCD Espanyol	CB	58	The Destroyer					left alone: fewer than 900 minutes and no EA card
+116844	Jorge De Frutos	Rayo Vallecano de Madrid	RMF	81	Prolific Winger	Hole Player			2025-26 2463', 2026-27 569', EA FC 27	style: ic 44, def90 1.11, g90 0.33, sh90 1.99
+111928	Isi Palazón	Rayo Vallecano de Madrid	SS	80	Hole Player	Creative Playmaker		Speeding Bullet	2025-26 2248', 2026-27 198', EA FC 27	style: kp90 1.53, xa90 0.17 | COM Speeding Bullet: PlayStyle Rapid
+131334	Rodrigo Riquelme	Real Betis Balompié	LMF	76	Prolific Winger	Hole Player	Cut Behind & Turn		2025-26 821', 2026-27 466', EA FC 27	style: ic 52, def90 1.74, g90 0.21, sh90 2.38 | Cut Behind & Turn: PlayStyle Technical
+104677	Antonio Rüdiger	Real Madrid CF	CB*	83	The Destroyer	Build Up	Acrobatic Clear		2025-26 1490', 2026-27 307', EA FC 27	style: PlayStyle Long Ball Pass, bu90 0.28, sp 81, lp 79 | Acrobatic Clear: PlayStyle Block
+172354	Maguette Gueye	Real Racing Club de Santander	DMF	69	Box-to-Box	Anchor Man			2026-27 159', EA FC 27	style: sp 69
+160932	Pedro Felipe	Real Racing Club de Santander	CB	69	The Destroyer				2025-26 129', 2026-27 145', EA FC 27	no change: sp 68, lp 61
+127604	Ander Barrenetxea	Real Sociedad de Fútbol	LMF	79	Prolific Winger	Hole Player		Speeding Bullet	2025-26 1763', 2026-27 551', EA FC 27	style: ic 38, def90 0.82, g90 0.19, sh90 1.83 | COM Speeding Bullet: PlayStyle Rapid
+119131	Sergio Gómez	Real Sociedad de Fútbol	LMF	78	Prolific Winger	Box-to-Box	Pinpoint Crossing; Long Throw		2025-26 2701', 2026-27 879', EA FC 27	style: ic 75, def90 1.95 | Pinpoint Crossing: crosses 4.6 per 90 with assists | Long Throw: PlayStyle Long Throw
+76119	Ricardo Bordon	S.S. Lazio	CB	64	The Destroyer					left alone: fewer than 900 minutes and no EA card
+118105	Jan-Niklas Beste	SC Freiburg	LMF	77	Offensive Full-back	Hole Player	Long Range Drive		2025-26 1704', 2026-27 558', EA FC 27	style: ic 64, def90 1.13, g90 0.08, sh90 1.27 | Long Range Drive: PlayStyle Finesse Shot
+70976	Max Rosenfelder	SC Freiburg	CB	73	The Destroyer				2025-26 492', 2026-27 51', EA FC 27	no change: sp 68, lp 61
+115098	A. Buongiorno	SSC Napoli	CB*	81	The Destroyer	Build Up	Heading		2025-26 2521', EA FC 27	style: bu90 0.28, sp 74, lp 70 | Heading: PlayStyle Aerial Fortress
+157489	Costantino Favasuli	SSC Napoli	LMF	69	Prolific Winger	Box-to-Box			2026-27 63', EA FC 27	style: ic 68
+164998	Luca Marianucci	SSC Napoli	CB	68	The Destroyer				2025-26 694', 2026-27 119', EA FC 27	no change: sp 65, lp 61
+122748	Senne Lynen	SV Werder Bremen	DMF*	77	Box-to-Box	Anchor Man			2025-26 2752', 2026-27 63', EA FC 27	style: sp 75, kp90 0.46, sh90 0.80
+142094	Amos Pieper	SV Werder Bremen	CB	76	The Destroyer		Heading; Acrobatic Clear		2025-26 1502', 2026-27 636', EA FC 27	style: bu90 0.13, sp 66, lp 65 | Heading: PlayStyle Aerial Fortress | Acrobatic Clear: PlayStyle Block
+70727	Eren Dinkçi	SV Werder Bremen	RWF*	73	Dummy Runner	Prolific Winger			2025-26 1379', 2026-27 457'	style: kp90 0.64, sp 70, vi 70, crs90 0.79
+71048	Keke Topp	SV Werder Bremen	CF	68	Prolific Winger	Target Man			2025-26 638', EA FC 27	style: height 192
+71111	Mick Schmetgens	SV Werder Bremen	CB	59	The Destroyer				2025-26 37', 2026-27 198', EA FC 27	no change: sp 44, lp 42
+138465	Arouna Sangante	Sevilla FC	CB*	74	The Destroyer				2025-26 2324', 2026-27 279', EA FC 27	no change: bu90 0.18, sp 67, lp 60
+104860	Fábio Cardoso	Sevilla FC	CB	73	The Destroyer	Build Up			2025-26 295', EA FC 27	style: sp 71, lp 67
+123147	P. Frankowski	Stade Rennais FC	RMF	76	Prolific Winger	Box-to-Box	Long Throw; Pinpoint Crossing	Incisive Run	2025-26 1210', 2026-27 592', EA FC 27	style: ic 73, def90 3.04 | Long Throw: PlayStyle Long Throw | Pinpoint Crossing: PlayStyle Whipped Pass | COM Incisive Run: PlayStyle Quick Step
+114379	Arnaud Nordin	Stade Rennais FC	RMF	73	Prolific Winger	Hole Player			2025-26 1039', 2026-27 94', EA FC 27	style: ic 34, g90 0.08, sh90 2.94
+133108	Kevin Danso	Sunderland ΑFC	CB*	79	The Destroyer				2025-26 1494', 2026-27 376', EA FC 27	no change: bu90 0.10, sp 69, lp 62
+101054	Luke O'nien	Sunderland ΑFC	CB	73	The Destroyer			Long Ball Expert	2025-26 569', 2026-27 278', EA FC 27	style: PlayStyle Long Ball Pass, sp 69, lp 68 | COM Long Ball Expert: PlayStyle Long Ball Pass
+156998	Nilson Angulo	Sunderland ΑFC	LWF*	73	Hole Player	Prolific Winger	Track Back		2025-26 404', 2026-27 519', EA FC 27	style: sp 69, vi 71, crs90 1.56 | Track Back: tackles + interceptions 2.6 per 90
+137715	Aji Alese	Sunderland ΑFC	CB	66	The Destroyer				EA FC 27	no change: sp 61, lp 51
+104749	Andrej Kramarić	TSG 1899 Hoffenheim	CMF*	81	Goal Poacher	Hole Player	Weighted Pass		2025-26 2207', 2026-27 195', EA FC 27	style: PlayStyle Incisive Pass, g90 0.34, xg90 0.37 | Weighted Pass: PlayStyle Incisive Pass
+179717	Sean Dulic	TSG 1899 Hoffenheim	CB	66	The Destroyer				EA FC 27	no change: sp 59, lp 52
+62008	Rolando Mandragora	Torino FC	DMF*	77	Box-to-Box	Build Up	Long Range Drive		2025-26 2421', 2026-27 501', EA FC 27	style: sp 80, lp 76, kp90 1.28, bu90 0.22, sh90 2.28 | Long Range Drive: PlayStyle Finesse Shot
+130461	Ardian Ismajli	Torino FC	CB*	75	The Destroyer				2025-26 1906', 2026-27 660', EA FC 27	no change: bu90 0.13, sp 64, lp 61
+165287	Pietro Comuzzo	Torino FC	CB	75	The Destroyer				2025-26 1696', 2026-27 783', EA FC 27	no change: bu90 0.31, sp 67, lp 51
+151830	Archie Gray	Tottenham Hotspur FC	CMF*	77	Anchor Man	Box-to-Box			2025-26 1478', 2026-27 623', EA FC 27	style: def90 2.60, g90 0.13, kp90 0.48
+178417	Seny Koumbassa	Toulouse FC	CB	70	The Destroyer				2025-26 444', 2026-27 291', EA FC 27	no change: sp 71, lp 52
+157122	Nicolas Wasbauer	Toulouse FC	CB	62	The Destroyer					left alone: fewer than 900 minutes and no EA card
+178416	Gaetan Bakhouche	Toulouse FC	CB	59	The Destroyer				EA FC 27	no change: sp 59, lp 40
+161915	Kialonda Gaspar	US Lecce	CB*	72	The Destroyer				2025-26 1830', 2026-27 514', EA FC 27	no change: bu90 0.13, sp 57, lp 44
+168332	Tiago Gabriel	US Lecce	CB*	69	The Destroyer				2025-26 3219', 2026-27 661', EA FC 27	no change: bu90 0.07, sp 61, lp 42
+179819	Sebastian Esposito	US Lecce	CB	62	The Destroyer				EA FC 27	no change: sp 57, lp 43
+130801	Fali Candé	US Sassuolo Calcio	CB	71	The Destroyer		Long Throw		2025-26 509', 2026-27 118', EA FC 27	style: sp 65, lp 57 | Long Throw: PlayStyle Long Throw
+113334	Christian Kabasele	Udinese Calcio	CB	73	The Destroyer		Acrobatic Clear		2025-26 2247', 2026-27 483', EA FC 27	style: bu90 0.09, sp 64, lp 58 | Acrobatic Clear: PlayStyle Block
+145610	Nicolò Bertola	Udinese Calcio	CB	72	The Destroyer				2025-26 1763', 2026-27 148', EA FC 27	no change: bu90 0.15, sp 62, lp 52
+103041	Luis Rioja	Valencia CF	LMF	77	Prolific Winger	Hole Player	Pinpoint Crossing		2025-26 2624', 2026-27 321', EA FC 27	style: ic 58, g90 0.12, sh90 1.47 | Pinpoint Crossing: PlayStyle Whipped Pass
+107985	Mouctar Diakhaby	Valencia CF	CB	76	The Destroyer				2025-26 543', 2026-27 334', EA FC 27	no change: sp 71, lp 58
+150844	César Tárrega	Valencia CF	CB*	75	The Destroyer	Build Up			2025-26 2598', 2026-27 600', EA FC 27	style: bu90 0.23, sp 73, lp 68
+138243	José Copete	Valencia CF	CB	74	The Destroyer				2025-26 1759', EA FC 27	no change: bu90 0.23, sp 73, lp 65
+112214	Aliou Dieng	Valencia CF	DMF	73	Box-to-Box	Anchor Man			2026-27 236', EA FC 27	style: sp 72
+42429	Juan Jesus	Venezia FC	CB*	74	The Destroyer	Build Up			2025-26 1675', 2026-27 562'	style: bu90 0.34, sp 67, lp 69
+127543	Thierry Correia	Venezia FC	RMF*	74	Defensive Full-back	Box-to-Box		Incisive Run	2025-26 1392', 2026-27 192', EA FC 27	style: ic 70 | COM Incisive Run: PlayStyle Quick Step
+133353	John Yeboah	Venezia FC	SS	73	Hole Player	Dummy Runner			2026-27 680', EA FC 27	style: fin 74, vi 61
+157131	Joël Schingtienne	Venezia FC	CB	70	The Destroyer				2026-27 477', EA FC 27	no change: sp 66, lp 57
+46941	Ridgeciano Haps	Venezia FC	LMF*	69	Offensive Full-back	Box-to-Box			2026-27 411', EA FC 27	style: ic 65
+180317	Ale Gomes	Venezia FC	CB	65	The Destroyer				EA FC 27	no change: sp 66, lp 72
+117840	Julian Chabot	VfB Stuttgart	CB	81	The Destroyer	Build Up	Heading	Long Ball Expert	2025-26 2294', 2026-27 595', EA FC 27	style: PlayStyle Long Ball Pass, bu90 0.42, sp 68, lp 70 | Heading: PlayStyle Aerial Fortress | COM Long Ball Expert: PlayStyle Long Ball Pass
+71092	Finn Jeltsch	VfB Stuttgart	CB	75	The Destroyer	Build Up			2025-26 1511', 2026-27 584', EA FC 27	style: bu90 0.31, sp 72, lp 68
+70899	Justin Diehl	VfB Stuttgart	LWF	66	Classic No. 10	Prolific Winger		Speeding Bullet; Incisive Run	EA FC 27	style: sp 59, vi 59 | COM Speeding Bullet: PlayStyle Quick Step | COM Incisive Run: PlayStyle Quick Step
+71045	David Preu	VfB Stuttgart	LB	62	Prolific Winger	Defensive Full-back			EA FC 27	style: cr 62
+152261	Zento Uno	VfL Borussia M’gladbach	DMF	71	Box-to-Box	Anchor Man			2026-27 281', EA FC 27	style: sp 72
+70877	Fabio Chiarodia	VfL Borussia M’gladbach	CB	70	Offensive Full-back				2025-26 674', 2026-27 253', EA FC 27	no change: sp 61, lp 54
+153210	Renato Veiga	Villarreal CF	CB*	78	The Destroyer	Build Up			2025-26 2481', 2026-27 900', EA FC 27	style: bu90 0.42, sp 78, lp 75
