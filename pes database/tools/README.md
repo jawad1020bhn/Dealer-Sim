@@ -55,3 +55,7 @@ Files:
   `python3 task18.py <in data.dat> <out data.dat> <fl/data.dat>`; ends with a self-check of the written file.
 - `task19.py` — registered positions set by hand (table `NAMED`: Gnabry and Karl of Bayern to RMF); the overall stays.
   Run it on the output of `task18.py`: `python3 task19.py <in data.dat> <out data.dat>`; ends with a self-check.
+- `task20.py` — 15 free agents go back to the club they last belonged to (table `NAMED`): Real Zaragoza, Bari, Spezia,
+  Amiens and AVS, clubs that Football Life 27 and EA FC 27 no longer carry. Evidence: FC 26 and the Transfermarkt
+  profiles of `salimt/football-datasets` (both September 2025), no other club in either 2026/27 source.
+  Run it on the output of `task19.py`: `python3 task20.py <in data.dat> <out data.dat>`; ends with a self-check.
