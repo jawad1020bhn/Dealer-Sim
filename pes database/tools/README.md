@@ -68,3 +68,10 @@ Files:
   Classic No. 10, the style PES 2017 switches on there. Prints the comparison with Football Life 27 and the styles
   that still have no effect. Later tasks must call `fldb.to17(q, fixed=True)`.
   Run it on the output of `task21.py`: `python3 task22.py <in data.dat> <out data.dat>`; ends with a self-check.
+- `task23.py` — playing styles, skills and COM styles from real matches of 2025-26 and 2026-27, for the 264 club
+  players of the five leagues whose style PES 2017 never switches on where they play. It applies `task23.tsv` (one row
+  per player with the figures that decided): 136 new styles, 89 skills and 28 COM styles on 155 players; nothing is
+  removed. `task23_research.py <task22 data.dat> <out tsv>` wrote the table and holds the rules; it needs, under
+  `$PES_WORK/src`, `lucianomurr/asta-fantacalcio` (FBref and Understat 2025-26), `turkensar/optiscout-football-dss`
+  (FBref 2026-27) and `mouhbnms/football-player-scouting` (EA FC 27 PlayStyles).
+  Run it on the output of `task22.py`: `python3 task23.py <in data.dat> <out data.dat>`; ends with a self-check.
