@@ -81,3 +81,24 @@ Files:
   five leagues, 18 below); name and nationality are written into the club's manager record. A club without a head
   coach keeps the last one (Manchester United, Crystal Palace, Lens).
   Run it on the output of `task23.py`: `python3 task24.py <in data.dat> <out data.dat>`; ends with a self-check.
+- Tasks 25 to 28 take what is worth taking from `EDIT00000000 (another save i found online)`, for the five leagues.
+  That save was built on our first upload, so it was compared with that upload (commit `9968a9c`), not with the
+  current file. Each item is kept only where a 2026/27 source confirms it; `fotmob.py` reads the FotMob first-team
+  squads of 12 November 2026 (numbers, positions played) from `src/xr-football` (Savowai/xr-football, commit `13dbadf`)
+  and matches them to the squads of the file. Not taken: ratings, ages, managers, line-ups, playing styles, stadium
+  names, form (older than ours or not verifiable).
+- `task25.py` — shirt numbers: every squad member found in his club's FotMob list gets the number of the list (115
+  numbers at 43 clubs, Real Madrid's eleven checked against the club's official list); a team-mate outside the list who
+  wore that number moves to the lowest free one from 30 up.
+  Run it on the output of `task24.py`: `python3 task25.py <in data.dat> <out data.dat>`; ends with a self-check.
+- `task26.py` — positions (tables `REG`, `PLAY`): 19 reserves get the registered position they play in 2026/27
+  (FotMob and the EA FC 27 card agree; overall kept as in task 19), 10 players get extra playable positions.
+  Starters are not moved.
+  Run it on the output of `task25.py`: `python3 task26.py <in data.dat> <out data.dat>`; ends with a self-check.
+- `task27.py` — skills (table `SKILLS`): of the 196 skills the other save adds, the 23 that pass the rules of
+  `task23_research.py` (19 players); none is removed. Goal celebrations of Mbappé and Vinícius Júnior (`CELEB`).
+  Run it on the output of `task26.py`: `python3 task27.py <in data.dat> <out data.dat>`; ends with a self-check.
+- `task28.py` — squads (table `NAMED`): 13 free agents that the other save and FotMob both have at a club of the five
+  leagues join it as reserves; in a full squad the weakest reserve outside the FotMob list is released (9). Kendry
+  Páez, left without a club by mistake, joins River Plate (on loan for 2026).
+  Run it on the output of `task27.py`: `python3 task28.py <in data.dat> <out data.dat>`; ends with a self-check.
