@@ -2,7 +2,7 @@
 
 Read from the decompiled C (`output/`) and from the machine code. "Run" below means: the
 game's own function was executed on real inputs in a CPU emulator (`tools/emu.py`), not in
-the game. `tools/check_findings.py` repeats every such run (checks 1 to 6; checks 7 to 9
+the game. `tools/check_findings.py` repeats every such run (checks 1 to 6; checks 7 to 11
 belong to `MASTER_LEAGUE.md`, which covers Master League).
 Nothing here was tried in the real game.
 

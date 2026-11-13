@@ -8,8 +8,8 @@ Ghidra decompiler plugin (`rea execute-rizin-command`, set-up in `../../rea-setu
 Every function that could be found is decompiled to C with machine names
 (`fcn_038e77af`). Three parts are understood so far and written up in **`NOTES.md`**:
 the save file, how the edit data is loaded, and the overall rating. What was found
-about Master League (year plan, salary, transfer fee, negotiations, squad planning of
-the computer clubs) is in **`MASTER_LEAGUE.md`**. The 105 functions
+about Master League (year plan, league fixtures, salary, transfer fee, negotiations,
+transfers of the computer clubs) is in **`MASTER_LEAGUE.md`**. The 127 functions
 behind them have working names in `names.tsv`.
 
 ## Look something up
@@ -55,9 +55,11 @@ They need `pip install unicorn capstone` and the exe (`rea-setup.sh` puts it in
 | `fields.py <exe>` | where each field of a player, team and manager record sits → `output/edit_fields.tsv` |
 | `emu.py` | runs single functions of the exe on chosen inputs (CPU emulator, no Windows); `Game.replace` answers a game function from Python |
 | `x86dis.py <exe> <address> <bytes>` | disassembly, for code the C output lacks |
-| `check_findings.py <exe> <save>` | self-check of `NOTES.md` and `MASTER_LEAGUE.md`: nine checks that run the game's code against the Python (one and a half minutes) |
+| `check_findings.py <exe> <save>` | self-check of `NOTES.md` and `MASTER_LEAGUE.md`: eleven checks that run the game's code against the Python (one and a half minutes) |
 | `money.py` | Master League salary and transfer fee in Python (checks 7, 8) |
 | `yearplan.py <exe> [july\|january]` | the Master League year: which event falls on which day (check 9) |
+| `fixtures.py <teams>` | the rounds of a home-and-away league as the game pairs them (check 10) |
+| `clubai.py` | overall window of the players a computer club looks for, by club level (check 11) |
 | `rtti.py <exe>` | class names and their function tables from the exe's type records → `output/classes.tsv.xz` (9,814 tables of 6,932 classes) |
 
 ## What the file looks like
@@ -133,8 +135,8 @@ read back from the exe; the import slots match the file.
 
 ## Not done
 
-- 105 functions are named (`names.tsv`); the rest is not understood. Of Master League
-  three pieces are proven and most rules are only located (`MASTER_LEAGUE.md`, section 14). Of the edit data, the
+- 127 functions are named (`names.tsv`); the rest is not understood. Of Master League
+  five pieces are proven and many rules are only located (`MASTER_LEAGUE.md`, section 14). Of the edit data, the
   player, team and manager fields are mapped; five blocks are not read (`NOTES.md`).
 - Virtual calls are not resolved, so `calls.tsv.xz` misses every call through a vtable.
 - The 17 skipped functions include `0x02e8c729`, which is called from 237 places.

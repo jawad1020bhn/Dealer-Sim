@@ -94,14 +94,35 @@ address	name	topic	note
 0x03652198	scout_step	master league	day end: rand(1000) < 30 / slots in use -> scout_search; read
 0x0364f2ca	scout_search	master league	1,381 lines; not read
 0x036602e5	club_squad_plan	master league	event 30: marks surplus players of up to 5 clubs per call, fills the plan record; read
-0x0389440a	squad_needs	master league	list of player / position entries for a club; not read
+0x0389440a	squad_needs	master league	(club, out list, flag): entries of player and position for the formation of a club; read in part
 0x03888d9e	squad_size	master league	count used by club_squad_plan (surplus = this - 23)
 0x03889a55	window_last_day	master league	(&date): true on 31 January and 31 August
 0x0389734b	move_players	master league	only writer found of a squad count with the squad list; not read
-0x0389840a	complete_transfer	master league	11 callers; not read
+0x0389840a	complete_transfer	master league	(player, new club, &type): news and messages, then one of five functions; fcn_038913b5 for two computer clubs; read
 0x03865b0a	team_strength_of	master league	(&club, &kind): one value per player, then team_strength
 0x04067cfa	team_strength	master league	sorts 32 values, mean of the best 11; kind 6: limited to 40..99
 0x038ba942	role_effects	master league	(role, out): the up to 3 effects of a role from table 0x0216f85c
 0x038bb0f0	role_multiplier	master league	(club) -> factor from the roles; read
 0x03640d19	money_step	master league	day begin, events 3, 23, 25, 49; 1,280 lines; not read
-0x037741b4	league_creation_pick	master league	process::LeagueCreation: picks one of four functions by competition id
+0x037741b4	league_creation_pick	master league	process::LeagueCreation, second function: after the circle method, fixed tables for some ids and for four teams, else fcn_03774035 (every 3rd and 7th round changes halves); proven (check 10)
+0x0377111e	make_fixtures	master league	(competition id): picks the creator by competition +0x5c (1 league, 3, 4); reached from the day end; read
+0x03774725	league_fixtures	master league	process::LeagueCreation (competition id, turn): circle method table, then writes the match records; proven for two legs (check 10)
+0x03774035	league_change_sides	master league	every 3rd and 7th round changes place with its return match; four teams: fixed table; proven with league_fixtures
+0x03773791	league_table_of_four	master league	fixed table of rounds for four teams; proven with league_fixtures
+0x03773b11	league_swap_rounds	master league	(&round a, &round b): swaps two round numbers in the whole table
+0x03773ec7	league_turn_sides	master league	first and second team change in every match of the table; proven with league_fixtures
+0x0365fb7d	plan_setup	master league	career creation: one plan record per computer club (level, kind, wait counter), first marks 29 / 30; read
+0x03661f6b	ai_transfer_step	master league	day begin: wait counters, squad counts, plan, pool, choosing (stored date, events 1 and 30); closing on events 3, 6; read
+0x0365cda9	ai_squad_counts	master league	per club: squad size minus players promised away; read
+0x03661380	ai_pool	master league	sorts the players that may be bought into two sets of 60 lists by overall; read
+0x03661b15	ai_fill_slots	master league	at most 5 clubs per call; fills empty slots while squad + open slots < 32; read
+0x03660c52	ai_pick_candidate	master league	picks one of up to three candidates: marked, status 2, long at the club, status 1, other; read
+0x0365f5c2	ai_candidates	master league	first three players of the pool that pass age, position, club and league tests; read
+0x0365d08d	ai_max_overall	master league	(&level) -> highest overall a club of that level looks for; proven (check 11)
+0x0365d12d	ai_min_overall	master league	(&level) -> lowest overall a club of that level looks for; proven (check 11)
+0x0365d9ca	ai_close_slots	master league	(&all clubs): gives up or closes the slots of the plan records while a window is open; read (disassembly)
+0x0365d4a9	ai_close_deal	master league	(slot, record): deal type 1, 2, 5, 6 or 11, then complete_transfer; read
+0x038913b5	do_transfer	master league	(player, new club, &type): fee, salary, years; moves the player between two squads; kinds transfer, loan, release, loan return; read in part
+0x03888145	ai_may_be_bought	master league	(player) -> may enter the pool: status, not on loan, not in a deal, club keeps more than 16; read
+0x0385a08a	window_open	master league	(&season) -> taken to be: a transfer window is open today; the C lacks the returns
+0x0366365b	user_deal_step	master league	day end, window days: 70 deal records at +0xd06438, 11 states; read up to line 230

@@ -2,19 +2,19 @@
 
 This file collects everything found so far about the Master League code of
 `PES2017.exe`: where the mode keeps its data, how a day is processed, the year plan
-(calendar), salaries, transfer fees, negotiations, scouts, the squad planning of the
-computer clubs, team roles, and the save file. It is written from the decompiled C in
+(calendar), the league fixtures, salaries, transfer fees, negotiations, scouts, the
+transfers of the computer clubs, team roles, and the save file. It is written from the decompiled C in
 `output/`, from disassembly where the C lacks the arithmetic, and from running single
 functions of the exe in an emulator.
 
 **Read this first: how sure each part is.** The code of the career day is
 large: the 72 step functions of appendix A alone are 27,010 lines of C, and they call many
-more. Three pieces are proven, a larger part is read, and most of the rules are only
+more. Five pieces are proven, a larger part is read, and many of the rules are only
 located. Each section says which of these four levels applies:
 
 | level | meaning |
 |---|---|
-| **proven** | the game's own machine code was run on thousands of inputs and gave the same result as the Python in `tools/` (`check_findings.py`, checks 7 to 9) |
+| **proven** | the game's own machine code was run on thousands of inputs and gave the same result as the Python in `tools/` (`check_findings.py`, checks 7 to 11) |
 | **read** | the C or the disassembly was read and the text below follows it; not run |
 | **inferred** | the purpose is concluded from what the code touches, when it runs and who calls it; the name may be wrong |
 | **located** | the function is found and listed, its body is not read |
@@ -31,7 +31,7 @@ Contents: [1 Proven](#1-what-is-proven) · [2 Frame](#2-the-frame-mode-data-reco
 [9 Computer clubs](#9-transfers-of-the-computer-clubs) · [10 Strength](#10-team-strength) ·
 [11 Roles](#11-team-roles) · [12 Growth](#12-growth-team-spirit-youth-retirement) ·
 [13 Save](#13-the-master-league-save-file) · [14 Not found](#14-not-found-not-read) ·
-[15 How to go on](#15-how-to-go-on) · [Appendices A to F](#appendix-a-steps-of-a-day)
+[15 How to go on](#15-how-to-go-on) · [Appendices A to G](#appendix-a-steps-of-a-day)
 
 ## 1 What is proven
 
@@ -40,6 +40,8 @@ python3 check_findings.py ~/pes-work/game/PES2017.exe "../../EDIT00000000 (pes 2
 7 ok: the game's salary code (fcn_038ac66e) and money.salary give the same amount for 3000 random players (awards and title bonuses not run)
 8 ok: the game's transfer fee code (fcn_038ab832) and money.fee give the same amount for 3000 random cases, with and without the random change
 9 ok: the game's year-plan code (fcn_038b0b21) and yearplan.events put the same events on each day (8928 days: four modes, both season kinds, flags on and off)
+10 ok: the game's league fixture code (fcn_03774725, fcn_037741b4) and fixtures.plan build the same table for leagues of 2 to 24 teams with two legs, also with the sides changed
+11 ok: the game's overall window of a computer club (fcn_0365d12d, fcn_0365d08d) is clubai.LEVEL_MIN / LEVEL_MAX for the levels 0 to 9
 ```
 
 - **Salary formula** (section 6.1), `tools/money.py`.
@@ -47,6 +49,10 @@ python3 check_findings.py ~/pes-work/game/PES2017.exe "../../EDIT00000000 (pes 2
 - **Year plan**: which event falls on which day, for Master League, Become a Legend,
   League mode and the other modes, for both kinds of season (section 4),
   `tools/yearplan.py`.
+- **League fixtures**: which teams of the list meet in which round of a home-and-away
+  league (section 5.3), `tools/fixtures.py`.
+- **Overall window of a computer club** by its level (section 9.4),
+  `tools/clubai.py`.
 
 How the proof works: `emu.py` runs the function's machine code. The functions it would
 call to fetch a player, a ranking place or a random number are answered with chosen
@@ -54,7 +60,8 @@ values (`Game.replace`), so the arithmetic that runs is the game's. What this do
 **not** prove: that the inputs I name (rating, ranking place, …) are what the game feeds
 in during a career. That part is read, not run. Each check was also tried
 against a wrong formula (one event dropped, one fee rule dropped, one salary off by
-1) and failed as it should.
+1, the seventh-round rule of the fixtures dropped, one level limit off by 1) and
+failed as it should.
 
 ## 2 The frame: mode data, records, random numbers
 
@@ -116,17 +123,21 @@ Fields seen in use (offsets inside the record; "?" = meaning not established):
 | record | offset | what |
 |---|---|---|
 | player | `+0x2c`, `+0x30` | the id pair |
-| player | `+0xb4` bits 0-3 | status (the values 2, 3, 4 and 6 are tested) ? |
+| player | `+0xb4` bits 0-3 | status: 0 for a normal player; 1 and 2 lead to the deal types 6 and 5 (taken to be players without a contract); 3 and 4 stop a deal; 6 is shut out of the pool (section 9) |
+| player | `+0xb4` bits 4-5 | "in a deal" (bit 5 is set when a computer club picks the player) |
+| player | `+0xb4` bits 6-10 | years at the club (`fcn_0364c9f7`; cleared by a transfer) |
 | player | `+0xb4` bits 11-22 | **a number 0 to 4095, called `x` below**: it raises salary and fee. Meaning ? (candidates: fame, popularity) |
 | player | `+0xb8` bits 26-27 | level of the team role, 0 to 3 |
-| player | `+0xb8` bit 28 | a mark, called "own" bit below: players with it are left out of the wage bill, and it changes the fee (section 6.2). Meaning ? |
-| player | `+0xb8` bits 29, 30 | marks set by the squad planning of computer clubs (section 9) |
+| player | `+0xb8` bit 28 | a mark, called "own" bit below: players with it are left out of the wage bill, and it changes the fee (section 6.2). **Taken to be "on loan"**: the loan kind of `do_transfer` sets it, the return clears it, and the pool of section 9.5 leaves such players out |
+| player | `+0xb8` bits 29, 30 | marks set by the squad planning of computer clubs: players the club lets go (section 9) |
+| player | `+0xd0` | team id |
+| player | `+0xdc` | day of the last transfer |
 | player | `+0xc4` | team role, one byte (section 11) |
 | player | `+0xcc` | **salary** (the wage bill sums it; the fee starts from it) |
 | team | `+0x4a` | name |
 | team | `+0xf8` | squad: 8 bytes (id pair) per player |
 | team | `+0x328` bits 9-15 | number of players in the squad |
-| competition | `+0x21c` bits 30-31 | a kind used when the fixtures are made (section 5) |
+| competition | `+0x21c` bits 30-31 | number of legs; more fields in section 5.1 |
 
 Player fields used by the money and negotiation code (`player_value`): field `0x2b` =
 age (the code tests it against 36, 37 and 45), field `0x20` ?, field `0x2e` ? (0 to 7). The numbering is the game's own, not that of the edit
@@ -204,7 +215,7 @@ Master League (kind 12), in the order of the code:
 1. On events 5 and 8 (a window closes) a mark is set for the screens.
 2. `fcn_036696e1` and `fcn_0362eb70` (events 41 to 44; they belong to the
    `process::SpecialTitle…` classes). Not read.
-3. `fcn_03664d29` (event 9) → `fcn_0366365b` (769 lines; section 9.3).
+3. `fcn_03664d29` (event 9) → `fcn_0366365b` (769 lines; section 9.8).
 4. `fcn_0365692c`, only when `day_state` is 2: for each deal record with state 2, 3
    or 12 that is not of kind `0x20`, thirteen numbers (26 to 38) are tried. Each has
    a chance in thousandths from `fcn_0365293e`, lowered by 150 (by 300 in April and
@@ -353,7 +364,9 @@ For a league with a January season the two halves change places: the first windo
 
 - **Two transfer windows**: 1 July to 31 August and 1 to 31 January (events 3-5 and
   6-8), with the daily step (event 9) on every day inside them.
-- **1 September and 1 February** (event 30): the computer clubs plan their squads.
+- **1 September and 1 February** (event 30), and the first day of the season
+  (event 1): the computer clubs plan their squads and choose players (section 9.2).
+  The deals close on window days.
 - **30 June and 31 December** (events 12 to 15, 24): half-year steps. Contract ends,
   loan returns and the closing of the accounts are expected here; the functions are
   located, not read.
@@ -368,22 +381,102 @@ map from a date to the code that acts on it.
 
 ## 5 Fixtures and match days
 
-Level: **located**, a little **read**. This part is the least understood.
+Level: the pairing table of a league is **proven** (check 10); the rest is **read**
+or **located** as marked. `tools/fixtures.py` holds the rule.
 
-- Every fixture of the season is a match record (9,000 × `0x24c` at `0x6f154c`). A day
-  of the calendar holds the numbers of its matches (up to 200).
-- Competitions are records of `0x224` bytes (300 at `0x552e80`).
-  `process::LeagueCreation` (`fcn_037741b4`) picks one of four functions by
-  competition id: ids 600-607, 1000-1011 and 3000-3007 → `fcn_03773791`; ids
-  1800-1807 and 15400-15407 → `fcn_037738c1`; ids 6800-6807 → `fcn_037739f1` or
-  `fcn_03773791` by two bits of the competition record (`+0x21c`, bits 30-31); all
-  others → `fcn_03774035`. `process::KnockOutCreation` is `fcn_0376ee12`. These are
-  not read, so **how the rounds are paired and put on dates is not known**.
+### 5.1 The records
+
+| record | where (mode data) | size, count | fields seen |
+|---|---|---|---|
+| competition | `+0x552e80`, count at `+0x5fece8` | `0x224` bytes, up to 300 | `+0x00` id; `+0x5c` kind (1 league, 3 and 4 other creators, 2 and 5 nothing to create); `+0x60` list of its match days (up to 58 numbers); `+0x148` team list, 4 bytes per team; `+0x214` bits 19-24 number of match days; `+0x218` bit 8 "fixtures are to be made"; `+0x21c` bits 16-22 number of teams, bits 30-31 number of legs |
+| match day | `+0x632e6c` | `0x208` bytes, up to 1,500 | `+0x204` bits 26-31: number of the round inside its competition |
+| match | `+0x6f154c` | `0x24c` bytes, up to 9,000 | `+0x00` own number (`0xffff` = free); `+0x04` competition id; `+0x06` bits 0-11 round, bit 13 set; `+0x0c` first team; `+0x10` second team |
+
+### 5.2 Who makes the fixtures
+
+`make_fixtures` (`fcn_0377111e(competition id)`) is reached from the day end
+(`day_end` → `fcn_036f5728`, and `day_end` → `fcn_036f9395` → `fcn_036f928d`; both
+go on to `fcn_036f5f90`) and from `fcn_03670351`. It does nothing unless bit 8 of `+0x218`
+is set, then picks by the kind at `+0x5c`:
+
+| kind | creator | level |
+|---|---|---|
+| 1 | `league_fixtures` (`fcn_03774725`, class `process::LeagueCreation`) | **proven** for two legs |
+| 3 | `fcn_0377661c` (154 lines) | located; taken to be the knock-out rounds |
+| 4 | `fcn_03775815` (101 lines) | located |
+| 2, 5 | none | read |
+
+For the competition ids 60, 61, 12600 and 12601, when the word at `+0xc2cbb2` is 0
+(meaning ?), `fcn_03770d07` is tried first (not read). `fcn_036f5728` asks for event 17
+(6 March in a July season) before it makes fixtures; why is not read.
+
+### 5.3 The league table of rounds (proven)
+
+`league_fixtures` builds one square table per pair of legs. Cell `[a][b]` holds the
+round in which team `a` is the first team against team `b`; `a` and `b` are places
+in the competition's team list (`+0x148`), so **the order of that list decides who
+meets whom in which round**. The table is made in two steps:
+
+1. **Circle method.** The teams stand in two rows: the first half of the list on
+   top, the second half below. Each round pairs the teams standing above each
+   other, top team first. Then every place but the first of the top row moves one
+   step round the ring. With an odd number of teams the first place of the top row
+   is empty and the team below it rests. The second half of the season repeats the
+   first with the sides changed: round `r` comes back as round `r + R`, where `R`
+   is the number of rounds of one half (`n − 1`, or `n` when `n` is odd).
+2. **Change of sides** (`league_creation_pick`, `fcn_037741b4`, the class's second
+   function, → `fcn_03774035`). After step 1 the team in the fixed place would be
+   first team in every round of the first half. So **every third and every seventh
+   round** (rounds 3, 6, 7, 9, 12, 14, 15, 18, 21, … counted from 1) changes place
+   with its return match (`fcn_03773b11` swaps two round numbers in the whole
+   table).
+
+Exceptions:
+
+- **Four teams**: step 2 is replaced by a fixed table (`fcn_03773791`). Rounds, with
+  the teams numbered 1 to 4: 2-1 3-4, 1-3 4-2, 1-4 2-3, 4-1 3-2, 1-2 4-3, 3-1 2-4.
+- Competition ids 600-607, 1000-1011 and 3000-3007 use that fixed table; ids
+  1800-1807 and 15400-15407 use a second fixed table (`fcn_037738c1`); ids 6800-6807 use `fcn_037739f1` (one leg, three rounds) or
+  the first table, by the number of legs. Which competitions carry these ids is not
+  established (no competition table was read).
+- **One leg, or three**: the last table is used for one half only and is balanced
+  by another function (`fcn_03773cf6`). Read, not put into Python; the emulator
+  gives the table (see below).
+- If `fcn_038a7b83(competition)` says so (not read), the whole table is turned
+  round: first and second team change in every match (`fcn_03773ec7`). Check 10
+  covers this.
+
+Then the matches are written: for each round, each cell with that round takes a free
+match record and gets the competition id, the round, the first and the second team;
+the match is hooked to the match day of the competition that carries the same round
+number (`fcn_038e09f3`). That the first team is the home side is **inferred** (it is
+stored first, and `fcn_03773ec7` exists to turn the sides); it was not seen in the
+game.
+
+```
+python3 fixtures.py 20        # the 38 rounds of a league of 20 teams (appendix G)
+```
+
+What the proof covers: `check_findings.py` runs the game's `league_fixtures` on a
+made-up competition of 2 to 24 teams with two legs and compares the whole table with
+`fixtures.plan`, with and without the turn. It does not cover one and three legs,
+the other creators, or the order of the team list.
+
+### 5.4 Dates of the rounds
+
+Level: **located**. The creator does not choose dates. A round is put on the match
+day record that already carries its number, and the match day belongs to a day of
+the calendar (section 4.1). Where the match days of a competition get their dates
+was not found; no creator writes them, so they are taken to come with the
+competition data when the career is created (`process::ModeDataCreationThread`).
+
+### 5.5 Other things near the fixtures
+
 - `process::CmnScheduleProcessCheck` (`fcn_03607db9`, `fcn_03607e8c`) and
   `process::CmnMonthlyScheduleCheck` belong to the schedule screens (not read).
 - `fcn_0387585e` (1,085 lines, 9 callers, uses random numbers and `move_players`,
-  called from the day begin and from the season end) is not read. What it does is
-  open. It runs for all modes and is the second caller of `move_players`.
+  called from the day begin, from the season end and from the creation of the
+  career data) is not read. What it does is open.
 - `fcn_038a7cf9(competition)` (37 callers) is asked before most competition steps;
   it walks the parent competitions (meaning ?).
 
@@ -577,64 +670,232 @@ report. Its selection rule is not read.
 
 ## 9 Transfers of the computer clubs
 
-Level: **read** in part, **inferred** as marked. The full rule by which a computer
-club picks and buys a player is **not decoded**.
+Level: **read** (C and disassembly), the two tables of 9.4 **proven** (check 11).
+Meanings marked "taken to be" are **inferred**. The chain is now followed from the
+plan to the closed deal; what a deal moves in money is still not read.
 
 ### 9.1 The plan record
 
 `mode data + 0xccb80c`: up to 851 records of `0x118` bytes, one per club (count at
-`+0xd06434`):
+`+0xd06434`). The records are made when the career data is created
+(`plan_setup`, `fcn_0365fb7d`, called by `process::ModeDataCreationThread`), for every
+club that is not the user's and passes three tests on the team record, sorted
+(`fcn_0365cd59` compares; order not read).
 
 | offset | what |
 |---|---|
 | `+0x000` | club id |
-| `+0x004` | a kind, 0 to 3 (meaning ?) |
-| `+0x008` | 16 slots of `0x10` bytes: a player id pair and a word whose bits 7-13 hold a position; position 13 = the slot is empty |
-| `+0x10c` | "done" mark |
-| `+0x114` | a counter |
+| `+0x004` | kind 0 to 4. Set-up gives 1, 2 or 3 by the high part of the club id (1 for `0x72`, `0x78`, `0x7f`, `0xad`; 2 for 100 to 102, 108, 109; 3 for `0x10a9`; the rest of the switch is lost in the C). The kinds 1 and 4 change the search (9.5) |
+| `+0x008` | 16 slots of `0x10` bytes, see below |
+| `+0x10c` | wait counter. Set-up: the running number of the club among the clubs of its level, divided by 10 |
+| `+0x110` | "ready" byte |
+| `+0x114` | **club level 0 to 9**: byte `+0xe` of the record `fcn_031b1c34(club)` returns. The number of clubs of each level is kept at `+0xd10118 + 4 × level` |
 
-### 9.2 The planning step
+A slot: the player id pair at `+0`, a word at `+8`, a word at `+0xc`
+(`0x630000` when empty).
 
-`club_squad_plan` (`fcn_036602e5`, 392 lines) tests event 30 (1 September,
-1 February); the last day of a window (`fcn_03889a55`: 31 January, 31 August)
-changes some limits. It is called from `fcn_03661f6b` at the day begin. It handles
-**at most five clubs per call**, and only clubs whose record is not marked done.
-Per club:
+| bits of the word at `+8` | what |
+|---|---|
+| 7-13 | position looked for; 13 = none |
+| 14-21 | 1 = buy, 2 = **taken to be a loan** (it leads to deal type 2, which sets the player's loan mark) |
+| 22-26 | state of the slot: 0 empty, 1 player chosen, 9 → 10 (a second way in, set outside the code read), 7 given up |
+
+Set-up also marks players: in every club with more than 27 players that are not on
+loan, up to three players of the sorted squad whose position field is not 0 (taken
+to be: not goalkeepers) get a mark of `+0xb8`: mark 29 if a draw out of 13 is below
+6, else mark 30.
+
+### 9.2 When the steps run
+
+`ai_transfer_step` (`fcn_03661f6b`, day begin, called by `fcn_0360a350`):
+
+- **Planning and choosing** run on the stored date `+0xdcb68c`, on event 1 (first
+  day of the season) and on event 30 (1 September, 1 February), if the byte
+  `+0xdcb698` is set. In order: the wait counters (below), `ai_squad_counts`,
+  `club_squad_plan`, `ai_pool`, `ai_fill_slots`.
+- **Closing** runs on events 3 and 6 (the first day of each window) through
+  `ai_close_slots(1)`, and from the day end (`fcn_0365df66`) on every day on which
+  `day_state` is 2 or event 9 is on (window days) through `ai_close_slots(0)`.
+
+Wait counters: every record is set ready. A club whose counter is 0 gets a new one
+(the number of clubs of its level minus the count of such clubs so far); every other
+counter goes down by one. `ai_fill_slots` serves only clubs whose counter is 0, and
+**at most five clubs per call**. So the clubs of one level take turns. How often the
+step is called again on such a day is not established, so the number of clubs that
+shop per day is open.
+
+### 9.3 Squad counts and the plan
+
+`ai_squad_counts` (`fcn_0365cda9`) keeps one number per club: squad size minus the
+players already promised away. `club_squad_plan` (`fcn_036602e5`, 392 lines) then
+handles, per club:
 
 1. The marks 29 and 30 of `+0xb8` are cleared for every player of the squad.
-2. `squad_needs` (`fcn_0389440a`, 647 lines, not read) returns a list of entries of
-   `0x10` bytes: a player id and a position. Entries without a player are taken to be
-   the positions the club lacks.
+2. `squad_needs` (`fcn_0389440a`, 647 lines, read in part) copies the team and its
+   tactics, takes out the players that carry a mark and have been at the club for
+   more than 364 days and those with bit 31 of `+0xb4`, and returns entries of
+   `0x10` bytes for the eleven positions of the formation (tactics record `+0x68`)
+   and beyond: a player id and a position. Entries without a player are the
+   positions the club lacks.
 3. Surplus = squad size (`fcn_03888d9e`) − 23. While there is a surplus, players who
    are not in the list of step 2 and whose band (`fcn_0385400e`) is below 6 (below 8
    with a chance of 1 in 5 on the last day of a window) are marked: with a chance of
-   1 in 5 mark 30, else mark 29. **Taken to be "for loan" and "for sale"**; which is
-   which is not established.
+   1 in 5 mark 30, else mark 29. **Taken to be the club's list of players it lets
+   go**; what tells the two marks apart is not established.
 4. The positions without a player are written into empty slots of the plan record.
    Then, while squad size − marked players + new slots stays under 25, more
-   positions from the list are added. By the record's kind a word of the slot is set
-   to 20 (kind 2) or 23 (kind 3), or the kind becomes 1 with the value 6 (on the last
-   day of a window). What these numbers stand for is not established.
+   positions from the list are added.
 
 So a computer club aims at a squad of 23 to 25, keeps the players its plan names and
 those of the top bands, and marks the rest.
 
-### 9.3 The deals themselves
+### 9.4 The overall window by club level (proven)
 
-- Steps of the day end that test event 9 (window day): `fcn_03664d29` →
-  `fcn_0366365b` (769 lines; tests events 5 and 8; uses random numbers, the salary
-  formula and `complete_transfer`), `fcn_0365df66`, and `fcn_036e2d84` →
-  `fcn_036e2557` (320 lines; event 8; salary, `complete_transfer`). Not read. The
-  deals between computer clubs are expected in one of these.
-- `fcn_036e067a` (232 lines; events 5, 13, 15) also calls `complete_transfer`.
-- `complete_transfer` (`fcn_0389840a`) has 11 callers; `fcn_038913b5` (745 lines)
-  under it uses the salary and fee formulas and the club plan records.
+| level | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| lowest overall looked for (`ai_min_overall`, `fcn_0365d12d`) | 47 | 51 | 55 | 59 | 63 | 67 | 70 | 73 | 76 | 83 |
+| highest overall looked for (`ai_max_overall`, `fcn_0365d08d`) | 74 | 75 | 76 | 77 | 78 | 79 | 80 | 83 | 86 | 99 |
+
+`tools/clubai.py`. The overall is the game's rating for the player's own position
+(`overall`, kind 2). That the byte is a club level and where it comes from is read,
+not proven.
+
+### 9.5 The pool of players (`ai_pool`, `fcn_03661380`)
+
+All players of the career are sorted into two sets of 60 lists, one list per
+overall from 99 down to 40. A player enters only if
+
+- he is not older than 36 (field `0x2b`; the test is made only for players whose id
+  matches the pair at `+0xe4a528`, which is not understood further), and his status
+  (`+0xb4` bits 0-3) is not 6;
+- `fcn_03888145` allows him: status 0, 1 or 2; bit 31 of `+0xb4` clear; not on loan
+  (bit 28 of `+0xb8`); his club keeps more than 16 players without the bit-31 ones;
+  he is in none of the 70 deal records of the user (`+0xd06438`); he is in no other
+  deal (bits 4-5 of `+0xb4`);
+- **he does not play for the club fetched with `fcn_0381e2eb(…, 0x2100cc4)`, taken
+  to be the user's club**: computer clubs do not pick the user's players on this
+  way (offers for them go through the deal records of section 7);
+- he has no club, or **his club's wait counter is 0 and it counts more than 23
+  players** (disassembly at `0x0366176f`).
+
+The overall used for sorting is lowered by 7 for a player who carries mark 29 or 30
+(a listed player comes within reach of weaker clubs) and kept inside 40 to 99.
+
+- **Set B**: players with status 1 or 2 (**taken to be players without a contract**;
+  see the deal types in 9.7), and players whose overall is above the highest overall
+  of their own club's level + 3 (never the case at a club of level 9).
+- **Set A**: all the others.
+
+Set B is searched first (9.6), so players who are too good for their club and
+players of status 1 or 2 are offered before the rest.
+
+### 9.6 Choosing (`ai_fill_slots`, `ai_candidates`, `ai_pick_candidate`)
+
+`ai_fill_slots` (`fcn_03661b15`) goes through the slots of a club while squad +
+open slots (states 1, 9, 10) is below **32** (`fcn_03889502`). For an empty slot
+with a position it asks `ai_pick_candidate` (`fcn_03660c52`) with the window of 9.4
+for the club's level; if nobody is found and no age limit was set, it asks again
+with the window 0 to 99. A found player is written into the slot with state 1 and
+"buy".
+
+`ai_candidates` (`fcn_0365f5c2`) walks the lists from the highest allowed overall
+down and takes **the first three** players who pass: not on loan, not of the two
+clubs shut out for this search, not of the buying club, not in a deal, age inside
+the two limits, position fits the slot (`fcn_0365d293`: the player's registered
+position, or a position he can play), not already in a slot, and the two tests
+`fcn_0388bce3` (by the leagues of the two clubs and the player's nationality:
+taken to be the foreign-player rules; not read through) and `fcn_0388f107`. Set B
+is searched first, then set A; clubs of kind 1 or 4 search only set A.
+
+`ai_pick_candidate` sorts the up to three candidates and prefers, in this order:
+
+1. a player with mark 29 or 30;
+2. a player with status 2;
+3. a player with a mark who has been at his club for more than 364 days and is not
+   the user's (`fcn_0388cf3d`);
+4. a player with status 1;
+5. any other whose club has more than 23 counted players or who has no club, under
+   further tests of level and age.
+
+The chosen player gets bit 5 of `+0xb4` ("in a deal", `fcn_0365d1cd`) and his club's
+count goes down by one.
+
+### 9.7 Closing (`ai_close_slots`, `ai_close_deal`)
+
+`ai_close_slots` (`fcn_0365d9ca`) is skipped on the stored date `+0xdcb68c`. Called
+with 0 (ordinary window days) it handles only the clubs whose wait counter is 0;
+called with 1 (first day of a window) all clubs, but only the states 1 and 10. Per
+slot, by its state:
+
+| state | what happens |
+|---|---|
+| 1, 10 | `fcn_0365d3a3` gives the slot up (state 7) if the player's status became 3 or 4, if the squad would pass 31, or if the player is now in one of the user's deals (`fcn_03662383`, `fcn_03120625`). Otherwise the deal is closed if `fcn_0385a08a` is true (**taken to be: a transfer window is open**) |
+| 9 | becomes 10; then as above, and closed at once on the last day of a window (31 January, 31 August; `fcn_0388c35c`) |
+| 7 | the slot is emptied and the player's "in a deal" bits are cleared |
+
+`ai_close_deal` (`fcn_0365d4a9`) sets the deal type and calls `complete_transfer`
+(`fcn_0389840a(player, new club, &type)`):
+
+| type | when | meaning |
+|---|---|---|
+| 2 | slot says 2 | loan (inferred) |
+| 5 | player status 2 | signing of a player without a club (inferred) |
+| 6 | player status 1 | the same for status 1 (inferred) |
+| 11 | player status 4 | ? |
+| 1 | else | transfer. The marks 29 and 30 of all players of the **selling** club are cleared if the player himself carried none |
+
+Then the slot is emptied.
+
+`complete_transfer` sends the news and messages when the user's club or one of the
+user's deal records is touched, and hands the move to one of five functions; a move
+between two computer clubs goes to `do_transfer` (`fcn_038913b5`, 745 lines, read in
+part):
+
+- **Fee, salary and years** come from the user's deal record if one exists for the
+  player (`+0x28`, `+0x2c`, `+0x14` bits 8-11). Otherwise fee = `transfer_fee`
+  (section 6.2, with its random change), salary = `salary` for the new club
+  (section 6.1), years = `fcn_0388a1be` (not read), at least 1.
+- The player's years at the club (`+0xb4` bits 6-10) and his marks are cleared and
+  the day is stored at `+0xdc`.
+- By the kind of move (four cases): 1 transfer: out of the old squad
+  (`fcn_03889d7e`), into the new one (`fcn_03889b6b`), team id `+0xd0`, salary
+  `+0xcc`; 2 loan: the same and **bit 28 of `+0xb8` is set**; 4: bit 28 is cleared
+  (return from a loan); 3: the player goes to the club id at `0x2521194` (taken to
+  be "no club").
+- `fcn_03889e24` and `fcn_03888c69` are called around the move with the two clubs
+  and the amounts; they are taken to move the money. **Not read**, so it is not
+  established that a computer club's budget limits what it buys. Nothing in the
+  choosing code of 9.5 and 9.6 looks at money: the choice goes by overall, level,
+  age, position and squad size only.
+
+### 9.8 Other steps that end in `complete_transfer`
+
+- `user_deal_step` (`fcn_0366365b`, 769 lines, day end, window days; 70 records of
+  `0x1dc` bytes at `+0xd06438`, 11 states): read up to line 230. It sends messages
+  to the user, so it is taken to work the user's deal list (offers for the user's
+  players included). At the deadline of a deal: fail with 4 in 5 if the player's
+  value at `+0xb4` bits 23-29 is below 30; fail if `fcn_0388cca1` < a draw from 0
+  to 99; else success if a draw from 0 to 99 is below
+  `{10, 30, 100}[class] + (5 − years at the club) × 10` (class from
+  `fcn_038b1433`). On success the salary is the larger of the `salary` formula and
+  the record's figure. The rest is not read.
+- `fcn_036e2d84` → `fcn_036e2557` (320 lines; event 8; salary, `complete_transfer`)
+  and `fcn_036e067a` (232 lines; events 5, 13, 15): not read.
 - `move_players` (`fcn_0389734b`, 466 lines) is the only function found that writes
   the squad count of a team record together with the squad list. It has two callers:
   the day end (event 8, team 4971) and `fcn_0387585e`.
 
-What is missing: how a computer club chooses its target, what it pays, and how often
-deals between two computer clubs happen.
+### 9.9 What this means in play
+
+- A computer club shops by **level**, not by money: a level-9 club looks at overall
+  83 to 99, a level-0 club at 47 to 74 (9.4).
+- It takes **the best three that fit** and prefers listed players and players
+  without a club among them (9.6).
+- A player leaves a computer club on this way only if that club counts more than 23
+  players; those more than 3 points above the top of their club's window are looked
+  at first (9.5).
+- Deals are chosen at the start of the season and on the day after each window, and
+  close when the next window is open (9.2, 9.7). Squads end between 23 and 32.
 
 ## 10 Team strength
 
@@ -711,17 +972,25 @@ career only where the mode reads the database again; where that happens is not f
 
 ## 14 Not found, not read
 
-- How fixtures are paired and dated (section 5).
-- How computer clubs choose, price and close deals among themselves (section 9.3).
+- Fixtures: where the match days get their dates; the creators of kind 3 and 4
+  (knock-out rounds, `fcn_0377661c`, `fcn_03775815`); leagues with one or three
+  legs in Python; which competitions carry the ids with a fixed table; the order of
+  a competition's team list (section 5).
+- Computer clubs: what a deal moves in money (`fcn_03889e24`, `fcn_03888c69`) and
+  whether a budget limits a club; the years of the contract (`fcn_0388a1be`); the
+  two tests `fcn_0388bce3` and `fcn_0388f107`; what tells mark 29 from mark 30;
+  where a slot gets "loan" and the state 9; how often the choosing step is repeated
+  on its days; the rest of `user_deal_step`, `fcn_036e2557`, `fcn_036e067a`
+  (section 9).
 - Growth, team spirit, youth, retirement, new players, contracts (section 12).
 - Club income, prize money, sponsors, budget (section 6.4).
-- The meaning of `x` (player `+0xb4`, bits 11-22), of the "own" bit, of field `0x2e`,
-  of the fee formula's `kind`, of the 13 deal states and of `day_state`.
+- The meaning of `x` (player `+0xb4`, bits 11-22), of field `0x2e`, of the fee
+  formula's `kind`, of the 13 deal states and of `day_state`.
 - The other twelve cases of the negotiation step, and the lost fraction arithmetic in
   the one that was read.
 - Season end (`fcn_035feb08` and the event-23 block).
 - Calls through tables of function pointers are not resolved in `calls.tsv.xz`.
-  `output/classes.tsv.xz` (new: 9,814 tables of 6,932 classes) gives the class and
+  `output/classes.tsv.xz` (9,814 tables of 6,932 classes) gives the class and
   the slot of each such function, which is enough to follow a call by hand.
 
 ## 15 How to go on
@@ -733,6 +1002,7 @@ python3 find.py callers 0x038ac66e           # who calls it
 python3 x86dis.py <exe> 038ac66e 1940        # disassembly, for the fractions the C drops
 python3 rtti.py <exe>                        # class names and their function tables
 python3 yearplan.py <exe> july               # the year
+python3 fixtures.py 20                       # rounds of a league of 20 teams
 python3 -c "import money; print(money.salary(90, 2000, rank=1), money.fee(77400, 90, 2000))"
 ```
 
@@ -741,8 +1011,8 @@ the disassembly, write it in Python, then run the game's code in `emu.py` with t
 look-up functions answered (`Game.replace`) and compare. The next candidates, in the
 order of what they would explain: `fcn_0385400e` (band), `fcn_038ab5ea`,
 `fcn_0388a1be` (years), `fcn_0389b3f8` / `fcn_0389bd94` (willingness),
-`fcn_03896290` (fit to the squad), `fcn_0389440a` (squad needs), `fcn_038b9827`
-(growth).
+`fcn_03896290` (fit to the squad), `fcn_0389440a` (squad needs), `fcn_03889e24`
+(money of a deal), `fcn_0377661c` (knock-out fixtures), `fcn_038b9827` (growth).
 
 What would settle the open meanings fastest is one Master League save file: the
 fields of section 2.3 could be read for known players and compared with what the
@@ -1171,3 +1441,52 @@ name in brackets = the function is in that class's table.
 | 47 | `fcn_036523fb` |
 | 48 | `fcn_031a269b` (menu::MainMenuML), `fcn_031a502c` (menu::MainMenuML), `fcn_0329ce18` (menu::MainMenuBL), `fcn_0360a350`, `fcn_0363beba`, `fcn_03682f42` (process::InfoStaffReportML) |
 | 49 | `fcn_03640d19` |
+
+## Appendix G: rounds of a league of 20 teams
+
+`python3 fixtures.py 20`. The numbers are places in the competition's team list
+(1 = first team of the list); the first team of each pair is the one stored first
+(taken to be the home side). Rounds 20 to 38 are the return matches of rounds 1 to
+19, with every third and every seventh round exchanged between the two halves
+(section 5.3).
+
+```
+round  1: 1-11  2-12  3-13  4-14  5-15  6-16  7-17  8-18  9-19  10-20
+round  2: 1-2  3-11  4-12  5-13  6-14  7-15  8-16  9-17  10-18  20-19
+round  3: 2-4  3-1  11-5  12-6  13-7  14-8  15-9  16-10  17-20  18-19
+round  4: 1-4  5-3  6-2  7-11  8-12  9-13  10-14  18-17  19-16  20-15
+round  5: 1-5  6-4  7-3  8-2  9-11  10-12  17-16  18-15  19-14  20-13
+round  6: 2-10  3-9  4-8  5-7  6-1  11-20  12-19  13-18  14-17  15-16
+round  7: 2-19  3-20  4-10  5-9  6-8  7-1  11-18  12-17  13-16  14-15
+round  8: 1-8  9-7  10-6  14-13  15-12  16-11  17-2  18-3  19-4  20-5
+round  9: 2-15  3-16  4-17  5-18  6-19  7-20  8-10  9-1  11-14  12-13
+round 10: 1-10  12-11  13-2  14-3  15-4  16-5  17-6  18-7  19-8  20-9
+round 11: 1-20  11-2  12-3  13-4  14-5  15-6  16-7  17-8  18-9  19-10
+round 12: 3-2  4-11  5-12  6-13  7-14  8-15  9-16  10-17  19-1  20-18
+round 13: 1-18  2-5  3-4  11-6  12-7  13-8  14-9  15-10  16-20  17-19
+round 14: 5-4  6-3  7-2  8-11  9-12  10-13  17-1  18-16  19-15  20-14
+round 15: 6-5  7-4  8-3  9-2  10-11  16-1  17-15  18-14  19-13  20-12
+round 16: 1-15  2-20  3-10  4-9  5-8  6-7  11-19  12-18  13-17  14-16
+round 17: 1-14  2-18  3-19  4-20  5-10  6-9  7-8  11-17  12-16  13-15
+round 18: 9-8  10-7  13-1  14-12  15-11  16-2  17-3  18-4  19-5  20-6
+round 19: 1-12  2-14  3-15  4-16  5-17  6-18  7-19  8-20  9-10  11-13
+round 20: 11-1  12-2  13-3  14-4  15-5  16-6  17-7  18-8  19-9  20-10
+round 21: 2-1  11-3  12-4  13-5  14-6  15-7  16-8  17-9  18-10  19-20
+round 22: 1-3  4-2  5-11  6-12  7-13  8-14  9-15  10-16  19-18  20-17
+round 23: 2-6  3-5  4-1  11-7  12-8  13-9  14-10  15-20  16-19  17-18
+round 24: 2-8  3-7  4-6  5-1  11-9  12-10  13-20  14-19  15-18  16-17
+round 25: 1-6  7-5  8-4  9-3  10-2  16-15  17-14  18-13  19-12  20-11
+round 26: 1-7  8-6  9-5  10-4  15-14  16-13  17-12  18-11  19-2  20-3
+round 27: 2-17  3-18  4-19  5-20  6-10  7-9  8-1  11-16  12-15  13-14
+round 28: 1-9  10-8  13-12  14-11  15-2  16-3  17-4  18-5  19-6  20-7
+round 29: 2-13  3-14  4-15  5-16  6-17  7-18  8-19  9-20  10-1  11-12
+round 30: 2-11  3-12  4-13  5-14  6-15  7-16  8-17  9-18  10-19  20-1
+round 31: 1-19  2-3  11-4  12-5  13-6  14-7  15-8  16-9  17-10  18-20
+round 32: 4-3  5-2  6-11  7-12  8-13  9-14  10-15  18-1  19-17  20-16
+round 33: 1-17  2-7  3-6  4-5  11-8  12-9  13-10  14-20  15-19  16-18
+round 34: 1-16  2-9  3-8  4-7  5-6  11-10  12-20  13-19  14-18  15-17
+round 35: 7-6  8-5  9-4  10-3  15-1  16-14  17-13  18-12  19-11  20-2
+round 36: 8-7  9-6  10-5  14-1  15-13  16-12  17-11  18-2  19-3  20-4
+round 37: 1-13  2-16  3-17  4-18  5-19  6-20  7-10  8-9  11-15  12-14
+round 38: 10-9  12-1  13-11  14-2  15-3  16-4  17-5  18-6  19-7  20-8
+```

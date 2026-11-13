@@ -1,5 +1,6 @@
 """Self-check of ../NOTES.md and ../MASTER_LEAGUE.md: runs the game's own machine code (emu.py) on real
-inputs and compares it with savefile.py, overall.py, money.py, yearplan.py and ../../tools/rate.py.
+inputs and compares it with savefile.py, overall.py, money.py, yearplan.py, fixtures.py, clubai.py and
+../../tools/rate.py.
 
     python3 check_findings.py <PES2017.exe> <save file>
 
@@ -10,6 +11,8 @@ import os
 import struct
 import sys
 
+import clubai
+import fixtures
 import yearplan as year_plan
 import fields
 import money
@@ -25,6 +28,9 @@ SAME64, STREAM, STREAM_KEY, GAME_NAME, OVERALL = 0x037892be, 0x0378b253, 0x0378b
 APPLY_PLAYER_FIELD, APPLY_MANAGER_FIELD = 0x040a04b1, 0x040aadb3
 MODE_OBJECT, MENU_OBJECT, PLAYER_RECORD, RANDOM = 0x026503e0, 0x0264f3e8, 0x03822835, 0x03855998
 SALARY, FEE, DAY_EVENTS = 0x038ac66e, 0x038ab832, 0x038b0b21
+LEAGUE_CREATE, LEAGUE_VTABLE, COMPETITION, NEW_MATCH, NEW, DELETE, FREE = (
+    0x03774725, 0x02138c00, 0x03822783, 0x0381e07b, 0x02a000b0, 0x02a000c0, 0x02bc5b9a)
+MODE_GETTER, LEVEL_MAX, LEVEL_MIN = 0x0381c0e5, 0x0365d08d, 0x0365d12d
 
 
 def master_league(exe):
@@ -121,6 +127,62 @@ def master_league(exe):
                             g.top -= 32
     print('9 ok: the game\'s year-plan code (fcn_038b0b21) and yearplan.events put the same events on each day '
           '(%d days: four modes, both season kinds, flags on and off)' % days)
+
+
+def league_and_levels(exe):
+    """Checks 10 and 11. Check 10 runs process::LeagueCreation on a made-up competition of n
+    teams with two legs and reads the table it builds; no match record is handed out, so the
+    code stops after the table."""
+    g = Game(exe)
+    box = {}
+    g.replace(MODE_GETTER, lambda s, a: box['holder'])
+    g.replace(COMPETITION, lambda s, a: box['competition'])
+    g.replace(NEW_MATCH, lambda s, a: 0)
+    g.replace(NEW, lambda s, a: s.alloc(size=a(0) + 16))
+    g.replace(DELETE, lambda s, a: 0)
+    g.replace(FREE, lambda s, a: 0)
+
+    def table(n, legs, swap_sides):
+        g.free_all()
+        competition = g.alloc(size=0x224)
+        g.write(competition, struct.pack('<H', 17))
+        g.write(competition + 0x148, b''.join(struct.pack('<I', 100 + i) for i in range(n)))
+        g.write(competition + 0x21c, struct.pack('<I', (legs << 30) | (n << 16)))
+        box['competition'] = competition
+        box['holder'] = g.alloc(size=0x40)
+        g.write(box['holder'] + 0x30, struct.pack('<I', g.alloc(size=0x100)))
+        creator = g.alloc(struct.pack('<I', LEAGUE_VTABLE), size=0x40)
+        g.call(LEAGUE_CREATE, [17, swap_sides], ecx=creator)
+        first, last = struct.unpack('<2I', g.read(creator + 4, 8))
+        assert last - first == 16, 'one table expected for two legs'
+        first, last = struct.unpack('<2I', g.read(first, 8))
+        rows = []
+        for p in range(first, last, 16):
+            a, b = struct.unpack('<2I', g.read(p, 8))
+            rows.append(list(struct.unpack('<%di' % ((b - a) // 4), g.read(a, b - a))))
+        return rows
+
+    sizes = range(2, 25)
+    for n in sizes:
+        want = fixtures.plan(n)
+        assert table(n, 2, 0) == want, n
+        assert table(n, 2, 1) == [list(column) for column in zip(*want)], n       # sides changed
+        played = sorted(sorted(pair) for matches in fixtures.rounds(n) for pair in matches)
+        assert played == sorted([a, b] for a in range(n) for b in range(a + 1, n) for _ in (0, 1)), n
+        for matches in fixtures.rounds(n):
+            busy = [team for pair in matches for team in pair]
+            assert len(busy) == len(set(busy)) and len(matches) == n // 2, n
+    print('10 ok: the game\'s league fixture code (fcn_03774725, fcn_037741b4) and fixtures.plan build the same '
+          'table for leagues of %d to %d teams with two legs, also with the sides changed' % (sizes[0], sizes[-1]))
+
+    g.free_all()
+    p = g.alloc(size=8)
+    for level in range(-1, 12):
+        g.write(p, struct.pack('<i', level))
+        got = (g.call(LEVEL_MIN, [p]) & 0xff, g.call(LEVEL_MAX, [p]) & 0xff)
+        assert got == clubai.window(level), (level, got)
+    print('11 ok: the game\'s overall window of a computer club (fcn_0365d12d, fcn_0365d08d) is '
+          'clubai.LEVEL_MIN / LEVEL_MAX for the levels 0 to 9')
 
 
 def game_sha(g, data):
@@ -269,3 +331,4 @@ def main(exe, save):
 if __name__ == '__main__':
     main(sys.argv[1], sys.argv[2])
     master_league(sys.argv[1])
+    league_and_levels(sys.argv[1])
