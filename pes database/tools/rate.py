@@ -189,7 +189,7 @@ def match_cards(cards, players):
                 base = (da <= 1 and dh <= 3 and (lv == 2 or cm or nm)) if c['height'] else (da == 0 and lv == 2 and (cm or nm))
                 ok = base or (lv == 2 and cm and da <= 2 and dh <= 10) or (lv == 2 and nm and da <= 1 and dh <= 6) or (cm and nm and da <= 1 and dh <= 6) or (lv == 2 and cm and nm and da == 0)
             if ok: cand.append((4 * (lv == 2) + 2 + 3 * cm + 2 * nm - da - dh / 3, id(c), p['id'], c, (lv, cm, nm, da, dh)))
-    cand.sort(key=lambda x: -x[0]); out = {}; usedc = set(); best = {}
+    cand.sort(key=lambda x: (-x[0], x[2])); out = {}; usedc = set(); best = {}       # equal scores: lowest player id first (was: hash order)
     for sc, cid, pid, c, ev in cand: best.setdefault(pid, []).append((sc, c))
     match_cards.ev = {}                 # evidence per matched player: (name level, club, nation, age gap, height gap)
     for sc, cid, pid, c, ev in cand:

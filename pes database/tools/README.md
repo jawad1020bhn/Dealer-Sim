@@ -12,11 +12,15 @@ Sources expected under `$PES_WORK` (default `/home/user/pes-work/`):
 - `src/mouhbnms_football-player-scouting` (mouhbnms/football-player-scouting): `Data/players.csv`, EA's complete FC 27
   list (17,849 men, ratings 47–91, snapshot 2026-09-12). Used by task 12.
 - `src/fpl` (olbauday/FPL-Core-Insights): Premier League 2026/27 player statistics per gameweek. Used by task 14 and task 15.
+- `src/wyscout` (btgriff/Wyscout_Data, `git clone --depth 1`, 1.3 GB): Wyscout exports per league and season, state of
+  12 November 2026. Used by tasks 30 to 33 through `wyscout.py`.
+- `src/optiscout-football-dss`, `src/asta-fantacalcio` (FBref / Understat tables of task 23; task 33 reads the first).
 
 Files:
 
 - `lib.py` — readers for the PES 2017 edit file and the Football Life 27 save.
 - `fldb.py` — Football Life 27 player database.
+- `wyscout.py` — Wyscout league tables of 2026-27: loader, link to the file players, club map.
 - `rate.py` — PES 2017 overall formula and FC 27 / FC 26 tables. Self-check: `python3 rate.py <data.dat>`.
 - `task11.py` — missing players, youngsters, wing starters, managers and tactics.
   `python3 task11.py <in data.dat> <FL data.dat> <out data.dat>`; ends with a self-check of the written file.
@@ -107,3 +111,56 @@ Files:
   ours had no effect at the player's position and the task 23 rule gives the other save's style (`STYLE`), 2 shirt
   numbers (`NUM`). Its shirt numbers outside the five leagues are last season's and are not taken.
   Run it on the output of `task28.py`: `python3 task29.py <in data.dat> <out data.dat>`; ends with a self-check.
+- Tasks 30 to 33 bring the clubs outside the five leagues up to November 2026 with `wyscout.py`: the Wyscout tables of
+  2026-27 (and 2026 for calendar-year leagues) list every player with league minutes this season, his team, minutes,
+  positions and set-piece counts; 202 competitions, 83,330 players, no shirt numbers, no Colombia or Iran. file players
+  are tied to a Wyscout player by name, age, height and nationality, and 471 of the 496 clubs to a Wyscout team.
+  Checked on the web before use: Vavro (Plzeň), Tavernier, Ounahi, Vasilj, Cillessen, Jullien, Jenz, Ander Herrera,
+  Gastón Suárez: Wyscout was right each time, the EA FC 27 card twice out of date.
+- `task30.py` — squads: 736 players leave their club (67 with minutes there and now at another team, 643 with minutes
+  for other teams only, 21 aged 38 or more whom no source has at the club, 5 Leicester players by web check); 283 join
+  the club they play for (137 of the leavers, 146 free agents such as Cillessen, Ander Herrera, Cavani); 19 reserves
+  are released for them, 27 joins find no room. Where a starter leaves, the best-fitting reserve steps in.
+  Run it on the output of `task29.py`: `python3 task30.py <in data.dat> <out data.dat>`; ends with a self-check.
+- `task31.py` — missing goalkeepers and short squads: every club is filled to two goalkeepers and 20 players from the
+  Wyscout list of the club (most minutes first), then EA FC 27, then Football Life 27. 45 players are built (15
+  goalkeepers; Empoli, Kayserispor, Viborg, Huesca, Mirandés, Dender among the clubs) into unused records, most of
+  them the game's made-up free agents. Abilities of a Wyscout-only player are those of the nearest file player of his
+  position, rated at the median of his club: an estimate. Left: Al Zawraa with one goalkeeper (no source has a second).
+  Run it on the output of `task30.py`: `python3 task31.py <in data.dat> <out data.dat>`; ends with a self-check.
+- `task32.py` — line-ups, takers and captains outside the Premier League: 862 starters change at 384 clubs (180
+  minutes more than the starter, at most 3 rating points less), set-piece takers from the Wyscout counts at 415 clubs,
+  captains of the four other big leagues from the table `CAPTAIN` (press lists of August and September 2026): 46 were
+  right, 7 are set, 7 are reserves in the file and 7 are at another club in the file; no change for those 14.
+  Run it on the output of `task31.py`: `python3 task32.py <in data.dat> <out data.dat>`; ends with a self-check.
+- `task33.py` — playing styles outside the five leagues: the rules of `task23_research.py` with Wyscout figures in
+  place of FBref and Understat. Wyscout counts lower than those two (shot assists 0.67 per 90 where Understat has 0.94
+  key passes for the same 756 players), so each figure is multiplied by a factor fitted on the five-league players
+  both sources have: key passes 1.33, xA 1.30, xG without penalties 1.15, shots 1.13, crosses 1.19, goals 1.07. After
+  that the two sources put 93 to 99 % of those players on the same side of the thresholds the rules use (crosses and
+  tackles + interceptions 88 to 91 %, on 100 and 34 players). Of 1,467 squad members whose style is None or never
+  switches on where they play, 596 get one (142 of them on the EA card alone, under 450 minutes); 376 have no
+  evidence and 495 are centre-backs the rules leave alone, as in task 23. Only the style is set, no skills.
+  Run it on the output of `task32.py`: `python3 task33.py <in data.dat> <out data.dat>`; ends with a self-check.
+- `rate.match_cards` breaks equal scores by player id since task 30 (before, the order of a Python set decided, so
+  two runs could differ by a player).
+- `task34.py` — the classic players are removed again: the 130 of task 13 and the nine hand-built legends of task 14.
+  The five slots hold what they held before task 13 ("The Old Boys" empty, "Pleasure Horn", the three Master League
+  default teams with their own players); 32 records are unused free agents again. The seven classic teams the save
+  came with stay. The old content is read from the file of commit `d5341d7` (the state before task 13), decrypted.
+  Run it on the output of `task33.py`: `python3 task34.py <in data.dat> <before/data.dat> <out data.dat>`; ends with
+  a self-check. `task13.py` and step 9 of `task14.py` stay in the folder: the chain needs them to rebuild the file.
+- `task35.py` — ratings outside the five leagues, checked and corrected. Of 10,942 club players there, 6,292 have an
+  EA FC 27 card and 6,275 already carried its rating; 15 more get it now: six built by task 31 at the median of their
+  club although EA rates them (Seghetti 68 to 61, Hübel 64 to 52; his card was checked on fut.gg and ea.com), seven
+  matched since, and two whose card is at the club they left this season (Sevikyan, Matías Pérez: Wyscout has their
+  minutes for both clubs). Two cards belong to namesakes and are left alone.
+  The 4,650 without a card are compared with what their share of the club's Wyscout minutes and their age suggest, a
+  fit on the rated players that misses a held-out one by 3.4 points. No group stands out: the mean gap is +0.3. 21
+  regulars (45 % of the minutes of the club's most-used player) are rated 7 or more below the expectation; 19 of them
+  rise to its lower edge, capped by the Football Life 27 estimate and at +5 (Vavassori 60 to 64, Julloux 61 to 66,
+  Sangalli 66 to 69), two stay because Football Life 27 rates them no higher. Nobody is lowered, and a player with a
+  card keeps EA's rating whatever he plays. Limits: 2,942 of the players without a card are at clubs with fewer than
+  6 rated players, where the level is that of their own squad (a club rated too high or too low as a whole does not
+  show); 683 players are at clubs without a Wyscout team. Run it on the output of `task34.py`:
+  `python3 task35.py <in data.dat> <out data.dat>`; ends with a self-check; the list of gaps is in `<out>.log.pkl`.
