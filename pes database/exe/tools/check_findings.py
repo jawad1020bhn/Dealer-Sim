@@ -1,16 +1,18 @@
-"""Self-check of ../NOTES.md: runs the game's own machine code (emu.py) on real
-inputs and compares it with savefile.py, overall.py and ../../tools/rate.py.
+"""Self-check of ../NOTES.md and ../MASTER_LEAGUE.md: runs the game's own machine code (emu.py) on real
+inputs and compares it with savefile.py, overall.py, money.py, yearplan.py and ../../tools/rate.py.
 
     python3 check_findings.py <PES2017.exe> <save file>
 
-Needs `pip install unicorn`. About one minute.
+Needs `pip install unicorn capstone`. About one and a half minutes.
 """
 import hashlib
 import os
 import struct
 import sys
 
+import yearplan as year_plan
 import fields
+import money
 import overall
 import savefile
 from emu import Game
@@ -21,6 +23,104 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'
 SHA_INIT, SHA_UPDATE, SHA_FINAL, SHA_BLOCK, SHA_DIGEST = 0x0378933e, 0x0378b599, 0x0378be99, 0x037893be, 0x0378aec3
 SAME64, STREAM, STREAM_KEY, GAME_NAME, OVERALL = 0x037892be, 0x0378b253, 0x0378b203, 0x03814ee3, 0x04067af3
 APPLY_PLAYER_FIELD, APPLY_MANAGER_FIELD = 0x040a04b1, 0x040aadb3
+MODE_OBJECT, MENU_OBJECT, PLAYER_RECORD, RANDOM = 0x026503e0, 0x0264f3e8, 0x03822835, 0x03855998
+SALARY, FEE, DAY_EVENTS = 0x038ac66e, 0x038ab832, 0x038b0b21
+
+
+def master_league(exe):
+    """Checks 7 to 9. The formulas run as machine code; the functions that would fetch a
+    player, a ranking place or a random number are answered with chosen values."""
+    import random
+    g = Game(exe)
+    mode = g.alloc(size=0xf00000)                       # empty mode data: no competitions, no awards
+    holder = g.alloc(size=0x40)
+    g.write(holder + 0x30, struct.pack('<I', mode))
+    g.write(MODE_OBJECT, struct.pack('<I', holder))
+    menu = g.alloc(size=0x40)
+    g.write(menu + 0x20, struct.pack('<I', 0x13))       # mode number 19 = Master League (kind 12)
+    g.write(MENU_OBJECT, struct.pack('<I', menu))
+    rec = g.alloc(size=0x400)
+    v = {}
+    g.replace(PLAYER_RECORD, lambda g, a: rec)
+    g.replace(0x03879e04, lambda g, a: 17)               # league of the club: not one of 60, 61, 62
+    g.replace(0x02c7d227, lambda g, a: 1)                # "the club is a real one"
+    g.replace(0x03138333, lambda g, a: v['rank'])        # place in the club ranking
+    g.replace(0x0385400e, lambda g, a: v['band'])
+    g.replace(0x0318c209, lambda g, a: 0)                # no award holders
+    g.replace(0x0388d14a, lambda g, a: 0)
+    g.replace(0x0381e2eb, lambda g, a: a(0))
+    g.replace(0x0385adf6, lambda g, a: v['season'])
+    g.replace(0x038b0769, lambda g, a: 0)                # the sort of the day's events
+    g.replace(RANDOM, lambda g, a: v['random'].pop(0))
+    for a in (0x03853b42, 0x03853b52, 0x0383899a):
+        g.replace(a, lambda g, a: v['overall'])
+
+    def field(g, a):
+        g.write(a(1), struct.pack('<I', v['field20'] if a(0) == 0x20 else 0))
+        return 0
+    g.replace(0x038278b0, field)
+    got_rows = []
+    g.replace(0x03365af8, lambda g, a: got_rows.append(struct.unpack('<I', g.read(a(0) + 8, 4))[0]) or 0)
+
+    random.seed(2017)
+    pid, team = g.alloc(struct.pack('<II', 1234, 1)), g.alloc(struct.pack('<I', 0x4066))
+    zero, number, kind, change = g.alloc(b'\0' * 8), g.alloc(b'\0' * 4), g.alloc(b'\0' * 4), g.alloc(b'\0' * 4)
+    g.write(rec + 0x2c, struct.pack('<II', 1234, 1))
+    g.write(rec + 0xbc, struct.pack('<h', -1))
+    n = 3000
+    for _ in range(n):
+        o = random.randint(40, 99)
+        x = random.choice([0, 800, 801, 1800, 1801, 4095, random.randint(0, 4095)])
+        role, level = random.randint(0, 22), random.randint(0, 3)
+        v.update(rank=random.choice([1, 250, 251, 300, random.randint(1, 300)]), band=random.randint(0, 7),
+                 field20=random.randint(40, 99), overall=o)
+        g.write(rec + 0xb4, struct.pack('<II', x << 11, level << 26))
+        g.write(rec + 0xc4, bytes([role]))
+        g.write(number, struct.pack('<I', o))
+        want = money.salary(o, x, role, level, v['rank'], v['band'], v['field20'])
+        assert g.call(SALARY, [pid, team, zero, zero, number]) == want, (o, x, role, level, v)
+    print('7 ok: the game\'s salary code (fcn_038ac66e) and money.salary give the same amount for %d random players '
+          '(awards and title bonuses not run)' % n)
+
+    for _ in range(n):
+        o, x, base, given = random.randint(40, 99), random.randint(0, 4095), random.randint(1, 400000), random.choice([0, 0, 777])
+        k, own, do = random.choice([0, 1, 2, 3]), random.randint(0, 1), random.randint(0, 1)
+        v['overall'] = o
+        g.write(rec + 0xb4, struct.pack('<II', x << 11, own << 28))
+        g.write(rec + 0xcc, struct.pack('<I', base))
+        g.write(number, struct.pack('<I', given))
+        g.write(kind, struct.pack('<I', k))
+        g.write(change, bytes([do]))
+        r, sign = random.randint(0, 49), random.randint(0, 1)
+        v['random'] = [] if not do else [r] if k in (1, 2) else [sign, r % 20]
+        percent = 0 if not do else (-r or 1) if k == 1 else (r or 1) if k == 2 else ((r % 20) or 1 if sign == 0 else -(r % 20) or 1)
+        want = money.fee(given or base, o, x, percent, keep=bool(k and not own))
+        assert g.call(FEE, [pid, number, kind, change, g.alloc(b'\1')]) == want, (o, x, base, given, k, own, do, r, sign)
+    print('8 ok: the game\'s transfer fee code (fcn_038ab832) and money.fee give the same amount for %d random cases, '
+          'with and without the random change' % n)
+
+    table = year_plan.rows(load(exe))
+    days = 0
+    for mode_number, mode_kind in ((0x13, year_plan.ML), (0x14, year_plan.BL), (0x12, year_plan.LEAGUE), (0, 0)):
+        g.write(menu + 0x20, struct.pack('<I', mode_number))
+        for january in (0, 1):
+            v['season'] = january
+            for year in (2016, 2017):
+                for flags in ((0, 0, 0, 0), (1, 1, 2, 1)) if year == 2017 else ((0, 0, 0, 0),):
+                    g.write(mode + 0xdcb686, bytes([flags[0]]))
+                    g.write(mode + 0xdc9d78, struct.pack('<I', 0x56 if flags[1] else 0))
+                    g.write(mode + 0xdc9cbc, bytes([flags[2]]))
+                    g.write(mode + 0xddce71, bytes([flags[3]]))
+                    for month in range(1, 13):
+                        for day in range(1, 32):
+                            del got_rows[:]
+                            g.call(DAY_EVENTS, [g.alloc(b'\0' * 12), g.alloc(struct.pack('<HBB', year, month, day))])
+                            want = year_plan.events(table, mode_kind, january, year, month, day, *flags)
+                            assert got_rows == want, (mode_kind, january, year, month, day, flags, got_rows, want)
+                            days += 1
+                            g.top -= 32
+    print('9 ok: the game\'s year-plan code (fcn_038b0b21) and yearplan.events put the same events on each day '
+          '(%d days: four modes, both season kinds, flags on and off)' % days)
 
 
 def game_sha(g, data):
@@ -168,3 +268,4 @@ def main(exe, save):
 
 if __name__ == '__main__':
     main(sys.argv[1], sys.argv[2])
+    master_league(sys.argv[1])

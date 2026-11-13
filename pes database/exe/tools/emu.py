@@ -9,7 +9,10 @@
 
 Needs `pip install unicorn`. The whole image is mapped at its own addresses.
 Four C-library imports (memset, memcpy, memmove, strcpy_s) are answered in
-Python; any other import stops the run with an error. A page is mapped at
+Python; any other import stops the run with an error. `g.replace(address, fn)`
+puts a Python function in the place of a game function (fn(game, stack
+arguments reader) -> eax), so that a formula can be run without the data it
+would fetch: the callers of the look-up functions get chosen values. A page is mapped at
 address 0, so a function that sets up an exception frame (fs:[0]) runs;
 functions that call Windows are out of reach.
 """
@@ -54,6 +57,8 @@ class Game:
             self.stub[STUBS + 16 * i] = name
         mu.hook_add(UC_HOOK_CODE, self._import, begin=STUBS, end=STUBS + 0xfff)
         self.top = HEAP
+        self.replaced = {}
+        self.exe = d
 
     def _import(self, mu, address, size, user):
         esp = mu.reg_read(UC_X86_REG_ESP)
@@ -72,6 +77,35 @@ class Game:
             raise RuntimeError('import not emulated at 0x%x' % address)
         mu.reg_write(UC_X86_REG_EAX, a)
         mu.reg_write(UC_X86_REG_ESP, esp + 4)          # cdecl: the caller removes the arguments
+        mu.reg_write(UC_X86_REG_EIP, ret)
+
+    def replace(self, address, fn):
+        """Answer calls to the game function at `address` with fn(game, arg) -> eax, where
+        arg(i) is stack argument i. The stack is cleaned as the real function does it
+        (its `ret n` is read from its code)."""
+        import capstone
+        from layout import off
+        md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32)
+        n = None
+        o = off(address)
+        for ins in md.disasm(self.exe[o:o + 0x4000], address):
+            if ins.mnemonic == 'ret':
+                n = int(ins.op_str, 0) if ins.op_str else 0
+                break
+        assert n is not None, 'no ret found in 0x%x' % address
+        if not self.replaced:
+            self.mu.hook_add(UC_HOOK_CODE, self._replaced)
+        self.replaced[address] = (fn, n)
+
+    def _replaced(self, mu, address, size, user):
+        if address not in self.replaced:
+            return
+        fn, n = self.replaced[address]
+        esp = mu.reg_read(UC_X86_REG_ESP)
+        ret = struct.unpack('<I', mu.mem_read(esp, 4))[0]
+        arg = lambda i: struct.unpack('<I', mu.mem_read(esp + 4 + 4 * i, 4))[0]
+        mu.reg_write(UC_X86_REG_EAX, fn(self, arg) & 0xffffffff)
+        mu.reg_write(UC_X86_REG_ESP, esp + 4 + n)
         mu.reg_write(UC_X86_REG_EIP, ret)
 
     def alloc(self, data=b'', size=None):

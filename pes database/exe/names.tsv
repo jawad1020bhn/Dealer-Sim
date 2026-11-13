@@ -58,3 +58,50 @@ address	name	topic	note
 0x02bc5ebe	allocate	runtime	guess
 0x02bc5b9a	free	runtime	guess
 0x02bcc2b9	string_assign	runtime	std::string assign (text, length)
+0x0381c0e5	mode_object	master league	returns the pointer at 0x026503e0; +0x30 = the mode data
+0x03808865	mode_selector	master league	returns the pointer at 0x0264f3e8; +0x20 = number of the running mode
+0x038093f1	mode_kind	master league	table 0x0251d408[mode number]: 11 League, 12 Master League, 13 Become a Legend
+0x03822835	player_record	master league	(id, id2) -> player record of the mode data
+0x03822969	team_record	master league	(id) -> team record; squad at +0xf8, count in +0x328 bits 9-15
+0x03822ab9	competition_record	master league	(id) -> one of 300 records of 0x224 bytes at mode data + 0x552e80
+0x03822b3f	match_record	master league	(number) -> one of 9,000 records of 0x24c bytes at mode data + 0x6f154c
+0x03855998	mode_random	master league	(&n) -> 0..n-1; seed u16 at mode data + 0xddcf02; read
+0x0360dbf0	day_loop	master league	process::UpdateDayEndThread: day end, then day begin / after matches / day end until day_loop_stop
+0x0360a350	day_begin	master league	steps at the start of a day; read in part
+0x0360bf0c	day_end	master league	steps at the end of a day and the season-end block; read in part
+0x0360b713	day_loop_stop	master league	true when day_state is 2
+0x03877938	day_state	master league	asked by most steps; 2 = the day loop stops; other values not worked out
+0x038ae451	today	master league	(&date): year, month, day from the day number at mode data + 0xc2cbb0
+0x038ae7ca	event_on_date	master league	(&event, &date): is the event in the 16 slots of that day of the calendar
+0x038558cc	event_on_day	master league	(&event, &day number): as event_on_date
+0x035d8b2e	year_plan_write	master league	on event 1: writes the events of each day into the calendar
+0x038b0b21	year_plan_day	master league	(out, &date): rows of table 0x0216bc20 for the date; proven, check 9, yearplan.py
+0x0385adf6	season_kind	master league	(league id): table 0x021687d0; 0 = season from 1 July
+0x038ac66e	salary	master league	(player, club, .., .., &overall); proven, check 7, money.py
+0x038ab5ea	salary_other	master league	salary for leagues 60 to 62; read, not run
+0x038ab832	transfer_fee	master league	(player, &figure, &kind, &random, &flag); proven, check 8, money.py
+0x038ad7a8	wage_bill	master league	(club, recompute): sum of the squad salaries; read
+0x0385400e	player_band	master league	(player record) -> band used by salary and squad planning; read, count not settled
+0x03138333	club_rank	master league	(club): number stored for the club in the ranking at mode data + 0xcc84cc
+0x038a9d95	money_clamp	master league	limits an amount
+0x03869870	money_text	master league	prints a 64-bit amount with thousands separators
+0x0365c89a	negotiation_day_begin	master league	on events 3 and 6 runs negotiation_step
+0x0365cbbc	negotiation_day_end	master league	on event 9 runs negotiation_step
+0x03659b50	negotiation_step	master league	walks the 70 deal records at mode data + 0xd06438; switch on 13 states; case 2 read
+0x0389b3f8	willingness_a	master league	score 0..100 used by negotiation_step; not read
+0x0389bd94	willingness_b	master league	score 0..100 used by negotiation_step; not read
+0x0388a1be	deal_years	master league	number stored in bits 8-11 of the deal record; not read
+0x03652198	scout_step	master league	day end: rand(1000) < 30 / slots in use -> scout_search; read
+0x0364f2ca	scout_search	master league	1,381 lines; not read
+0x036602e5	club_squad_plan	master league	event 30: marks surplus players of up to 5 clubs per call, fills the plan record; read
+0x0389440a	squad_needs	master league	list of player / position entries for a club; not read
+0x03888d9e	squad_size	master league	count used by club_squad_plan (surplus = this - 23)
+0x03889a55	window_last_day	master league	(&date): true on 31 January and 31 August
+0x0389734b	move_players	master league	only writer found of a squad count with the squad list; not read
+0x0389840a	complete_transfer	master league	11 callers; not read
+0x03865b0a	team_strength_of	master league	(&club, &kind): one value per player, then team_strength
+0x04067cfa	team_strength	master league	sorts 32 values, mean of the best 11; kind 6: limited to 40..99
+0x038ba942	role_effects	master league	(role, out): the up to 3 effects of a role from table 0x0216f85c
+0x038bb0f0	role_multiplier	master league	(club) -> factor from the roles; read
+0x03640d19	money_step	master league	day begin, events 3, 23, 25, 49; 1,280 lines; not read
+0x037741b4	league_creation_pick	master league	process::LeagueCreation: picks one of four functions by competition id
