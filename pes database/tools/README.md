@@ -144,3 +144,9 @@ Files:
   Run it on the output of `task32.py`: `python3 task33.py <in data.dat> <out data.dat>`; ends with a self-check.
 - `rate.match_cards` breaks equal scores by player id since task 30 (before, the order of a Python set decided, so
   two runs could differ by a player).
+- `task34.py` — the classic players are removed again: the 130 of task 13 and the nine hand-built legends of task 14.
+  The five slots hold what they held before task 13 ("The Old Boys" empty, "Pleasure Horn", the three Master League
+  default teams with their own players); 32 records are unused free agents again. The seven classic teams the save
+  came with stay. The old content is read from the file of commit `d5341d7` (the state before task 13), decrypted.
+  Run it on the output of `task33.py`: `python3 task34.py <in data.dat> <before/data.dat> <out data.dat>`; ends with
+  a self-check. `task13.py` and step 9 of `task14.py` stay in the folder: the chain needs them to rebuild the file.
