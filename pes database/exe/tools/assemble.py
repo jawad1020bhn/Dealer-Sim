@@ -97,6 +97,7 @@ def main(work, found, inv, outdir):
 
     info, files = {}, defaultdict(list)
     calls, srefs, irefs, evid = set(), [], set(), []
+    # sorted: the second look (r0000) comes last and replaces the first answer for its starts
     for jf in sorted(glob.glob(os.path.join(work, 'batches', '*.json'))):
         rec = json.load(open(jf))
         out = open(jf[:-5] + '.out', encoding='utf-8', errors='replace').read()

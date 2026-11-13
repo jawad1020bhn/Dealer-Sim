@@ -11,7 +11,13 @@ output files from them. Run it again to continue: finished batches are skipped.
 One function may take 45 seconds. A watchdog then stops Rizin (so does the
 memory ceiling of rizin-limited.sh); REA still returns what was printed, the
 function is put on the batch's skipped list and the rest of the batch runs in
-a new REA call. A batch can therefore have several Evidence ids."""
+a new REA call. A batch can therefore have several Evidence ids.
+
+Second look (batch r0000): a start on a padding byte makes Rizin analyse the
+bytes after it, and such a piece can run over real functions that follow (the
+jump table of a switch read as code). Starts that were answered with a piece
+like that, one that is not in the list of starts, are analysed again on their
+own; assemble.py takes the later answer."""
 import json
 import os
 import sys
@@ -20,6 +26,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 import rea
+from assemble import blocks
 
 TIMEOUT_MS = 900000      # REA's own deadline for one call
 PER_FUNCTION = 45        # seconds
@@ -46,7 +53,7 @@ def watchdog(base, stop):
 
 
 def one(exe, work, n, addrs):
-    base = os.path.join(work, 'batches', '%05d' % n)
+    base = os.path.join(work, 'batches', n if isinstance(n, str) else '%05d' % n)
     if os.path.exists(base + '.json'):
         return n, 'done before', 0
     t = time.time()
@@ -92,6 +99,14 @@ def main(exe, found, work, workers=2, size=1000):
     with ThreadPoolExecutor(workers) as ex:
         for n, st, secs in ex.map(lambda j: one(exe, work, *j), jobs):
             print('batch %05d %s %.0f s' % (n, st, secs), flush=True)
+    listed = {int(a, 16) for a in addrs}
+    again = set()
+    for n, _ in jobs:
+        out = open(os.path.join(work, 'batches', '%05d.out' % n), encoding='utf-8', errors='replace').read()
+        again |= {a for a, facts, _ in blocks(out) if facts and facts['offset'] != a and facts['offset'] not in listed}
+    if again:
+        n, st, secs = one(exe, work, 'r0000', ['0x%08x' % a for a in sorted(again)])
+        print('second look at %d starts: %s %.0f s' % (len(again), st, secs), flush=True)
 
 
 if __name__ == '__main__':
