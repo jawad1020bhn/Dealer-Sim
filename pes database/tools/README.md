@@ -102,3 +102,8 @@ Files:
   leagues join it as reserves; in a full squad the weakest reserve outside the FotMob list is released (9). Kendry
   Páez, left without a club by mistake, joins River Plate (on loan for 2026).
   Run it on the output of `task27.py`: `python3 task28.py <in data.dat> <out data.dat>`; ends with a self-check.
+- `task29.py` — the rest of the other save, all leagues, after a quality check of each kind of difference (figures in
+  the docstring): 56 playable positions on 50 players that EA FC 27 or FotMob list (`PLAY`), 16 playing styles where
+  ours had no effect at the player's position and the task 23 rule gives the other save's style (`STYLE`), 2 shirt
+  numbers (`NUM`). Its shirt numbers outside the five leagues are last season's and are not taken.
+  Run it on the output of `task28.py`: `python3 task29.py <in data.dat> <out data.dat>`; ends with a self-check.
