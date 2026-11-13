@@ -150,3 +150,13 @@ Files:
   came with stay. The old content is read from the file of commit `d5341d7` (the state before task 13), decrypted.
   Run it on the output of `task33.py`: `python3 task34.py <in data.dat> <before/data.dat> <out data.dat>`; ends with
   a self-check. `task13.py` and step 9 of `task14.py` stay in the folder: the chain needs them to rebuild the file.
+- `task35.py` — ratings outside the five leagues, checked. Of 10,942 club players there, 6,292 have an EA FC 27 card
+  and 6,275 already carried its rating; 13 more get it now (six of them built by task 31 at the median of their club
+  although EA rates them: Seghetti 68 to 61, Hübel 64 to 52), 4 cards sit at another club and are left alone.
+  The 4,650 without a card are compared with what their share of the club's Wyscout minutes and their age suggest, a
+  fit on the rated players that misses a held-out one by 3.4 points. Nothing stands out: the mean gap is +0.3, and
+  2.0 % of the regulars are rated 7 or more below the expectation where 1.2 % of the rated players are. No rating is
+  changed on that evidence. Limits: 2,942 of them play for clubs with fewer than 6 rated players, where the level is
+  that of their own squad (a club rated too high or too low as a whole does not show); 683 players are at clubs
+  without a Wyscout team. Run it on the output of `task34.py`: `python3 task35.py <in data.dat> <out data.dat>`;
+  ends with a self-check. The full list of gaps is in `<out data.dat>.log.pkl`.

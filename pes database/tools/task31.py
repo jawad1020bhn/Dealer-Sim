@@ -52,6 +52,7 @@ def candidates(t):
     ws = [w for w in W.values() if w['now'] == wmap.get(t) and w['id'] not in taken and w['nation'] in natw]
     for w in sorted(ws, key=lambda w: (-wyscout.minutes(w, wmap[t]), w['id'])):
         r = max(w['rows'], key=lambda x: x['min'])['r']; pos = WPOS.get(r['Position'].split(',')[0].strip()); mins = wyscout.minutes(w, wmap[t])
+        # shortcut: the club median even where EA FC 27 has a card for him (six players); task35.py sets the card's rating
         if pos and w['height']: out.append(('Wyscout, %d minutes' % mins, wname(w), w['name'], w['age'], w['height'], natw[w['nation']].most_common(1)[0][0], pos, med - 3 * (mins < 450), r['Foot'], None))
     for c in sorted((c for c in C27 if eamap.get(c['club']) == t and id(c) not in owned and c['nation'] in natof), key=lambda c: (-c['ovr'], c['name'])):
         out.append(('EA FC 27', c['short'] if len(c['name']) > 30 else c['name'], c['name'], c['age'], c['height'] or 180, natof[c['nation']].most_common(1)[0][0], EAPOS[c['pos']], c['ovr'], '', None))
