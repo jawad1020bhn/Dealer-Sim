@@ -7,3 +7,4 @@ node_modules/
 /sider.ini
 /sider.ini.bak-*
 /SiderX Launcher.*
+__pycache__/

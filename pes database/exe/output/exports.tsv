@@ -1,0 +1,42 @@
+address	name	mangled
+0x04247e1d	public: void __thiscall TiXmlOutStream::constructor(class TiXmlOutStream const &)	??0TiXmlOutStream@@QAE@ABV0@@Z
+0x0424775a	public: void __thiscall TiXmlOutStream::constructor(void)	??0TiXmlOutStream@@QAE@XZ
+0x04247b5e	public: void __thiscall TiXmlString::constructor(class TiXmlString const &)	??0TiXmlString@@QAE@ABV0@@Z
+0x04247bce	public: void __thiscall TiXmlString::constructor(char const *)	??0TiXmlString@@QAE@PBD@Z
+0x04247c4e	public: void __thiscall TiXmlString::constructor(char const *, unsigned int)	??0TiXmlString@@QAE@PBDI@Z
+0x00400000	Ordinal_6	Ordinal_6
+0x038e67b2	public: void __thiscall std::_Mutex::constructor(enum std::_Uninitialized)	??0_Mutex@std@@QAE@W4_Uninitialized@1@@Z
+0x02dfaaec	public: void __thiscall TiXmlOutStream::~destructor(void)	??1TiXmlOutStream@@QAE@XZ
+0x00400000	Ordinal_9	Ordinal_9
+0x04247e3d	public: class TiXmlOutStream & __thiscall TiXmlOutStream::operator=(class TiXmlOutStream const &)	??4TiXmlOutStream@@QAEAAV0@ABV0@@Z
+0x04247ced	public: class TiXmlString & __thiscall TiXmlString::operator=(class TiXmlString const &)	??4TiXmlString@@QAEAAV0@ABV0@@Z
+0x04247cbe	public: class TiXmlString & __thiscall TiXmlString::operator=(char const *)	??4TiXmlString@@QAEAAV0@PBD@Z
+0x00400000	Ordinal_13	Ordinal_13
+0x04247d5d	public: class TiXmlOutStream & __thiscall TiXmlOutStream::operator<<(class TiXmlString const &)	??6TiXmlOutStream@@QAEAAV0@ABVTiXmlString@@@Z
+0x04247dbd	public: class TiXmlOutStream & __thiscall TiXmlOutStream::operator<<(char const *)	??6TiXmlOutStream@@QAEAAV0@PBD@Z
+0x042477aa	public: char & __thiscall TiXmlString::operator[](unsigned int)const	??ATiXmlString@@QBEAADI@Z
+0x00400000	Ordinal_17	Ordinal_17
+0x04247d0d	public: class TiXmlString & __thiscall TiXmlString::operator+=(char)	??YTiXmlString@@QAEAAV0@D@Z
+0x00400000	Ordinal_19	Ordinal_19
+0x04247b0e	public: class TiXmlString & __thiscall TiXmlString::append(char const *, unsigned int)	?append@TiXmlString@@QAEAAV1@PBDI@Z
+0x04247a25	public: class TiXmlString & __thiscall TiXmlString::assign(char const *, unsigned int)	?assign@TiXmlString@@QAEAAV1@PBDI@Z
+0x00400000	Ordinal_22	Ordinal_22
+0x0424776a	public: char const * __thiscall TiXmlString::c_str(void)const	?c_str@TiXmlString@@QBEPBDXZ
+0x0424779a	public: unsigned int __thiscall TiXmlString::capacity(void)const	?capacity@TiXmlString@@QBEIXZ
+0x042478e9	public: void __thiscall TiXmlString::clear(void)	?clear@TiXmlString@@QAEXXZ
+0x00400000	Ordinal_26	Ordinal_26
+0x0424778a	public: bool __thiscall TiXmlString::empty(void)const	?empty@TiXmlString@@QBE_NXZ
+0x042478a9	public: unsigned int __thiscall TiXmlString::find(char)const	?find@TiXmlString@@QBEID@Z
+0x042477ba	public: unsigned int __thiscall TiXmlString::find(char, unsigned int)const	?find@TiXmlString@@QBEIDI@Z
+0x04247839	private: char * __thiscall TiXmlString::finish(void)const	?finish@TiXmlString@@ABEPADXZ
+0x04247909	private: void __thiscall TiXmlString::init(unsigned int)	?init@TiXmlString@@AAEXI@Z
+0x04247849	private: void __thiscall TiXmlString::init(unsigned int, unsigned int)	?init@TiXmlString@@AAEXII@Z
+0x0424777a	public: unsigned int __thiscall TiXmlString::length(void)const	?length@TiXmlString@@QBEIXZ
+0x0227de0c	public: static unsigned int const TiXmlString::npos	?npos@TiXmlString@@2IB
+0x026ca4bc	private: static struct TiXmlString::Rep TiXmlString::nullrep_	?nullrep_@TiXmlString@@0URep@1@A
+0x00400000	Ordinal_36	Ordinal_36
+0x04247959	public: void __thiscall TiXmlString::reserve(unsigned int)	?reserve@TiXmlString@@QAEXI@Z
+0x04247819	private: void __thiscall TiXmlString::set_size(unsigned int)	?set_size@TiXmlString@@AAEXI@Z
+0x00400000	Ordinal_39	Ordinal_39
+0x00400000	Ordinal_40	Ordinal_40
+0x042477f9	public: void __thiscall TiXmlString::swap(class TiXmlString &)	?swap@TiXmlString@@QAEXAAV1@@Z

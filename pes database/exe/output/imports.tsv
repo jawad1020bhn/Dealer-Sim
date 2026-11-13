@@ -1,0 +1,683 @@
+slot	value_in_file	dll	name
+0x047d7000	0x043d8e34	advapi32.dll	ConvertSidToStringSidW
+0x047d7004	0x043d8e4e	advapi32.dll	CryptAcquireContextA
+0x047d7008	0x043d8e66	advapi32.dll	CryptAcquireContextW
+0x047d700c	0x043d8e7e	advapi32.dll	CryptGenRandom
+0x047d7010	0x043d8e90	advapi32.dll	RegOpenKeyExA
+0x047d7014	0x043d8ea0	advapi32.dll	CryptReleaseContext
+0x047d7018	0x043d8eb6	advapi32.dll	RegOpenKeyExW
+0x047d701c	0x043d8ec6	advapi32.dll	LookupAccountNameW
+0x047d7020	0x043d8edc	advapi32.dll	RegCloseKey
+0x047d7024	0x043d8eea	advapi32.dll	RegQueryValueExW
+0x047d702c	0x043d8f0c	d3d9.dll	D3DPERF_SetOptions
+0x047d7030	0x043d8f22	d3d9.dll	D3DPERF_BeginEvent
+0x047d7034	0x043d8f38	d3d9.dll	D3DPERF_EndEvent
+0x047d7038	0x043d8f4c	d3d9.dll	D3DPERF_SetMarker
+0x047d703c	0x043d8f60	d3d9.dll	Direct3DCreate9
+0x047d7044	0x043d8f7c	d3dx9_43.dll	D3DXSaveTextureToFileA
+0x047d704c	0x043d8fa4	dinput8.dll	DirectInput8Create
+0x047d7054	0x8000000c	dsound.dll	DirectSoundCaptureCreate8
+0x047d7058	0x8000000b	dsound.dll	DirectSoundCreate8
+0x047d705c	0x80000003	dsound.dll	DirectSoundEnumerateW
+0x047d7064	0x043d8fd2	gdi32.dll	GetObjectA
+0x047d7068	0x043d8fe0	gdi32.dll	CreateFontIndirectA
+0x047d706c	0x043d8ff6	gdi32.dll	DeleteObject
+0x047d7070	0x043d9006	gdi32.dll	GetDeviceCaps
+0x047d7074	0x043d9016	gdi32.dll	GetTextExtentPoint32W
+0x047d7078	0x043d902e	gdi32.dll	GetStockObject
+0x047d707c	0x043d9040	gdi32.dll	SelectObject
+0x047d7080	0x043d9050	gdi32.dll	SetTextColor
+0x047d7088	0x043d906a	imm32.dll	ImmAssociateContext
+0x047d7090	0x043d908a	iphlpapi.dll	AddIPAddress
+0x047d7094	0x043d909a	iphlpapi.dll	GetIpAddrTable
+0x047d7098	0x043d90ac	iphlpapi.dll	GetBestInterface
+0x047d709c	0x043d90c0	iphlpapi.dll	GetAdaptersAddresses
+0x047d70a0	0x043d90d8	iphlpapi.dll	GetIfEntry
+0x047d70a4	0x043d90e6	iphlpapi.dll	ConvertInterfaceLuidToGuid
+0x047d70a8	0x043d9104	iphlpapi.dll	DeleteIPAddress
+0x047d70ac	0x043d9116	iphlpapi.dll	GetAdaptersInfo
+0x047d70b0	0x043d9128	iphlpapi.dll	GetIpForwardTable
+0x047d70b4	0x043d913c	iphlpapi.dll	GetNetworkParams
+0x047d70bc	0x043d915e	kernel32.dll	CreateEventW
+0x047d70c0	0x043d916e	kernel32.dll	SetThreadIdealProcessor
+0x047d70c4	0x043d9188	kernel32.dll	ReadFile
+0x047d70c8	0x043d9194	kernel32.dll	SetProcessPriorityBoost
+0x047d70cc	0x043d91ae	kernel32.dll	SizeofResource
+0x047d70d0	0x043d91c0	kernel32.dll	CreateMutexA
+0x047d70d4	0x043d91d0	kernel32.dll	DeleteFileA
+0x047d70d8	0x043d91de	kernel32.dll	GetThreadPriority
+0x047d70dc	0x043d91f2	kernel32.dll	CreateSemaphoreW
+0x047d70e0	0x043d9206	kernel32.dll	GetDriveTypeW
+0x047d70e4	0x043d9216	kernel32.dll	GetProcessHeap
+0x047d70e8	0x043d9228	kernel32.dll	CreateSemaphoreA
+0x047d70ec	0x043d923c	kernel32.dll	TlsAlloc
+0x047d70f0	0x043d9248	kernel32.dll	FindClose
+0x047d70f4	0x043d9254	kernel32.dll	TerminateProcess
+0x047d70f8	0x043d9268	kernel32.dll	DeleteFileW
+0x047d70fc	0x043d9276	kernel32.dll	GetProcessAffinityMask
+0x047d7100	0x043d9290	kernel32.dll	DuplicateHandle
+0x047d7104	0x043d92a2	kernel32.dll	DeleteCriticalSection
+0x047d7108	0x043d92ba	kernel32.dll	MoveFileA
+0x047d710c	0x043d92c6	kernel32.dll	CreateDirectoryW
+0x047d7110	0x043d92da	kernel32.dll	AcquireSRWLockExclusive
+0x047d7114	0x043d92f4	kernel32.dll	CreateProcessA
+0x047d7118	0x043d9306	kernel32.dll	QueryPerformanceCounter
+0x047d711c	0x043d9320	kernel32.dll	CreatePipe
+0x047d7120	0x043d932e	kernel32.dll	AcquireSRWLockShared
+0x047d7124	0x043d9346	kernel32.dll	GetCurrentProcess
+0x047d7128	0x043d935a	kernel32.dll	CloseHandle
+0x047d712c	0x043d9368	kernel32.dll	GetExitCodeProcess
+0x047d7130	0x043d937e	kernel32.dll	CreateDirectoryA
+0x047d7134	0x043d9392	kernel32.dll	ExitProcess
+0x047d7138	0x043d93a0	kernel32.dll	CreateEventA
+0x047d713c	0x043d93b0	kernel32.dll	ResumeThread
+0x047d7140	0x043d93c0	kernel32.dll	CreateFileA
+0x047d7144	0x043d93ce	kernel32.dll	CreateFileMappingW
+0x047d7148	0x043d93e4	kernel32.dll	CreateFileW
+0x047d714c	0x043d93f2	kernel32.dll	CreateMutexW
+0x047d7150	0x043d9402	kernel32.dll	DeviceIoControl
+0x047d7154	0x043d9414	kernel32.dll	DecodePointer
+0x047d7158	0x043d9424	kernel32.dll	EncodePointer
+0x047d715c	0x043d9434	kernel32.dll	EnterCriticalSection
+0x047d7160	0x043d944c	kernel32.dll	FindResourceW
+0x047d7164	0x043d945c	kernel32.dll	FindFirstFileA
+0x047d7168	0x043d946e	kernel32.dll	FindFirstFileW
+0x047d716c	0x043d9480	kernel32.dll	FindNextFileA
+0x047d7170	0x043d9490	kernel32.dll	GetCurrentProcessId
+0x047d7174	0x043d94a6	kernel32.dll	FindNextFileW
+0x047d7178	0x043d94b6	kernel32.dll	FlushFileBuffers
+0x047d717c	0x043d94ca	kernel32.dll	SwitchToThread
+0x047d7180	0x043d94dc	kernel32.dll	FormatMessageA
+0x047d7184	0x043d94ee	kernel32.dll	FreeLibrary
+0x047d7188	0x043d94fc	kernel32.dll	GetCurrentDirectoryW
+0x047d718c	0x043d9514	kernel32.dll	GetCurrentThread
+0x047d7190	0x043d9528	kernel32.dll	lstrcpyW
+0x047d7194	0x043d9534	kernel32.dll	GetCurrentThreadId
+0x047d7198	0x043d954a	kernel32.dll	GetDiskFreeSpaceExW
+0x047d719c	0x043d9560	kernel32.dll	GetDiskFreeSpaceW
+0x047d71a0	0x043d9574	kernel32.dll	GetExitCodeThread
+0x047d71a4	0x043d9588	kernel32.dll	GetFileAttributesA
+0x047d71a8	0x043d959e	kernel32.dll	SuspendThread
+0x047d71ac	0x043d95ae	kernel32.dll	GetFileAttributesW
+0x047d71b0	0x043d95c4	kernel32.dll	GetFileInformationByHandle
+0x047d71b4	0x043d95e2	kernel32.dll	GetFileSize
+0x047d71b8	0x043d95f0	kernel32.dll	GetFileSizeEx
+0x047d71bc	0x043d9600	kernel32.dll	IsDebuggerPresent
+0x047d71c0	0x043d9614	kernel32.dll	GetFullPathNameA
+0x047d71c4	0x043d9628	kernel32.dll	GetLastError
+0x047d71c8	0x043d9638	kernel32.dll	GetLocalTime
+0x047d71cc	0x043d9648	kernel32.dll	GetLocaleInfoA
+0x047d71d0	0x043d965a	kernel32.dll	GetModuleFileNameW
+0x047d71d4	0x043d9670	kernel32.dll	GetLogicalDrives
+0x047d71d8	0x043d9684	kernel32.dll	GetLogicalProcessorInformation
+0x047d71dc	0x043d96a6	kernel32.dll	GetLongPathNameA
+0x047d71e0	0x043d96ba	kernel32.dll	GetModuleFileNameA
+0x047d71e4	0x043d96d0	kernel32.dll	GetModuleHandleA
+0x047d71e8	0x043d96e4	kernel32.dll	GetModuleHandleW
+0x047d71ec	0x043d96f8	kernel32.dll	GetProcAddress
+0x047d71f0	0x043d970a	kernel32.dll	GetStartupInfoW
+0x047d71f4	0x043d971c	kernel32.dll	GetStdHandle
+0x047d71f8	0x043d972c	kernel32.dll	HeapAlloc
+0x047d71fc	0x043d9738	kernel32.dll	GetSystemDirectoryA
+0x047d7200	0x043d974e	kernel32.dll	GetSystemInfo
+0x047d7204	0x043d975e	kernel32.dll	GetSystemTimeAsFileTime
+0x047d7208	0x043d9778	kernel32.dll	GetTempPathW
+0x047d720c	0x043d9788	kernel32.dll	GetTickCount
+0x047d7210	0x043d9798	kernel32.dll	ReleaseMutex
+0x047d7214	0x043d97a8	kernel32.dll	GetTimeZoneInformation
+0x047d7218	0x043d97c2	kernel32.dll	GetVersionExW
+0x047d721c	0x043d97d2	kernel32.dll	GlobalAlloc
+0x047d7220	0x043d97e0	kernel32.dll	GlobalFree
+0x047d7224	0x043d97ee	kernel32.dll	GlobalLock
+0x047d7228	0x043d97fc	kernel32.dll	GlobalMemoryStatus
+0x047d722c	0x043d9812	kernel32.dll	GlobalUnlock
+0x047d7230	0x043d9822	kernel32.dll	HeapFree
+0x047d7234	0x043d982e	kernel32.dll	HeapSetInformation
+0x047d7238	0x043d9844	kernel32.dll	InitializeCriticalSection
+0x047d723c	0x043d9860	kernel32.dll	InitializeCriticalSectionAndSpinCount
+0x047d7240	0x043d9888	kernel32.dll	InitializeSRWLock
+0x047d7244	0x043d989c	kernel32.dll	InterlockedCompareExchange
+0x047d7248	0x043d98ba	kernel32.dll	MoveFileW
+0x047d724c	0x043d98c6	kernel32.dll	InterlockedDecrement
+0x047d7250	0x043d98de	kernel32.dll	InterlockedExchange
+0x047d7254	0x043d98f4	kernel32.dll	InterlockedExchangeAdd
+0x047d7258	0x043d990e	kernel32.dll	RemoveDirectoryW
+0x047d725c	0x043d9922	kernel32.dll	InterlockedIncrement
+0x047d7260	0x043d993a	kernel32.dll	IsProcessorFeaturePresent
+0x047d7264	0x043d9956	kernel32.dll	LeaveCriticalSection
+0x047d7268	0x043d996e	kernel32.dll	LoadLibraryA
+0x047d726c	0x043d997e	kernel32.dll	LoadLibraryExW
+0x047d7270	0x043d9990	kernel32.dll	LoadLibraryW
+0x047d7274	0x043d99a0	kernel32.dll	LoadResource
+0x047d7278	0x043d99b0	kernel32.dll	VerifyVersionInfoW
+0x047d727c	0x043d99c6	kernel32.dll	LocalFileTimeToFileTime
+0x047d7280	0x043d99e0	kernel32.dll	LocalFree
+0x047d7284	0x043d99ec	kernel32.dll	MapViewOfFile
+0x047d7288	0x043d99fc	kernel32.dll	MoveFileExW
+0x047d728c	0x043d9a0a	kernel32.dll	MultiByteToWideChar
+0x047d7290	0x043d9a20	kernel32.dll	OutputDebugStringA
+0x047d7294	0x043d9a36	kernel32.dll	OutputDebugStringW
+0x047d7298	0x043d9a4c	kernel32.dll	PeekNamedPipe
+0x047d729c	0x043d9a5c	kernel32.dll	QueryPerformanceFrequency
+0x047d72a0	0x043d9a78	kernel32.dll	RaiseException
+0x047d72a4	0x043d9a8a	kernel32.dll	ReleaseSRWLockExclusive
+0x047d72a8	0x043d9aa4	kernel32.dll	ReleaseSRWLockShared
+0x047d72ac	0x043d9abc	kernel32.dll	ReleaseSemaphore
+0x047d72b0	0x043d9ad0	kernel32.dll	RemoveDirectoryA
+0x047d72b4	0x043d9ae4	kernel32.dll	ResetEvent
+0x047d72b8	0x043d9af2	kernel32.dll	SetEndOfFile
+0x047d72bc	0x043d9b02	kernel32.dll	SetEvent
+0x047d72c0	0x043d9b0e	kernel32.dll	SetFileAttributesW
+0x047d72c4	0x043d9b24	kernel32.dll	SetFilePointer
+0x047d72c8	0x043d9b36	kernel32.dll	SetThreadAffinityMask
+0x047d72cc	0x043d9b4e	kernel32.dll	SetThreadPriority
+0x047d72d0	0x043d9b62	kernel32.dll	SetThreadPriorityBoost
+0x047d72d4	0x043d9b7c	kernel32.dll	SetUnhandledExceptionFilter
+0x047d72d8	0x043d9b9a	kernel32.dll	SignalObjectAndWait
+0x047d72dc	0x043d9bb0	kernel32.dll	Sleep
+0x047d72e0	0x043d9bb8	kernel32.dll	SystemTimeToFileTime
+0x047d72e4	0x043d9bd0	kernel32.dll	SystemTimeToTzSpecificLocalTime
+0x047d72e8	0x043d9bf2	kernel32.dll	TlsFree
+0x047d72ec	0x043d9bfc	kernel32.dll	TlsGetValue
+0x047d72f0	0x043d9c0a	kernel32.dll	TlsSetValue
+0x047d72f4	0x043d9c18	kernel32.dll	TryEnterCriticalSection
+0x047d72f8	0x043d9c32	kernel32.dll	UnhandledExceptionFilter
+0x047d72fc	0x043d9c4e	kernel32.dll	UnmapViewOfFile
+0x047d7300	0x043d9c60	kernel32.dll	VerSetConditionMask
+0x047d7304	0x043d9c76	kernel32.dll	VirtualAlloc
+0x047d7308	0x043d9c86	kernel32.dll	VirtualFree
+0x047d730c	0x043d9c94	kernel32.dll	VirtualQuery
+0x047d7310	0x043d9ca4	kernel32.dll	WaitForMultipleObjects
+0x047d7314	0x043d9cbe	kernel32.dll	WaitForSingleObject
+0x047d7318	0x043d9cd4	kernel32.dll	WideCharToMultiByte
+0x047d731c	0x043d9cea	kernel32.dll	WriteFile
+0x047d7320	0x043d9cf6	kernel32.dll	lstrcmpiA
+0x047d7324	0x043d9d02	kernel32.dll	lstrlenA
+0x047d732c	0x043d9d1c	msvcp100.dll	public: class std::basic_ostream<char, struct std::char_traits<char>> & __thiscall std::basic_ostream<char, struct std::char_traits<char>>::operator<<(unsigned int)
+0x047d7330	0x043d9d5c	msvcp100.dll	public: class std::basic_ostream<char, struct std::char_traits<char>> & __thiscall std::basic_ostream<char, struct std::char_traits<char>>::operator<<(unsigned __int64)
+0x047d7334	0x043d9d9c	msvcp100.dll	public: class std::basic_istream<char, struct std::char_traits<char>> & __thiscall std::basic_istream<char, struct std::char_traits<char>>::operator>>(unsigned __int64 &)
+0x047d7338	0x043d9dde	msvcp100.dll	public: void __thiscall std::_Lockit::~destructor(void)
+0x047d733c	0x043d9df8	msvcp100.dll	public: static unsigned short int __cdecl std::numeric_limits<unsigned short int>::min(void)
+0x047d7340	0x043d9e1e	msvcp100.dll	struct _iobuf * __cdecl std::_Fiopen(char const *, int, int)
+0x047d7344	0x043d9e44	msvcp100.dll	public: static unsigned int __cdecl std::codecvt<char, char, int>::_Getcat(class std::locale::facet const * *, class std::locale const *)
+0x047d7348	0x043d9e82	msvcp100.dll	bool __cdecl std::uncaught_exception(void)
+0x047d734c	0x043d9ea4	msvcp100.dll	public: void __thiscall std::_Container_base12::~destructor(void)
+0x047d7350	0x043d9ec8	msvcp100.dll	public virtual: void __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::~destructor(void)
+0x047d7354	0x043d9f04	msvcp100.dll	public: class std::basic_ostream<char, struct std::char_traits<char>> & __thiscall std::basic_ostream<char, struct std::char_traits<char>>::operator<<(class std::basic_ostream<char, struct std::char_traits<char>> & (__cdecl *)(class std::basic_ostream<char, struct std::char_traits<char>> &))
+0x047d7358	0x043d9f54	msvcp100.dll	public virtual: void __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::_Unlock(void)
+0x047d735c	0x043d9f96	msvcp100.dll	public: static unsigned int __cdecl std::ctype<char>::_Getcat(class std::locale::facet const * *, class std::locale const *)
+0x047d7360	0x043d9fd0	msvcp100.dll	public: class std::basic_istream<char, struct std::char_traits<char>> & __thiscall std::basic_istream<char, struct std::char_traits<char>>::operator>>(unsigned int &)
+0x047d7364	0x043da012	msvcp100.dll	public: void __thiscall std::_Lockit::constructor(int)
+0x047d7368	0x043da02c	msvcp100.dll	void __cdecl std::_Xlength_error(char const *)
+0x047d736c	0x043da04c	msvcp100.dll	protected virtual: __int64 __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::showmanyc(void)
+0x047d7370	0x043da090	msvcp100.dll	struct std::_Smanip<__int64> __cdecl std::setw(__int64)
+0x047d7374	0x043da0b6	msvcp100.dll	struct std::_Smanip<__int64> __cdecl std::setprecision(__int64)
+0x047d7378	0x043da0e4	msvcp100.dll	private: static class std::locale::_Locimp * __cdecl std::locale::_Getgloballocale(void)
+0x047d737c	0x043da118	msvcp100.dll	public: void __thiscall std::basic_ios<char, struct std::char_traits<char>>::setstate(int, bool)
+0x047d7380	0x043da158	msvcp100.dll	public: static unsigned int __cdecl std::numeric_limits<unsigned int>::min(void)
+0x047d7384	0x043da17e	msvcp100.dll	public: static int __cdecl std::numeric_limits<int>::min(void)
+0x047d7388	0x043da1a4	msvcp100.dll	public: char __thiscall std::basic_ios<char, struct std::char_traits<char>>::widen(char)const
+0x047d738c	0x043da1de	msvcp100.dll	public: class std::basic_istream<char, struct std::char_traits<char>> & __thiscall std::basic_istream<char, struct std::char_traits<char>>::operator>>(unsigned short int &)
+0x047d7390	0x043da220	msvcp100.dll	public: class std::basic_istream<char, struct std::char_traits<char>> & __thiscall std::basic_istream<char, struct std::char_traits<char>>::read(char *, __int64)
+0x047d7394	0x043da266	msvcp100.dll	protected: void __thiscall std::basic_ios<char, struct std::char_traits<char>>::constructor(void)
+0x047d7398	0x043da29c	msvcp100.dll	public: void __thiscall std::basic_iostream<char, struct std::char_traits<char>>::constructor(class std::basic_streambuf<char, struct std::char_traits<char>> *)
+0x047d739c	0x043da306	msvcp100.dll	public: void __thiscall std::basic_istream<char, struct std::char_traits<char>>::constructor(class std::basic_streambuf<char, struct std::char_traits<char>> *, bool)
+0x047d73a0	0x043da370	msvcp100.dll	public: void __thiscall std::basic_ostream<char, struct std::char_traits<char>>::constructor(class std::basic_streambuf<char, struct std::char_traits<char>> *, bool)
+0x047d73a4	0x043da3da	msvcp100.dll	protected: void __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::constructor(void)
+0x047d73a8	0x043da416	msvcp100.dll	public virtual: void __thiscall std::basic_ios<char, struct std::char_traits<char>>::~destructor(void)
+0x047d73ac	0x043da44c	msvcp100.dll	public: class std::basic_istream<char, struct std::char_traits<char>> & __thiscall std::basic_istream<char, struct std::char_traits<char>>::operator>>(int &)
+0x047d73b0	0x043da48e	msvcp100.dll	public virtual: void __thiscall std::basic_iostream<char, struct std::char_traits<char>>::~destructor(void)
+0x047d73b4	0x043da4c8	msvcp100.dll	public virtual: void __thiscall std::basic_istream<char, struct std::char_traits<char>>::~destructor(void)
+0x047d73b8	0x043da502	msvcp100.dll	public virtual: void __thiscall std::basic_ostream<char, struct std::char_traits<char>>::~destructor(void)
+0x047d73bc	0x043da53c	msvcp100.dll	public: class std::basic_istream<char, struct std::char_traits<char>> & __thiscall std::basic_istream<char, struct std::char_traits<char>>::operator>>(double &)
+0x047d73c0	0x043da57e	msvcp100.dll	public: class std::basic_istream<char, struct std::char_traits<char>> & __thiscall std::basic_istream<char, struct std::char_traits<char>>::operator>>(class std::ios_base & (__cdecl *)(class std::ios_base &))
+0x047d73c4	0x043da5d6	msvcp100.dll	protected virtual: int __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::sync(void)
+0x047d73c8	0x043da614	msvcp100.dll	public: class std::basic_ostream<char, struct std::char_traits<char>> & __thiscall std::basic_ostream<char, struct std::char_traits<char>>::operator<<(unsigned short int)
+0x047d73cc	0x043da654	msvcp100.dll	public: class std::basic_ostream<char, struct std::char_traits<char>> & __thiscall std::basic_ostream<char, struct std::char_traits<char>>::operator<<(int)
+0x047d73d0	0x043da694	msvcp100.dll	public: class std::basic_ostream<char, struct std::char_traits<char>> & __thiscall std::basic_ostream<char, struct std::char_traits<char>>::operator<<(float)
+0x047d73d4	0x043da6d4	msvcp100.dll	public: class std::basic_ostream<char, struct std::char_traits<char>> & __thiscall std::basic_ostream<char, struct std::char_traits<char>>::operator<<(double)
+0x047d73d8	0x043da714	msvcp100.dll	public: class std::basic_ostream<char, struct std::char_traits<char>> & __thiscall std::basic_ostream<char, struct std::char_traits<char>>::operator<<(class std::ios_base & (__cdecl *)(class std::ios_base &))
+0x047d73dc	0x043da76c	msvcp100.dll	public: class std::basic_ostream<char, struct std::char_traits<char>> & __thiscall std::basic_ostream<char, struct std::char_traits<char>>::operator<<(void const *)
+0x047d73e0	0x043da7ae	msvcp100.dll	public: class std::basic_ostream<char, struct std::char_traits<char>> & __thiscall std::basic_ostream<char, struct std::char_traits<char>>::operator<<(bool)
+0x047d73e4	0x043da7ee	msvcp100.dll	public: void * __thiscall std::ios_base::operator void *(void)const
+0x047d73e8	0x043da80a	msvcp100.dll	const std::basic_ios<char, struct std::char_traits<char>>::vftable
+0x047d73ec	0x043da83e	msvcp100.dll	const std::basic_istream<char, struct std::char_traits<char>>::vftable
+0x047d73f0	0x043da876	msvcp100.dll	const std::basic_ostream<char, struct std::char_traits<char>>::vftable
+0x047d73f4	0x043da8ae	msvcp100.dll	public: static unsigned int __cdecl std::numeric_limits<unsigned int>::max(void)
+0x047d73f8	0x043da8d4	msvcp100.dll	public: static unsigned __int64 __cdecl std::numeric_limits<unsigned __int64>::max(void)
+0x047d73fc	0x043da8fc	msvcp100.dll	public: void __thiscall std::basic_ostream<char, struct std::char_traits<char>>::_Osfx(void)
+0x047d7400	0x043da93a	msvcp100.dll	const std::ios_base::vftable
+0x047d7404	0x043da952	msvcp100.dll	public: void __thiscall std::basic_istream<char, struct std::char_traits<char>>::vbase_dtor(void)
+0x047d7408	0x043da98c	msvcp100.dll	__int64 const std::_BADOFF
+0x047d740c	0x043da9a2	msvcp100.dll	public: class std::locale::facet * __thiscall std::locale::facet::_Decref(void)
+0x047d7410	0x043da9cc	msvcp100.dll	private: static int std::locale::id::_Id_cnt
+0x047d7414	0x043da9ea	msvcp100.dll	public: void __thiscall std::locale::facet::_Incref(void)
+0x047d7418	0x043daa0e	msvcp100.dll	protected: void __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::_Init(void)
+0x047d741c	0x043daa4e	msvcp100.dll	private: static void __cdecl std::ios_base::_Ios_base_dtor(class std::ios_base *)
+0x047d7420	0x043daa7a	msvcp100.dll	public: int __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::sbumpc(void)
+0x047d7424	0x043daaba	msvcp100.dll	public: bool __thiscall std::basic_istream<char, struct std::char_traits<char>>::_Ipfx(bool)
+0x047d7428	0x043daafa	msvcp100.dll	public virtual: void __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::_Lock(void)
+0x047d742c	0x043dab3a	msvcp100.dll	public: void __thiscall std::_Container_base0::_Orphan_all(void)
+0x047d7430	0x043dab66	msvcp100.dll	public: void __thiscall std::_Container_base12::_Orphan_all(void)
+0x047d7434	0x043dab94	msvcp100.dll	protected: char * __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::_Pninc(void)
+0x047d7438	0x043dabd6	msvcp100.dll	void __cdecl std::_Xout_of_range(char const *)
+0x047d743c	0x043dabf6	msvcp100.dll	public: bool __thiscall std::codecvt_base::always_noconv(void)const
+0x047d7440	0x043dac22	msvcp100.dll	public: void __thiscall std::basic_ios<char, struct std::char_traits<char>>::clear(int, bool)
+0x047d7444	0x043dac5e	msvcp100.dll	class std::basic_ostream<char, struct std::char_traits<char>> & __cdecl std::endl(class std::basic_ostream<char, struct std::char_traits<char>> &)
+0x047d7448	0x043daca4	msvcp100.dll	protected: char * __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::eback(void)const
+0x047d744c	0x043dace6	msvcp100.dll	protected: char * __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::egptr(void)const
+0x047d7450	0x043dad28	msvcp100.dll	protected: void __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::setg(char *, char *, char *)
+0x047d7454	0x043dad6c	msvcp100.dll	protected: char * __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::epptr(void)const
+0x047d7458	0x043dadae	msvcp100.dll	public: class std::basic_ostream<char, struct std::char_traits<char>> & __thiscall std::basic_ostream<char, struct std::char_traits<char>>::flush(void)
+0x047d745c	0x043dadf0	msvcp100.dll	public: class std::locale __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::getloc(void)
+0x047d7460	0x043dae3c	msvcp100.dll	public: class std::locale __thiscall std::ios_base::getloc(void)
+0x047d7464	0x043dae66	msvcp100.dll	public: static class std::locale::id std::codecvt<char, char, int>::id
+0x047d7468	0x043dae8e	msvcp100.dll	public: static class std::locale::id std::ctype<char>::id
+0x047d746c	0x043daeb2	msvcp100.dll	protected virtual: void __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::imbue(class std::locale const &)
+0x047d7470	0x043daefe	msvcp100.dll	protected virtual: class std::basic_streambuf<char, struct std::char_traits<char>> * __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::setbuf(char *, __int64)
+0x047d7474	0x043daf48	msvcp100.dll	public: int __thiscall std::codecvt<char, char, int>::in(int &, char const *, char const *, char const * &, char *, char *, char * &)const
+0x047d7478	0x043daf7e	msvcp100.dll	public: static unsigned short int __cdecl std::numeric_limits<unsigned short int>::max(void)
+0x047d747c	0x043dafa4	msvcp100.dll	public: static int __cdecl std::numeric_limits<int>::max(void)
+0x047d7480	0x043dafca	msvcp100.dll	public: int __thiscall std::codecvt<char, char, int>::out(int &, char const *, char const *, char const * &, char *, char *, char * &)const
+0x047d7484	0x043db000	msvcp100.dll	protected virtual: int __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::pbackfail(int)
+0x047d7488	0x043db044	msvcp100.dll	protected: char * __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::pptr(void)const
+0x047d748c	0x043db084	msvcp100.dll	public: class std::basic_istream<char, struct std::char_traits<char>> & __thiscall std::basic_istream<char, struct std::char_traits<char>>::seekg(__int64, int)
+0x047d7490	0x043db0ca	msvcp100.dll	protected: void __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::setp(char *, char *)
+0x047d7494	0x043db10c	msvcp100.dll	public: int __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::sgetc(void)
+0x047d7498	0x043db14c	msvcp100.dll	public: int __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::snextc(void)
+0x047d749c	0x043db18c	msvcp100.dll	public: int __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::sputc(char)
+0x047d74a0	0x043db1cc	msvcp100.dll	public: __int64 __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::sputn(char const *, __int64)
+0x047d74a4	0x043db212	msvcp100.dll	protected virtual: int __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::uflow(void)
+0x047d74a8	0x043db252	msvcp100.dll	protected virtual: int __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::underflow(void)
+0x047d74ac	0x043db296	msvcp100.dll	public: int __thiscall std::codecvt<char, char, int>::unshift(int &, char *, char *, char * &)const
+0x047d74b0	0x043db2c8	msvcp100.dll	protected virtual: __int64 __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::xsgetn(char *, __int64)
+0x047d74b4	0x043db30e	msvcp100.dll	protected virtual: __int64 __thiscall std::basic_streambuf<char, struct std::char_traits<char>>::xsputn(char const *, __int64)
+0x047d74bc	0x043db362	msvcr100.dll	feof
+0x047d74c0	0x043db36a	msvcr100.dll	iscntrl
+0x047d74c4	0x043db374	msvcr100.dll	printf
+0x047d74c8	0x043db37e	msvcr100.dll	strlen
+0x047d74cc	0x043db388	msvcr100.dll	_byteswap_ushort
+0x047d74d0	0x043db39c	msvcr100.dll	strncmp
+0x047d74d4	0x043db3a6	msvcr100.dll	longjmp
+0x047d74d8	0x043db3b0	msvcr100.dll	_snprintf
+0x047d74dc	0x043db3bc	msvcr100.dll	_pclose
+0x047d74e0	0x043db3c6	msvcr100.dll	_finite
+0x047d74e4	0x043db3d0	msvcr100.dll	clearerr
+0x047d74e8	0x043db3dc	msvcr100.dll	_lock
+0x047d74ec	0x043db3e4	msvcr100.dll	_XcptFilter
+0x047d74f0	0x043db3f2	msvcr100.dll	strncpy
+0x047d74f4	0x043db3fc	msvcr100.dll	__CxxFrameHandler3
+0x047d74f8	0x043db412	msvcr100.dll	tanh
+0x047d74fc	0x043db41a	msvcr100.dll	__iob_func
+0x047d7500	0x043db428	msvcr100.dll	wcsstr
+0x047d7504	0x043db432	msvcr100.dll	srand
+0x047d7508	0x043db43a	msvcr100.dll	_CIlog10
+0x047d750c	0x043db446	msvcr100.dll	_fseeki64
+0x047d7510	0x043db452	msvcr100.dll	localeconv
+0x047d7514	0x043db460	msvcr100.dll	isalnum
+0x047d7518	0x043db46a	msvcr100.dll	cos
+0x047d751c	0x043db470	msvcr100.dll	__CxxLongjmpUnwind
+0x047d7520	0x043db486	msvcr100.dll	sqrt
+0x047d7524	0x043db48e	msvcr100.dll	_popen
+0x047d7528	0x043db498	msvcr100.dll	void __cdecl terminate(void)
+0x047d752c	0x043db4ac	msvcr100.dll	_CIfmod
+0x047d7530	0x043db4b6	msvcr100.dll	_beginthreadex
+0x047d7534	0x043db4c8	msvcr100.dll	strcpy_s
+0x047d7538	0x043db4d4	msvcr100.dll	ldexp
+0x047d753c	0x043db4dc	msvcr100.dll	_except_handler4_common
+0x047d7540	0x043db4f6	msvcr100.dll	ispunct
+0x047d7544	0x043db500	msvcr100.dll	_isnan
+0x047d7548	0x043db50a	msvcr100.dll	atan2
+0x047d754c	0x043db512	msvcr100.dll	strtod
+0x047d7550	0x043db51c	msvcr100.dll	atoi
+0x047d7554	0x043db524	msvcr100.dll	_localtime64_s
+0x047d7558	0x043db536	msvcr100.dll	_CIsinh
+0x047d755c	0x043db540	msvcr100.dll	_CItan
+0x047d7560	0x043db54a	msvcr100.dll	_vsnprintf_s
+0x047d7564	0x043db55a	msvcr100.dll	ferror
+0x047d7568	0x043db564	msvcr100.dll	wcsncat_s
+0x047d756c	0x043db570	msvcr100.dll	memcmp
+0x047d7570	0x043db57a	msvcr100.dll	public virtual: void __thiscall std::bad_cast::~destructor(void)
+0x047d7574	0x043db594	msvcr100.dll	isspace
+0x047d7578	0x043db59e	msvcr100.dll	strpbrk
+0x047d757c	0x043db5a8	msvcr100.dll	_onexit
+0x047d7580	0x043db5b2	msvcr100.dll	getc
+0x047d7584	0x043db5ba	msvcr100.dll	memset
+0x047d7588	0x043db5c4	msvcr100.dll	_CIasin
+0x047d758c	0x043db5ce	msvcr100.dll	_byteswap_ulong
+0x047d7590	0x043db5e0	msvcr100.dll	public: void __thiscall std::bad_cast::constructor(class std::bad_cast const &)
+0x047d7594	0x043db600	msvcr100.dll	_gmtime64_s
+0x047d7598	0x043db60e	msvcr100.dll	toupper
+0x047d759c	0x043db618	msvcr100.dll	fgetpos
+0x047d75a0	0x043db622	msvcr100.dll	_vsnprintf_s_l
+0x047d75a4	0x043db634	msvcr100.dll	exit
+0x047d75a8	0x043db63c	msvcr100.dll	strncat
+0x047d75ac	0x043db646	msvcr100.dll	log10
+0x047d75b0	0x043db64e	msvcr100.dll	strtoul
+0x047d75b4	0x043db658	msvcr100.dll	clock
+0x047d75b8	0x043db660	msvcr100.dll	asin
+0x047d75bc	0x043db668	msvcr100.dll	_aligned_realloc
+0x047d75c0	0x043db67c	msvcr100.dll	strchr
+0x047d75c4	0x043db686	msvcr100.dll	_CIlog
+0x047d75c8	0x043db690	msvcr100.dll	fclose
+0x047d75cc	0x043db69a	msvcr100.dll	sprintf_s
+0x047d75d0	0x043db6a6	msvcr100.dll	public: void __thiscall std::exception::constructor(void)
+0x047d75d4	0x043db6c2	msvcr100.dll	_purecall
+0x047d75d8	0x043db6ce	msvcr100.dll	atof
+0x047d75dc	0x043db6d6	msvcr100.dll	_stricmp
+0x047d75e0	0x043db6e2	msvcr100.dll	_CIacos
+0x047d75e4	0x043db6ec	msvcr100.dll	_invoke_watson
+0x047d75e8	0x043db6fe	msvcr100.dll	wcslen
+0x047d75ec	0x043db708	msvcr100.dll	rename
+0x047d75f0	0x043db712	msvcr100.dll	islower
+0x047d75f4	0x043db71c	msvcr100.dll	frexp
+0x047d75f8	0x043db724	msvcr100.dll	_CItanh
+0x047d75fc	0x043db72e	msvcr100.dll	_endthreadex
+0x047d7600	0x043db73e	msvcr100.dll	floor
+0x047d7604	0x043db746	msvcr100.dll	remove
+0x047d7608	0x043db750	msvcr100.dll	fseek
+0x047d760c	0x043db758	msvcr100.dll	memchr
+0x047d7610	0x043db762	msvcr100.dll	strcmp
+0x047d7614	0x043db76c	msvcr100.dll	_ismbblead
+0x047d7618	0x043db77a	msvcr100.dll	_CxxThrowException
+0x047d761c	0x043db790	msvcr100.dll	_configthreadlocale
+0x047d7620	0x043db7a6	msvcr100.dll	fscanf
+0x047d7624	0x043db7b0	msvcr100.dll	memmove
+0x047d7628	0x043db7ba	msvcr100.dll	strftime
+0x047d762c	0x043db7c6	msvcr100.dll	_amsg_exit
+0x047d7630	0x043db7d4	msvcr100.dll	tan
+0x047d7634	0x043db7da	msvcr100.dll	_CIsin
+0x047d7638	0x043db7e4	msvcr100.dll	tmpfile
+0x047d763c	0x043db7ee	msvcr100.dll	fgets
+0x047d7640	0x043db7f6	msvcr100.dll	atan
+0x047d7644	0x043db7fe	msvcr100.dll	public: void __thiscall std::exception::constructor(char const * const const &)
+0x047d7648	0x043db81e	msvcr100.dll	public: void __thiscall std::bad_cast::constructor(char const *)
+0x047d764c	0x043db83c	msvcr100.dll	public: void __thiscall std::exception::constructor(class std::exception const &)
+0x047d7650	0x043db85e	msvcr100.dll	public virtual: void __thiscall std::exception::~destructor(void)
+0x047d7654	0x043db87a	msvcr100.dll	public: void __thiscall type_info::_type_info_dtor_internal_method(void)
+0x047d7658	0x043db8b0	msvcr100.dll	public virtual: char const * __thiscall std::exception::what(void)const
+0x047d765c	0x043db8d0	msvcr100.dll	_CIatan
+0x047d7660	0x043db8da	msvcr100.dll	_vsnprintf
+0x047d7664	0x043db8e8	msvcr100.dll	_CIatan2
+0x047d7668	0x043db8f4	msvcr100.dll	_CIcos
+0x047d766c	0x043db8fe	msvcr100.dll	_CIcosh
+0x047d7670	0x043db908	msvcr100.dll	_mktime64
+0x047d7674	0x043db914	msvcr100.dll	_time64
+0x047d7678	0x043db91e	msvcr100.dll	_CIexp
+0x047d767c	0x043db928	msvcr100.dll	_CIpow
+0x047d7680	0x043db932	msvcr100.dll	_strnicmp
+0x047d7684	0x043db93e	msvcr100.dll	_CIsqrt
+0x047d7688	0x043db948	msvcr100.dll	fflush
+0x047d768c	0x043db952	msvcr100.dll	_HUGE
+0x047d7690	0x043db95a	msvcr100.dll	_get_errno
+0x047d7694	0x043db968	msvcr100.dll	_difftime64
+0x047d7698	0x043db976	msvcr100.dll	__argc
+0x047d769c	0x043db980	msvcr100.dll	__argv
+0x047d76a0	0x043db98a	msvcr100.dll	__dllonexit
+0x047d76a4	0x043db998	msvcr100.dll	__getmainargs
+0x047d76a8	0x043db9a8	msvcr100.dll	__set_app_type
+0x047d76ac	0x043db9ba	msvcr100.dll	__setusermatherr
+0x047d76b0	0x043db9ce	msvcr100.dll	_acmdln
+0x047d76b4	0x043db9d8	msvcr100.dll	_aligned_free
+0x047d76b8	0x043db9e8	msvcr100.dll	_aligned_malloc
+0x047d76bc	0x043db9fa	msvcr100.dll	_fmode
+0x047d76c0	0x043dba04	msvcr100.dll	_byteswap_uint64
+0x047d76c4	0x043dba18	msvcr100.dll	_cexit
+0x047d76c8	0x043dba22	msvcr100.dll	_commode
+0x047d76cc	0x043dba2e	msvcr100.dll	_controlfp_s
+0x047d76d0	0x043dba3e	msvcr100.dll	_create_locale
+0x047d76d4	0x043dba50	msvcr100.dll	sprintf
+0x047d76d8	0x043dba5a	msvcr100.dll	_crt_debugger_hook
+0x047d76dc	0x043dba70	msvcr100.dll	_errno
+0x047d76e0	0x043dba7a	msvcr100.dll	_except_handler3
+0x047d76e4	0x043dba8e	msvcr100.dll	isdigit
+0x047d76e8	0x043dba98	msvcr100.dll	_exit
+0x047d76ec	0x043dbaa0	msvcr100.dll	_free_locale
+0x047d76f0	0x043dbab0	msvcr100.dll	_gmtime64
+0x047d76f4	0x043dbabc	msvcr100.dll	fread
+0x047d76f8	0x043dbac4	msvcr100.dll	_initterm
+0x047d76fc	0x043dbad0	msvcr100.dll	_initterm_e
+0x047d7700	0x043dbade	msvcr100.dll	strcoll
+0x047d7704	0x043dbae8	msvcr100.dll	_localtime64
+0x047d7708	0x043dbaf8	msvcr100.dll	_lock_file
+0x047d770c	0x043dbb06	msvcr100.dll	freopen_s
+0x047d7710	0x043dbb12	msvcr100.dll	_setjmp3
+0x047d7714	0x043dbb1e	msvcr100.dll	_strtoi64
+0x047d7718	0x043dbb2a	msvcr100.dll	_strtoui64
+0x047d771c	0x043dbb38	msvcr100.dll	getenv
+0x047d7720	0x043dbb42	msvcr100.dll	_unlock
+0x047d7724	0x043dbb4c	msvcr100.dll	_unlock_file
+0x047d7728	0x043dbb5c	msvcr100.dll	_vscprintf_l
+0x047d772c	0x043dbb6c	msvcr100.dll	_vsnwprintf
+0x047d7730	0x043dbb7a	msvcr100.dll	_wfopen_s
+0x047d7734	0x043dbb86	msvcr100.dll	acos
+0x047d7738	0x043dbb8e	msvcr100.dll	atol
+0x047d773c	0x043dbb96	msvcr100.dll	calloc
+0x047d7740	0x043dbba0	msvcr100.dll	ceil
+0x047d7744	0x043dbba8	msvcr100.dll	cosh
+0x047d7748	0x043dbbb0	msvcr100.dll	exp
+0x047d774c	0x043dbbb6	msvcr100.dll	fabs
+0x047d7750	0x043dbbbe	msvcr100.dll	fgetc
+0x047d7754	0x043dbbc6	msvcr100.dll	fmod
+0x047d7758	0x043dbbce	msvcr100.dll	fopen_s
+0x047d775c	0x043dbbd8	msvcr100.dll	fprintf
+0x047d7760	0x043dbbe2	msvcr100.dll	fputc
+0x047d7764	0x043dbbea	msvcr100.dll	free
+0x047d7768	0x043dbbf2	msvcr100.dll	fsetpos
+0x047d776c	0x043dbbfc	msvcr100.dll	ftell
+0x047d7770	0x043dbc04	msvcr100.dll	fwrite
+0x047d7774	0x043dbc0e	msvcr100.dll	setvbuf
+0x047d7778	0x043dbc18	msvcr100.dll	isalpha
+0x047d777c	0x043dbc22	msvcr100.dll	strstr
+0x047d7780	0x043dbc2c	msvcr100.dll	isupper
+0x047d7784	0x043dbc36	msvcr100.dll	isxdigit
+0x047d7788	0x043dbc42	msvcr100.dll	log
+0x047d778c	0x043dbc48	msvcr100.dll	malloc
+0x047d7790	0x043dbc52	msvcr100.dll	realloc
+0x047d7794	0x043dbc5c	msvcr100.dll	mbstowcs_s
+0x047d7798	0x043dbc6a	msvcr100.dll	memcpy
+0x047d779c	0x043dbc74	msvcr100.dll	rand
+0x047d77a0	0x043dbc7c	msvcr100.dll	memcpy_s
+0x047d77a4	0x043dbc88	msvcr100.dll	strspn
+0x047d77a8	0x043dbc92	msvcr100.dll	modf
+0x047d77ac	0x043dbc9a	msvcr100.dll	pow
+0x047d77b0	0x043dbca0	msvcr100.dll	qsort
+0x047d77b4	0x043dbca8	msvcr100.dll	setlocale
+0x047d77b8	0x043dbcb4	msvcr100.dll	wprintf
+0x047d77bc	0x043dbcbe	msvcr100.dll	sin
+0x047d77c0	0x043dbcc4	msvcr100.dll	sinh
+0x047d77c4	0x043dbccc	msvcr100.dll	sscanf
+0x047d77c8	0x043dbcd6	msvcr100.dll	sscanf_s
+0x047d77cc	0x043dbce2	msvcr100.dll	strcat_s
+0x047d77d0	0x043dbcee	msvcr100.dll	strcspn
+0x047d77d4	0x043dbcf8	msvcr100.dll	strerror
+0x047d77d8	0x043dbd04	msvcr100.dll	strncat_s
+0x047d77dc	0x043dbd10	msvcr100.dll	strncpy_s
+0x047d77e0	0x043dbd1c	msvcr100.dll	strrchr
+0x047d77e4	0x043dbd26	msvcr100.dll	strtok_s
+0x047d77e8	0x043dbd32	msvcr100.dll	strtol
+0x047d77ec	0x043dbd3c	msvcr100.dll	swprintf_s
+0x047d77f0	0x043dbd4a	msvcr100.dll	system
+0x047d77f4	0x043dbd54	msvcr100.dll	tmpnam
+0x047d77f8	0x043dbd5e	msvcr100.dll	tolower
+0x047d77fc	0x043dbd68	msvcr100.dll	ungetc
+0x047d7800	0x043dbd72	msvcr100.dll	vsprintf_s
+0x047d7804	0x043dbd80	msvcr100.dll	wcsncmp
+0x047d7808	0x043dbd8a	msvcr100.dll	wcstombs_s
+0x047d7810	0x043dbdb8	ole32.dll	CoCreateInstance
+0x047d7814	0x043dbdcc	ole32.dll	CoInitialize
+0x047d7818	0x043dbddc	ole32.dll	CoUninitialize
+0x047d781c	0x043dbda6	ole32.dll	CoInitializeEx
+0x047d7824	0x80000002	oleaut32.dll	SysReAllocString
+0x047d7828	0x80000006	oleaut32.dll	SysStringLen
+0x047d782c	0x80000009	oleaut32.dll	VariantCopy
+0x047d7834	0x043dbe06	psapi.dll	GetProcessMemoryInfo
+0x047d783c	0x043dbe28	secur32.dll	GetUserNameExW
+0x047d7844	0x043dbe46	shell32.dll	ShellExecuteA
+0x047d7848	0x043dbe56	shell32.dll	SHGetSpecialFolderPathW
+0x047d784c	0x043dbe70	shell32.dll	SHGetFolderPathW
+0x047d7850	0x043dbe84	shell32.dll	SHCreateDirectoryExW
+0x047d7854	0x043dbe9c	shell32.dll	ShellExecuteW
+0x047d785c	0x043dbeb8	shlwapi.dll	PathFileExistsW
+0x047d7864	0x043dbed6	steam_api.dll	SteamAPI_RegisterCallback
+0x047d7868	0x043dbef2	steam_api.dll	SteamAPI_Init
+0x047d786c	0x043dbf02	steam_api.dll	SteamAPI_GetHSteamUser
+0x047d7870	0x043dbf1c	steam_api.dll	SteamInternal_CreateInterface
+0x047d7874	0x043dbf3c	steam_api.dll	SteamAPI_UnregisterCallResult
+0x047d7878	0x043dbf5c	steam_api.dll	SteamAPI_RestartAppIfNecessary
+0x047d787c	0x043dbf7e	steam_api.dll	SteamAPI_GetHSteamPipe
+0x047d7880	0x043dbf98	steam_api.dll	SteamAPI_RunCallbacks
+0x047d7884	0x043dbfb0	steam_api.dll	SteamAPI_SetMiniDumpComment
+0x047d7888	0x043dbfce	steam_api.dll	SteamAPI_Shutdown
+0x047d788c	0x043dbfe2	steam_api.dll	SteamAPI_UnregisterCallback
+0x047d7890	0x043dc000	steam_api.dll	SteamAPI_WriteMiniDump
+0x047d7898	0x043dc028	user32.dll	CreateWindowExW
+0x047d789c	0x043dc03a	user32.dll	SetWindowTextA
+0x047d78a0	0x043dc04c	user32.dll	DispatchMessageW
+0x047d78a4	0x043dc060	user32.dll	EnumDisplaySettingsW
+0x047d78a8	0x043dc078	user32.dll	SetWindowTextW
+0x047d78ac	0x043dc08a	user32.dll	DispatchMessageA
+0x047d78b0	0x043dc09e	user32.dll	MessageBoxW
+0x047d78b4	0x043dc0ac	user32.dll	SetWindowsHookExW
+0x047d78b8	0x043dc0c0	user32.dll	EmptyClipboard
+0x047d78bc	0x043dc0d2	user32.dll	SendDlgItemMessageA
+0x047d78c0	0x043dc0e8	user32.dll	SetCapture
+0x047d78c4	0x043dc0f6	user32.dll	MessageBoxA
+0x047d78c8	0x043dc104	user32.dll	GetWindowTextA
+0x047d78cc	0x043dc116	user32.dll	PtInRect
+0x047d78d0	0x043dc122	user32.dll	ClientToScreen
+0x047d78d4	0x043dc134	user32.dll	SetCursor
+0x047d78d8	0x043dc140	user32.dll	GetDesktopWindow
+0x047d78dc	0x043dc154	user32.dll	LoadIconA
+0x047d78e0	0x043dc160	user32.dll	SetFocus
+0x047d78e4	0x043dc16c	user32.dll	OpenClipboard
+0x047d78e8	0x043dc17c	user32.dll	EnumDisplayDevicesA
+0x047d78ec	0x043dc192	user32.dll	RegisterClassExW
+0x047d78f0	0x043dc1a6	user32.dll	InvalidateRect
+0x047d78f4	0x043dc1b8	user32.dll	LoadIconW
+0x047d78f8	0x043dc1c4	user32.dll	EndPaint
+0x047d78fc	0x043dc1d0	user32.dll	ScreenToClient
+0x047d7900	0x043dc1e2	user32.dll	GetClipboardData
+0x047d7904	0x043dc1f6	user32.dll	ReleaseCapture
+0x047d7908	0x043dc208	user32.dll	AdjustWindowRectEx
+0x047d790c	0x043dc21e	user32.dll	BeginPaint
+0x047d7910	0x043dc22c	user32.dll	CallNextHookEx
+0x047d7914	0x043dc23e	user32.dll	CallWindowProcA
+0x047d7918	0x043dc250	user32.dll	CloseClipboard
+0x047d791c	0x043dc262	user32.dll	CloseWindow
+0x047d7920	0x043dc270	user32.dll	CreateWindowExA
+0x047d7924	0x043dc282	user32.dll	DefWindowProcW
+0x047d7928	0x043dc294	user32.dll	DestroyWindow
+0x047d792c	0x043dc2a4	user32.dll	EnableWindow
+0x047d7930	0x043dc2b4	user32.dll	GetCapture
+0x047d7934	0x043dc2c2	user32.dll	GetClientRect
+0x047d7938	0x043dc2d2	user32.dll	GetCursorPos
+0x047d793c	0x043dc2e2	user32.dll	GetDC
+0x047d7940	0x043dc2ea	user32.dll	GetDlgCtrlID
+0x047d7944	0x043dc2fa	user32.dll	GetDlgItem
+0x047d7948	0x043dc308	user32.dll	GetForegroundWindow
+0x047d794c	0x043dc31e	user32.dll	RegisterRawInputDevices
+0x047d7950	0x043dc338	user32.dll	GetMessageA
+0x047d7954	0x043dc346	user32.dll	GetMonitorInfoW
+0x047d7958	0x043dc358	user32.dll	GetSystemMetrics
+0x047d795c	0x043dc36c	user32.dll	GetWindowLongA
+0x047d7960	0x043dc37e	user32.dll	GetWindowLongW
+0x047d7964	0x043dc390	user32.dll	GetWindowRect
+0x047d7968	0x043dc3a0	user32.dll	GetWindowTextLengthA
+0x047d796c	0x043dc3b8	user32.dll	GetWindowTextLengthW
+0x047d7970	0x043dc3d0	user32.dll	GetWindowTextW
+0x047d7974	0x043dc3e2	user32.dll	GetWindowThreadProcessId
+0x047d7978	0x043dc3fe	user32.dll	LoadCursorA
+0x047d797c	0x043dc40c	user32.dll	LoadCursorW
+0x047d7980	0x043dc41a	user32.dll	PeekMessageW
+0x047d7984	0x043dc42a	user32.dll	PostQuitMessage
+0x047d7988	0x043dc43c	user32.dll	RegisterDeviceNotificationW
+0x047d798c	0x043dc45a	user32.dll	ReleaseDC
+0x047d7990	0x043dc466	user32.dll	SendMessageA
+0x047d7994	0x043dc476	user32.dll	SetActiveWindow
+0x047d7998	0x043dc488	user32.dll	SetClipboardData
+0x047d799c	0x043dc49c	user32.dll	SetWindowLongA
+0x047d79a0	0x043dc4ae	user32.dll	SetWindowLongW
+0x047d79a4	0x043dc4c0	user32.dll	SetWindowPos
+0x047d79a8	0x043dc4d0	user32.dll	ShowCursor
+0x047d79ac	0x043dc4de	user32.dll	ShowWindow
+0x047d79b0	0x043dc4ec	user32.dll	TranslateMessage
+0x047d79b4	0x043dc500	user32.dll	UpdateWindow
+0x047d79b8	0x043dc510	user32.dll	wsprintfW
+0x047d79cc	0x043dc55e	winhttp.dll	WinHttpCloseHandle
+0x047d79d0	0x043dc574	winhttp.dll	WinHttpConnect
+0x047d79d4	0x043dc586	winhttp.dll	WinHttpQueryHeaders
+0x047d79d8	0x043dc59c	winhttp.dll	WinHttpGetIEProxyConfigForCurrentUser
+0x047d79dc	0x043dc5c4	winhttp.dll	WinHttpSetStatusCallback
+0x047d79e0	0x043dc5e0	winhttp.dll	WinHttpSetOption
+0x047d79e4	0x043dc5f4	winhttp.dll	WinHttpOpen
+0x047d79e8	0x043dc602	winhttp.dll	WinHttpAddRequestHeaders
+0x047d79ec	0x043dc61e	winhttp.dll	WinHttpCheckPlatform
+0x047d79f0	0x043dc636	winhttp.dll	WinHttpCrackUrl
+0x047d79f4	0x043dc648	winhttp.dll	WinHttpOpenRequest
+0x047d79f8	0x043dc65e	winhttp.dll	WinHttpQueryDataAvailable
+0x047d79fc	0x043dc67a	winhttp.dll	WinHttpReadData
+0x047d7a00	0x043dc68c	winhttp.dll	WinHttpReceiveResponse
+0x047d7a04	0x043dc6a6	winhttp.dll	WinHttpSendRequest
+0x047d7a0c	0x043dc6c8	wininet.dll	HttpOpenRequestA
+0x047d7a10	0x043dc6dc	wininet.dll	InternetCloseHandle
+0x047d7a14	0x043dc6f2	wininet.dll	InternetSetOptionA
+0x047d7a18	0x043dc708	wininet.dll	HttpSendRequestA
+0x047d7a1c	0x043dc71c	wininet.dll	InternetConnectA
+0x047d7a20	0x043dc730	wininet.dll	InternetOpenA
+0x047d7a24	0x043dc740	wininet.dll	InternetQueryOptionA
+0x047d7a28	0x043dc758	wininet.dll	InternetReadFile
+0x047d7a30	0x043dc78a	winmm.dll	timeEndPeriod
+0x047d7a34	0x043dc79a	winmm.dll	timeGetSystemTime
+0x047d7a38	0x043dc7ae	winmm.dll	timeGetTime
+0x047d7a3c	0x043dc778	winmm.dll	timeBeginPeriod
+0x047d7a44	0x043dc7c6	wlanapi.dll	WlanOpenHandle
+0x047d7a48	0x043dc7d8	wlanapi.dll	WlanCloseHandle
+0x047d7a4c	0x043dc7ea	wlanapi.dll	WlanQueryInterface
+0x047d7a50	0x043dc800	wlanapi.dll	WlanFreeMemory
+0x047d7a58	0x80000009	ws2_32.dll	htons
+0x047d7a5c	0x80000001	ws2_32.dll	accept
+0x047d7a60	0x80000008	ws2_32.dll	htonl
+0x047d7a64	0x8000000f	ws2_32.dll	ntohs
+0x047d7a68	0x043dc81e	ws2_32.dll	getnameinfo
+0x047d7a6c	0x80000003	ws2_32.dll	closesocket
+0x047d7a70	0x043dc82c	ws2_32.dll	WSACreateEvent
+0x047d7a74	0x80000012	ws2_32.dll	select
+0x047d7a78	0x8000000d	ws2_32.dll	listen
+0x047d7a7c	0x8000000b	ws2_32.dll	inet_addr
+0x047d7a80	0x8000000a	ws2_32.dll	ioctlsocket
+0x047d7a84	0x8000000c	ws2_32.dll	inet_ntoa
+0x047d7a88	0x043dc83e	ws2_32.dll	WSAIoctl
+0x047d7a8c	0x80000014	ws2_32.dll	sendto
+0x047d7a90	0x043dc84a	ws2_32.dll	WSAResetEvent
+0x047d7a94	0x80000097	ws2_32.dll	__WSAFDIsSet
+0x047d7a98	0x80000002	ws2_32.dll	bind
+0x047d7a9c	0x80000013	ws2_32.dll	send
+0x047d7aa0	0x043dc85a	ws2_32.dll	getaddrinfo
+0x047d7aa4	0x80000038	ws2_32.dll	getservbyport
+0x047d7aa8	0x80000033	ws2_32.dll	gethostbyaddr
+0x047d7aac	0x8000000e	ws2_32.dll	ntohl
+0x047d7ab0	0x8000006f	ws2_32.dll	WSAGetLastError
+0x047d7ab4	0x80000070	ws2_32.dll	WSASetLastError
+0x047d7ab8	0x80000073	ws2_32.dll	WSAStartup
+0x047d7abc	0x80000074	ws2_32.dll	WSACleanup
+0x047d7ac0	0x80000010	ws2_32.dll	recv
+0x047d7ac4	0x80000011	ws2_32.dll	recvfrom
+0x047d7ac8	0x80000015	ws2_32.dll	setsockopt
+0x047d7acc	0x80000016	ws2_32.dll	shutdown
+0x047d7ad0	0x80000017	ws2_32.dll	socket
+0x047d7ad4	0x80000004	ws2_32.dll	connect
+0x047d7ad8	0x80000005	ws2_32.dll	getpeername
+0x047d7adc	0x80000034	ws2_32.dll	gethostbyname
+0x047d7ae0	0x80000037	ws2_32.dll	getservbyname
+0x047d7ae4	0x80000006	ws2_32.dll	getsockname
+0x047d7ae8	0x80000007	ws2_32.dll	getsockopt
+0x047d7aec	0x043dc868	ws2_32.dll	WSACloseEvent
+0x047d7af0	0x043dc878	ws2_32.dll	WSAEventSelect
+0x047d7af4	0x043dc88a	ws2_32.dll	WSARecvFrom
+0x047d7af8	0x043dc898	ws2_32.dll	WSASendTo
+0x047d7afc	0x043dc8a4	ws2_32.dll	WSAWaitForMultipleEvents
+0x047d7b00	0x043dc8c0	ws2_32.dll	freeaddrinfo
+0x047d7b08	0x80000003	xinput1_3.dll	Ordinal_3
+0x047d7b0c	0x80000004	xinput1_3.dll	Ordinal_4
+0x047d7b10	0x80000002	xinput1_3.dll	Ordinal_2
