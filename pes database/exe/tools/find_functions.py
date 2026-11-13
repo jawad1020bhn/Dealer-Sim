@@ -8,7 +8,9 @@ A start is an address in .trace/.xcode that is
          callbacks),
   (the exports and the two routines the entry stub calls are added as they are)
 and that passes the boundary test: the byte before it ends a function or is
-padding (int3, nop, ret, ret n, jmp), or it is called from two places or more.
+padding (int3, nop, ret, ret n, jmp), or it is called from two places or more,
+or it opens with a frame set-up (push ebp; mov ebp, esp and its two variants:
+a function that follows the jump table of a switch has no padding before it).
 A byte E8 inside another instruction gives a random target; 0.7 % of random
 targets fall in the code and the boundary test removes nearly all of those.
 
@@ -29,6 +31,7 @@ from collections import Counter
 from layout import CODE_LO, CODE_HI, CODE_OFF, load, off
 
 ENDS1 = {0xCC, 0x90, 0xC3}
+ENTRY = (b'\x55\x89\xe5', b'\x53\x89\xe3', b'\x56\x89\xce')   # 66,491 / 2,128 / 2,021 of the decompiled functions
 
 
 def boundary(d, a):
@@ -100,7 +103,8 @@ def find(d, extra=()):
     for a in sorted(set(calls) | set(ptrs) | extra):
         b = boundary(d, a)
         c, p = calls[a], ptrs[a]
-        if b or c >= 2 or a in extra:
+        o = CODE_OFF + a - CODE_LO
+        if b or c >= 2 or a in extra or d[o:o + 3] in ENTRY:
             rows.append((a, c, p, int(b), shape(d, a)))
     return rows, len(calls), len(ptrs)
 
@@ -115,7 +119,7 @@ if __name__ == '__main__':
         for a, c, p, b, k in rows:
             f.write('0x%08x\t%d\t%d\t%d\t%s\n' % (a, c, p, b, k))
     print('call targets in code %d, data pointers into code %d, kept %d' % (nc, np_, len(rows)))
-    print('  called and at a boundary %d, called twice or more off a boundary %d, pointer only %d' % (
+    print('  called and at a boundary %d, off a boundary (called twice or more, or a frame set-up) %d, pointer only %d' % (
         sum(1 for r in rows if r[1] and r[3]), sum(1 for r in rows if not r[3]),
         sum(1 for r in rows if not r[1])))
     print('  shapes: ' + ', '.join('%s %d' % kv for kv in Counter(r[4] for r in rows).most_common()))

@@ -1,0 +1,170 @@
+"""Self-check of ../NOTES.md: runs the game's own machine code (emu.py) on real
+inputs and compares it with savefile.py, overall.py and ../../tools/rate.py.
+
+    python3 check_findings.py <PES2017.exe> <save file>
+
+Needs `pip install unicorn`. About one minute.
+"""
+import hashlib
+import os
+import struct
+import sys
+
+import fields
+import overall
+import savefile
+from emu import Game
+from layout import load, off
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'tools'))
+
+SHA_INIT, SHA_UPDATE, SHA_FINAL, SHA_BLOCK, SHA_DIGEST = 0x0378933e, 0x0378b599, 0x0378be99, 0x037893be, 0x0378aec3
+SAME64, STREAM, STREAM_KEY, GAME_NAME, OVERALL = 0x037892be, 0x0378b253, 0x0378b203, 0x03814ee3, 0x04067af3
+APPLY_PLAYER_FIELD, APPLY_MANAGER_FIELD = 0x040a04b1, 0x040aadb3
+
+
+def game_sha(g, data):
+    """(context address, digest) from the game's SHA-512 code."""
+    ctx, buf, out = g.alloc(size=0xc8), g.alloc(data), g.alloc(size=64)
+    g.call(SHA_INIT, ecx=ctx)
+    g.call(SHA_UPDATE, [buf, len(data), SHA_BLOCK], ecx=ctx)
+    g.call(SHA_FINAL, [SHA_BLOCK], ecx=ctx)
+    g.call(SHA_DIGEST, [out, 0x40], ecx=ctx)
+    return ctx, g.read(out, 64)
+
+
+def game_stream(g, key, data):
+    k, src, dst = g.alloc(key), g.alloc(data), g.alloc(size=len(data) + 4)
+    g.call(STREAM, [src, len(data)], ecx=k, edx=dst)
+    return g.read(dst, len(data))
+
+
+def main(exe, save):
+    d = load(exe)
+    g = Game(exe)
+    raw = open(save, 'rb').read()
+    s = savefile.read(save)
+
+    # 1. the master key
+    name = g.read(g.call(GAME_NAME), 40).split(b'\0')[0].decode()
+    assert name == savefile.GAME_NAME, name
+    ctx, digest = game_sha(g, name.encode('utf-16-le'))
+    assert digest == savefile.MASTER == s['header'][:64] == hashlib.sha512(name.encode('utf-16-le')).digest()
+    print('1 ok: the game\'s hash code is SHA-512; master key = SHA-512 of UTF-16 "%s"; the save header starts with it'
+          % name)
+
+    # 2. the stream cipher and the key of each part
+    hashes = s['hashes']
+    rolling = bytes(64)
+    for i in range(5):
+        rolling = bytes(a ^ b for a, b in zip(rolling, hashes[64 * i:64 * i + 64]))
+    r, k = g.alloc(rolling), g.alloc(size=64)
+    g.call(STREAM_KEY, [k, 0xb0, 0], ecx=r)
+    key = g.read(k, 64)
+    assert key == savefile._stream_key(hashes, 0xb0)
+    assert game_stream(g, key, raw[0x140:0x1f0]) == s['header']
+    o = 0x1f0 + len(s['description']) + len(s['logo'])
+    for n in (1, 2, 3, 4, 5, 15, 16, 17, 4099):                     # short and odd lengths: the first words and the tail
+        assert game_stream(g, savefile._stream_key(hashes, 2), raw[o:o + n]) == s['data'][:n], n
+    assert savefile.write(s, keep_hashes=True) == raw
+    print('2 ok: the game\'s stream code decrypts the header and data as savefile.py does; '
+          'savefile.py rewrites the file byte for byte (%d bytes)' % len(raw))
+
+    # 3. what the reader does with the hashes
+    assert d[off(0x0378dda1)] == 0xe8 and d[off(0x0378dda6):off(0x0378dda6) + 4] == bytes.fromhex('84c00f85')
+    jump = 0x0378ddae + struct.unpack_from('<i', d, off(0x0378dda8) + 2)[0]
+    assert jump == 0x0378dcf6            # call same64; test al,al; jne -> the error exit
+    true = savefile.true_hashes(s)
+    seen = []
+    for i, part in enumerate(savefile.PARTS):
+        g.free_all()
+        ctx, digest = game_sha(g, s[part])
+        assert digest == true[64 * i:64 * i + 64]
+        stored = g.alloc(hashes[64 * i:64 * i + 64])
+        fresh = digest == hashes[64 * i:64 * i + 64]
+        same = g.call(SAME64, [stored, 0x40], ecx=ctx) & 0xff
+        assert same == 0, 'the reader would take the error exit for the ' + part
+        seen.append('%s %s' % (part, 'fresh' if fresh else 'STALE'))
+        wrong = g.alloc(bytes(x ^ 0x5a for x in digest))               # a hash that fits no content
+        assert g.call(SAME64, [wrong, 0x40], ecx=ctx) & 0xff == 0
+        assert g.call(SAME64, [g.alloc(g.read(ctx, 64)), 0x40], ecx=ctx) & 0xff == 1
+    g.free_all()
+    print('3 ok: the reader compares the stored hash with the hash state in the other byte order; the test '
+          'returns "different" and the load goes on, for the right hash and for a wrong one (%s)' % ', '.join(seen))
+    res = savefile.check(s)
+    assert not any(v == 'FAIL' for v, _ in res), res
+
+    # 4. the overall rating
+    import lib
+    import rate
+    tmp = save + '.data.tmp'
+    open(tmp, 'wb').write(s['data'])
+    try:
+        players = [p for p in lib.P17(tmp).players.values() if p['id']]
+    finally:
+        os.remove(tmp)
+    t = overall.Tables(d)
+    assert t.weights == [w for _, w in rate.ROWS] and t.registered == rate.REGISTERED
+    assert t.rated_a == rate.RATED_A and t.rated_b == rate.RATED_B and t.blend == rate.BLEND
+    buf = g.alloc(size=39 * 4)
+    n = 0
+    for p in players:
+        v = overall.values(p)
+        g.write(buf, struct.pack('<39i', *v))
+        for f in range(13):
+            pos = overall.FILE_POS[f]
+            a = g.call(OVERALL, [buf, pos])
+            assert a == overall.overall(t, v, pos) == rate.overall(p, f), (p['id'], f, a)
+            n += 1
+    print('4 ok: the game\'s rating code, overall.py and tools/rate.py give the same number for %d players '
+          'at each of the 13 positions (%d results); the tables in rate.py are the ones in the exe' % (len(players), n))
+
+    # 5. the record fields
+    g.free_all()
+    rows = fields.fields(g, d)
+    named = [r for r in rows if r[0] == 'player']
+    assert len(named) == 0x6a and all(r[2] for r in named), 'a player field starts where lib.py has no field'
+    place = {r[2]: r for r in named}
+    assert [place[f][1] for f in fields.EDITED] == list(range(1, 10)) and place['uD'][1] == 11
+    assert [place[f][3] for f in fields.EDITED] == [191, 223, 255, 349, 350, 351, 366, 367, 368]
+    wider = {'reg_pos': 5, 'injury': 3}                              # the game's field also takes lib.py's next spare bit
+    assert all(r[4] == wider.get(r[2], w) for r in named for n, w in lib.F17 if n == r[2])
+    out, record = g.alloc(size=8), g.alloc(size=0xbc)
+    tab = fields.table(d, fields.TABLES[0][1], 0x6a)
+    outside = 0
+    for p in players:
+        g.write(record, p['raw'])
+        for field, reader, _, lo, _, hi, _, _ in tab:
+            if 21 <= field <= 44 or field >= 97:                     # abilities and motions: the fields our tools write
+                outside += not lo <= fields.read_field(g, reader, record, out) <= hi
+    print('5 ok: the game\'s 106 player fields sit where tools/lib.py has them (also 32 team and 11 manager fields, '
+          '../output/edit_fields.tsv); %d ability or motion values of the save are outside the game\'s range '
+          '(such a field is left as the game has it)' % outside)
+
+    # 6. names and the edited flags
+    def applied(function, field, name_at, raw, flag_byte, flag_bit, argument):
+        raw = bytearray(raw)
+        raw[flag_byte] = raw[flag_byte] & ~(1 << flag_bit) & 0xff
+        res = []
+        for flag in (0, 1):
+            raw[flag_byte] |= flag << flag_bit
+            for old in (b'Old Name', b''):
+                target = g.alloc(size=0x200)
+                g.write(target + name_at, old + b'\0')
+                g.call(function, [target, g.alloc(raw), field, argument])
+                res.append(g.read(target + name_at, 0x40).split(b'\0')[0] != old)
+        return res                                                   # flag 0 / name, flag 0 / no name, flag 1 / name, flag 1 / no name
+    p = next(p for p in players if 0 < len(p['name'].encode()) < 16)
+    m = next(s['data'][o:o + 0x58] for o in range(0x410118, 0x410118 + 850 * 0x58, 0x58)
+             if 0 < len(s['data'][o + 9:o + 0x58].split(b'\0')[0]) < 16)
+    for what, call in (('player', (APPLY_PLAYER_FIELD, 0x6a, 0x38, p['raw'], 191 // 8, 191 % 8)),
+                       ('manager', (APPLY_MANAGER_FIELD, 0x0b, 0x34, m, 8, 0))):
+        assert applied(*call, 0) == [False, True, True, True], what
+        assert applied(*call, 1) == [True, True, True, True], what
+    marked = sum(p['e_player'] for p in players)
+    print('6 ok: on load the game takes a player\'s or manager\'s name from the edit file only if the record\'s '
+          'edited flag is 1 or the game has no name for him (%d players of the save have the flag)' % marked)
+
+
+if __name__ == '__main__':
+    main(sys.argv[1], sys.argv[2])

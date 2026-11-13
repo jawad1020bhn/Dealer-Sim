@@ -164,3 +164,12 @@ Files:
   6 rated players, where the level is that of their own squad (a club rated too high or too low as a whole does not
   show); 683 players are at clubs without a Wyscout team. Run it on the output of `task34.py`:
   `python3 task35.py <in data.dat> <out data.dat>`; ends with a self-check; the list of gaps is in `<out>.log.pkl`.
+- `task36.py` — renamed players and managers are marked as edited. The game takes a name from the edit file only when
+  the record's "edited" flag is 1 (read from `PES2017.exe` and run in an emulator: `../exe/NOTES.md`, "Names and the
+  edited flags"). Task 17 set the flags of the players it renamed; the 46 players built since (task 31 and later:
+  Seghetti, Hübel, Kauê) and all 439 renamed managers (tasks 11, 14, 24: Postecoglou, Iñigo Pérez) lacked them, so
+  the game would have shown the old name with the new abilities. Only these flag bits change. Run it on the output of
+  `task35.py`: `python3 task36.py <in data.dat> <upload data.dat> <out data.dat>`; ends with a self-check. The upload
+  is the user's original file (`git show "9968a9c:pes database/EDIT00000000 (pes 2017 updated)"`). Since this task
+  the save is unpacked and packed with `../exe/tools/savefile.py` (`unpack`, `pack`), which also writes fresh hashes;
+  `pesXdecrypter` is no longer needed.
