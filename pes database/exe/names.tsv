@@ -1,0 +1,60 @@
+address	name	topic	note
+0x03789071	mt_init_genrand	save	Mersenne Twister, seed from one number
+0x037890c4	mt_init_by_array	save	Mersenne Twister, seed from a key array
+0x037891a2	mt_next	save	next 32-bit output
+0x0378b253	crypt_stream	save	encrypt / decrypt a buffer with a 64-byte key (ecx key, edx output; stack: input, size)
+0x0378b203	stream_key	save	key of one part from the XOR of the five hashes and the part number
+0x0378b6bd	crypt_hash_block	save	encrypt the first four stored hashes with the fifth
+0x0378933e	sha512_init	save	
+0x0378b599	sha512_update	save	
+0x0378be99	sha512_final	save	
+0x0378aec3	sha512_digest	save	copy the digest out
+0x037892be	same_64_bytes	save	compare of the hash check; never matches (NOTES.md 1)
+0x0378c40b	five_hashes	save	hashes of description, logo, data, serial, header
+0x0378b4fb	header_check	save	sizes and type text of the file header
+0x0378cd8d	save_write	save	writer of a save file
+0x0378d643	save_read	save	reader of a save file
+0x037913e2	save_dispatch	save	vtable 0x0213ec1c: 0 save, 1 load
+0x0378d593	save_task	save	
+0x0378df35	load_task	save	
+0x03791698	save_setup	save	computes the master key
+0x03814ee3	game_name	save	returns "Pro Evolution Soccer 2017"
+0x0378ca76	user_sid	save	the Windows user id as text (ConvertSidToStringSidW)
+0x0408a5ef	edit_data_init	edit data	
+0x0408841f	edit_data_init_blocks	edit data	
+0x0408ad62	edit_apply_after_load	edit data	edit data -> database
+0x0408ab90	edit_collect_before_save	edit data	database -> edit data
+0x0409d032	edit_apply_blocks	edit data	walks the blocks (argument 0 on a load)
+0x0409c4d6	edit_collect_blocks	edit data	
+0x0377c46a	header_count	edit data	record count of a block from the header (key table 0x025116b0)
+0x04096c87	header_field	edit data	
+0x0409b819	apply_player	edit data	one player record: look up, overwrite or add
+0x0409ad9e	apply_player_fields	edit data	108 fields of one player
+0x040a04b1	apply_player_field	edit data	one field; field 0x6a is the name (edited-flag rule)
+0x03822663	db_find_player	database	database player by id, 0 if none
+0x0377ea09	player_field_info	edit data	table 0x02511768 (32 bytes per field)
+0x030cb7cb	player_field_read	edit data	value of a field if it is within minimum..maximum
+0x030cbc66	player_text_read	edit data	text field (table 0x025124a8)
+0x0377d285	player_field_11	edit data	"new player" bit
+0x0312bc11	db_player_set_name	database	name at +0x38
+0x0409aedd	apply_manager	edit data	
+0x040aadb3	apply_manager_field	edit data	field 0x0b is the name (edited-flag rule)
+0x0378033d	manager_field_info	edit data	table 0x02512fb0
+0x03822723	db_find_manager	database	
+0x040987c5	apply_team	edit data	
+0x040aa421	apply_team_field	edit data	fields 0x24 and 0x26 are texts with an edited flag
+0x0377b3b1	team_field_info	edit data	table 0x025110b8
+0x038226c3	db_find_team	database	
+0x040990ed	apply_squad	edit data	
+0x040ababa	apply_squad_slots	edit data	
+0x04099214	apply_game_plan	edit data	
+0x04067af3	overall_rating	rating	(39 values, position) -> rating
+0x04067a53	overall_blend	rating	
+0x0383899a	player_rating_now	rating	rating with the condition arrow
+0x038278b0	player_value	rating	one ability of a database player
+0x038e6c48	stack_cookie_check	runtime	
+0x038e6e2b	memset_thunk	runtime	
+0x038e6d6f	memcpy_thunk	runtime	
+0x02bc5ebe	allocate	runtime	guess
+0x02bc5b9a	free	runtime	guess
+0x02bcc2b9	string_assign	runtime	std::string assign (text, length)

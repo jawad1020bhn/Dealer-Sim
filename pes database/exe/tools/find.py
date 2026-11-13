@@ -1,6 +1,7 @@
 """Look things up in the output files (no set-up needed, Python 3 only).
 
-    python3 find.py show 0x038e77af        the C of one function
+    python3 find.py show 0x038e77af        the C of one function (or a working name: show save_read)
+    python3 find.py name save              working names from ../names.tsv that contain the text
     python3 find.py string Player.bin      functions that refer to a string containing the text
     python3 find.py import CreateFileA     functions that use an import
     python3 find.py callers 0x038e77af     functions that call it directly
@@ -36,8 +37,18 @@ def functions(path):
         yield head, body
 
 
+def names():
+    """[[address, name, topic, note]] of ../names.tsv: the functions understood so far."""
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'names.tsv'), encoding='utf-8') as f:
+        return [l.rstrip('\n').split('\t') for l in list(f)[1:]]
+
+
 def show(a):
-    a = int(a, 16)
+    known = names()
+    a = int(next((r[0] for r in known if r[1] == a), a), 16)
+    for r in known:
+        if int(r[0], 16) == a:
+            print('// %s  (%s) %s' % (r[1], r[2], r[3]))
     path = os.path.join(OUT, 'c', '%03x.c.xz' % (a >> 20))
     if os.path.exists(path):
         for head, body in functions(path):
@@ -56,6 +67,10 @@ def main(argv):
     what, arg = argv[1], argv[2]
     if what == 'show':
         print(show(arg))
+    elif what == 'name':
+        for r in names():
+            if arg.lower() in ' '.join(r).lower():
+                print('\t'.join(r))
     elif what == 'string':
         for f, s, t in rows('string_refs.tsv.xz'):
             if arg.lower() in t.lower():
