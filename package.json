@@ -1,7 +1,7 @@
 {
   "name": "pes2017-rea",
   "private": true,
-  "description": "REA (reverse-engineering CLI, https://github.com/morluto/rea) for PES2017.exe. Extract pes.7z.001 into this folder, run \"npm ci\", then \"npx rea doctor\" or \"npx rea inspect-artifact <full path of PES2017.exe>\".",
+  "description": "REA (reverse-engineering CLI, https://github.com/morluto/rea) for PES2017.exe. In the Arena sandbox: \"bash rea-setup.sh\" (REA, the game files, Rizin and its decompiler). On a PC: extract pes.7z.001 here, \"npm ci\", then \"npx rea doctor\".",
   "dependencies": {
     "node": "24.22.3",
     "rea-agents": "6.9.0"
