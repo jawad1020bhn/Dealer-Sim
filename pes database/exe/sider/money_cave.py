@@ -3,16 +3,20 @@
     python3 money_cave.py            print the layout and the code bytes
     python3 money_cave.py build      assemble the code again (needs: pip install keystone-engine)
                                      and compare it with the bytes kept in this file
-    python3 money_cave.py context <PES2017.exe>
-                                     print the CONTEXT list of MLMoney.lua from the exe file
+    python3 money_cave.py lua <PES2017.exe>
+                                     print the part of MLMoney.lua that is made from this file and
+                                     the exe: ROUTINES, SITES and CONTEXT (test_money.py checks that
+                                     MLMoney.lua holds exactly this text)
 
-MLMoney.lua changes up to four places of PES2017.exe (sha256 44b0caaa...) and fills a
-piece of unused memory with four small routines and their tables.
+MLMoney.lua changes up to 25 places of PES2017.exe (sha256 44b0caaa...) and fills a
+piece of unused memory with 13 small routines and their tables.
 
 Fee, fcn_038ab832 (MASTER_LEAGUE.md 6.2). The 17 bytes at 0x038ab8db hold the rating part
 of the formula, `9000 * max(0, rating - 68)`, left in edi. They become a call to FEE_CODE:
 
     v           = VALUE[rating] * AGE[age] / 100
+    p           = min(max(0, rating - TALENT[age]) * TALENT_STEP, TALENT_MAX)
+    v           = v + min(v * p / 100, TALENT_CAP)       the talent bonus; TALENT[age] = 255: none
     v           = v * POSITION[registered position] / 100
     v           = v * (SPREAD_LOW + (hash * SPREAD_RANGE >> 8)) / 1000, at most 99,999,900
     edi         = v + v * (popularity * FAME) / 100000
@@ -44,6 +48,54 @@ mean value of the 16 best players, doubled) becomes a call to BUDGET_T_CODE:
 salary of the 16 best paid) becomes a call to BUDGET_S_CODE and three nops:
 `esi = ecx + eax * BUDGET_S / 100`, then a jump to 0x0381c0e5, which returns to the nops.
 
+Prize money (6.7). cup_prize (fcn_038aa307) searches the 73 rows (competition, stage,
+amount) at 0x0216b178. The three instructions that hold the table's address get the
+address of a copy with other amounts (CUP_TAB); the game's table is not written.
+league_prize (fcn_038a9ebb) reads the amount for a place from a list on its stack:
+`mov eax, [ebp + eax*4 - 0x17c]` at 0x038aa2dd (first list, index 0 to 22) and
+`mov eax, [ebp + eax*4 - 0x120]` at 0x038aa2c6 (second list, index 0 to 24). The second
+becomes `mov eax, [eax*4 + LEAGUE2_TAB]`, the same length. The first becomes a call to
+LEAGUE_CODE: the number of the club's league is in edi there (16 bits, from fcn_03879e04);
+if it is one of the LEAGUE_COUNT numbers at LEAGUE_IDS, the amount is that league's row of
+LEAGUE_ROWS_TAB (words, in units of 100 stored), else `[eax*4 + LEAGUE1_TAB]`. The routine
+uses ecx and edx, which the game loads anew right after.
+A cup without a row in the table gets one of six amounts by stage, the immediates of six
+`mov edi` (NATIONAL_SITES); the module writes other numbers there.
+prize_step (fcn_03640686) hands every prize to balance_add (fcn_038aadb7), at 0x03640ac5
+(league) and 0x03640b78 (cup). Both calls go to PRIZE_CODE instead: it calls balance_add
+with the same argument and then, in game mode 0x13 (Master League), transfer_budget_add
+(fcn_038aac87) with `amount * SHARE / 100`.
+
+Salary once more. `fmul qword [0x01f2fe88]` at 0x038aca19 multiplies (251 - rank) by 0.004;
+its address operand (0x038aca1b) is pointed to RANK_STEP, a number of the module, so the
+shared constant stays as it is. `add esi, [ebp - 0x50]` at 0x038aca2b (esi = the role
+bonus R) becomes a call to BONUS_R_CODE: `esi = esi * BONUS / 100`, then that add.
+`mov eax, [ebp - 0x34]; add eax, [ebp - 0x50]` at 0x038acd96 (award bonuses + band bonus
+T) becomes a call to BONUS_END_CODE: `eax = (awards + T) * BONUS / 100`.
+
+Contract years (7.3). `mov eax, 3` at 0x03887fc1 in fcn_03887f5d is the limit for players
+of 23 and younger; its number is replaced.
+
+Yearly income (6.4). season_income (fcn_038ade76) calls the wage bill function and then
+overwrites its result: `call wage_bill; mov eax, [ebp + 8]; push eax; call club_popularity`.
+The nine bytes after the first call become a call to WAGES_KEEP_CODE, which stores eax in
+the function's local [ebp - 4] (a flag byte for the wage bill function, not read again),
+pushes the argument under its own return address and jumps to club_popularity, so that
+function returns to the nops after the call as if the game had called it. The last step
+of the amount, `lea eax, [esi - 3451330]` at 0x038adeee, becomes a call to INCOME_N_CODE:
+
+    eax = esi - 3451330
+    eax = eax * INCOME / 100            only if eax > 0 (INCOME_SCALE_CODE)
+    eax = eax + [ebp - 4] * INCOME_WAGES / 100
+
+and the game's `test eax, eax` and its floor of 1,000 follow as before. With INCOME_WAGES
+off the percent is 0 and the first place is not changed. `imul eax, eax, 5000` at
+0x038a9e9c (the amount by rank, fcn_038a9e6b) and `add esi, 15000` at 0x038ae025 (the
+starting amount in club_money_setup) become calls that do the same and apply INCOME.
+
+The yearly budget step (6.7) is not changed. june_grants() below is its arithmetic, and
+test_money.py runs the game's code for both days against it.
+
 The memory used is the end of the section .trace: the section's content ends at
 0x047b005d, its declared size at 0x047b0123, and its last page runs to 0x047b0fff. The
 section is readable, writable and executable. No call or jump of the exe goes there.
@@ -66,12 +118,38 @@ BUDGET_T_AT = CAVE + 0x44c      # dword: transfer budget, percent of the mean va
 BUDGET_S_AT = CAVE + 0x450      # dword: salary budget, percent of the mean salary of the best 16
 HUNDRED_AT = CAVE + 0x454       # dword 100
 THOUSAND_AT = CAVE + 0x458      # dword 1000
-MARK_AT = CAVE + 0x45c          # 4 bytes "MLM2"
-FEE_CODE = CAVE + 0x480
+MARK_AT = CAVE + 0x45c          # 4 bytes "MLM4"
+TALENT_TAB = CAVE + 0x480       # 64 bytes, by age 0-63: the rating above which a young player gets the
+                                # talent bonus (255: no bonus at this age)
+INCOME_N_CODE = CAVE + 0x460     # (0x4c0 to 0x4cb are not used)
+INCOME_M_CODE = CAVE + 0x4cc
+INCOME_SCALE_CODE = CAVE + 0x4d8
+INCOME_S_CODE = CAVE + 0x4ec
+LEAGUE_CODE = CAVE + 0x500
+WAGES_KEEP_CODE = CAVE + 0x532
 SALARY_CODE = CAVE + 0x540
 BUDGET_T_CODE = CAVE + 0x580
 BUDGET_S_CODE = CAVE + 0x5a0
-CAVE_SIZE = 0x5c0
+LEAGUE1_TAB = CAVE + 0x5c0      # 23 dwords: league prize by place, first list (index 0 is not a place)
+LEAGUE2_TAB = CAVE + 0x620      # 25 dwords: league prize by place, second list
+RANK_STEP_AT = CAVE + 0x688     # double: rise of the club factor per place of the ranking
+SHARE_AT = CAVE + 0x690         # dword: percent of a prize that goes to the transfer budget
+BONUS_AT = CAVE + 0x694         # dword: percent of the game's role, band and award bonuses
+PRIZE_CODE = CAVE + 0x6a0
+BONUS_R_CODE = CAVE + 0x6e0
+BONUS_END_CODE = CAVE + 0x700
+CUP_TAB = CAVE + 0x720          # 73 rows of 12 bytes: competition, stage, amount
+FEE_CODE = CAVE + 0xa90         # (0x480 in version 3)
+TALENT_STEP_AT = CAVE + 0xb80   # dword: percent of value per rating point above TALENT_TAB
+TALENT_MAX_AT = CAVE + 0xb84    # dword: the most percent
+TALENT_CAP_AT = CAVE + 0xb88    # dword: the most the bonus can be, as an amount
+INCOME_AT = CAVE + 0xb8c        # dword: percent of the game's two yearly incomes
+LEAGUE_IDS_AT = CAVE + 0xb90    # 12 words: leagues with a prize list of their own
+LEAGUE_COUNT_AT = CAVE + 0xba8  # dword: how many of them are used
+INCOME_WAGES_AT = CAVE + 0xbac  # dword: percent of the wage bill that is added to the yearly income
+LEAGUE_ROWS_TAB = CAVE + 0xbb0  # 12 rows of 24 words: prize by place in units of LEAGUE_UNIT, index 0 unused
+LEAGUE_ROWS, LEAGUE_ROW_WORDS, LEAGUE_UNIT = 12, 24, 100
+CAVE_SIZE = 0xdf0
 CAVE_LIMIT = 0x047b1000
 
 FEE_SITE = 0x038ab8db
@@ -84,6 +162,69 @@ BUDGET_T_SITE_OLD = bytes.fromhex('01f68b4030')
 BUDGET_S_SITE = 0x038add08
 BUDGET_S_SITE_OLD = bytes.fromhex('8d3441e8d5e3f6ff')
 MODE_OBJECT_GETTER = 0x0381c0e5
+MENU_GETTER = 0x03808865          # -> object whose +0x20 is the game mode number
+MASTER_LEAGUE = 0x13
+BALANCE_ADD = 0x038aadb7
+TRANSFER_BUDGET_ADD = 0x038aac87
+CUP_TABLE, CUP_ROWS = 0x0216b178, 73    # the game's own table
+LEAGUE1_SITE, LEAGUE1_SITE_OLD = 0x038aa2dd, bytes.fromhex('8b848584feffff')
+LEAGUE2_SITE, LEAGUE2_SITE_OLD = 0x038aa2c6, bytes.fromhex('8b8485e0feffff')
+LEAGUE1_PLACES, LEAGUE2_PLACES = 22, 24
+PRIZE_SITE_1, PRIZE_SITE_1_OLD = 0x03640ac5, bytes.fromhex('e8eda22600')
+PRIZE_SITE_2, PRIZE_SITE_2_OLD = 0x03640b78, bytes.fromhex('e83aa22600')
+RANK_SITE, RANK_SITE_OLD = 0x038aca1b, bytes.fromhex('88fef201')
+RANK_STEP_OLD = 0.004000000189989805
+BONUS_R_SITE, BONUS_R_SITE_OLD = 0x038aca2b, bytes.fromhex('03b5b0ffffff')
+BONUS_END_SITE, BONUS_END_SITE_OLD = 0x038acd96, bytes.fromhex('8b85ccffffff0385b0ffffff')
+YEARS_SITE, YEARS_SITE_OLD = 0x03887fc1, bytes.fromhex('b803000000')
+# yearly income: season_income (fcn_038ade76), the amount by rank (fcn_038a9e6b), and the
+# same amount by club level when a career is set up (fcn_038adf0c)
+INCOME_N_SITE, INCOME_N_SITE_OLD = 0x038adeee, bytes.fromhex('8d863e56cbff')   # lea eax, [esi - 0x34a9c2]
+INCOME_M_SITE, INCOME_M_SITE_OLD = 0x038a9e9c, bytes.fromhex('69c088130000')   # imul eax, eax, 5000
+INCOME_S_SITE, INCOME_S_SITE_OLD = 0x038ae025, bytes.fromhex('81c6983a0000')   # add esi, 15000
+# season_income calls the wage bill function and throws the result away; right after that call:
+# mov eax, [ebp + 8]; push eax; call club_popularity
+INCOME_W_SITE, INCOME_W_SITE_OLD = 0x038adeaa, bytes.fromhex('8b450850e8a2a9fcff')
+CLUB_POPULARITY = 0x03878855
+# cup_prize: the amounts for a cup that has no row in the table, by stage (immediates of six mov edi)
+NATIONAL_SITES = ((0x038aa43a, 20000), (0x038aa446, 10000), (0x038aa452, 5000), (0x038aa45e, 1000),
+                  (0x038aa46a, 500), (0x038aa476, 300))
+NATIONAL_STAGES = ((0,), (1,), (2, 3), (4,), (5,), (6,))        # the stages each of the six serves
+# the game's cup table: (competition, stage, amount)
+GAME_CUP_ROWS = struct.iter_unpack('<3I', bytes.fromhex(
+    '0200000000000000803801000200000001000000409c00000200000003000000307500000200000004000000204e0000'
+    '0200000007000000102700000200000009000000881300000300000000000000307500000300000001000000204e0000'
+    '0300000003000000983a00000300000004000000102700000300000005000000881300000300000007000000b80b0000'
+    '0300000009000000e80300000400000000000000b8880000040000000100000010270000050000000000000080380100'
+    '0500000001000000409c00000500000003000000307500000500000004000000204e0000050000000700000010270000'
+    '0500000009000000881300003000000000000000803801003000000001000000409c0000300000000300000030750000'
+    '3000000004000000204e0000300000000700000010270000300000000900000088130000060000000000000030750000'
+    '0600000001000000204e00000600000003000000983a0000060000000400000010270000060000000700000088130000'
+    '0600000009000000b80b0000060000000a000000e80300005b00000000000000307500005b00000001000000204e0000'
+    '5b00000003000000983a00005b00000004000000102700005b00000007000000881300005b00000009000000b80b0000'
+    '5b0000000a000000e80300000700000000000000b8880000070000000100000010270000080000000000000080380100'
+    '0800000001000000409c00000800000003000000307500000800000004000000204e0000080000000700000010270000'
+    '0800000009000000881300000100000000000000409c00000100000001000000204e0000010000000200000010270000'
+    '0100000003000000881300004900000000000000881300004900000001000000b80b00004a0000000000000088130000'
+    '4a00000001000000b80b00004b00000000000000881300004b00000001000000b80b00004c0000000000000088130000'
+    '4c00000001000000b80b00004d00000000000000881300004d00000001000000b80b00004e0000000000000088130000'
+    '4e00000001000000b80b00004f00000000000000881300004f00000001000000b80b0000520000000000000088130000'
+    '5200000001000000b80b00005300000000000000881300005300000001000000b80b0000540000000000000088130000'
+    '5400000001000000b80b0000'))
+GAME_CUP_ROWS = tuple(GAME_CUP_ROWS)
+assert len(GAME_CUP_ROWS) == CUP_ROWS
+# what cup_prize gives for a cup without a row, by stage (switch at 0x038aa42b)
+CUP_FALLBACK = {0: 20000, 1: 10000, 2: 5000, 3: 5000, 4: 1000, 5: 500, 6: 300}
+CUP_NONE = (0x2d, 0x2e, 0x2f, 0x36, 0x37, 0x46, 0x47, 0x48)
+# league_prize's four lists, index 0 to the last place
+GAME_LEAGUE = {
+    'first': (0, 150000, 130000, 100000, 80000, 60000, 50000, 45000, 40000, 35000, 30000, 27000, 24000, 21000,
+              18000, 15000, 12000, 9000, 7000, 5000, 3000, 3000, 3000),
+    'second': (0, 20000, 15000, 12000, 10000, 9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1500, 1000, 900,
+               800, 700, 600, 500, 450, 400, 350, 300, 250),
+    60: (0, 20000, 10000, 8000, 6000, 4000, 2000, 1000) + (0,) * 15,
+    61: (0, 2000, 1000, 500) + (0,) * 19,
+}
 
 POSITIONS = ('GK', 'CB', 'LB', 'RB', 'DMF', 'CMF', 'LMF', 'RMF', 'AMF', 'LWF', 'RWF', 'SS', 'CF')
 HASH_A, HASH_B = 0x01000193, 0x9e3779b1
@@ -92,13 +233,30 @@ FEE_SOURCE = f'''
     cmp eax, 99
     jbe f1
     mov eax, 99
-f1: mov eax, dword ptr [eax*4 + {VALUE_TAB}]
+f1: mov edi, eax
+    mov eax, dword ptr [eax*4 + {VALUE_TAB}]
     mov ecx, dword ptr [ebx + 0x1c]
     shr ecx, 7
     and ecx, 0x3f
-    movzx ecx, word ptr [ecx*2 + {AGE_TAB}]
+    movzx edx, byte ptr [ecx + {TALENT_TAB}]
+    sub edi, edx
+    jg t1
+    xor edi, edi
+t1: imul edi, dword ptr [{TALENT_STEP_AT}]
+    cmp edi, dword ptr [{TALENT_MAX_AT}]
+    jbe t2
+    mov edi, dword ptr [{TALENT_MAX_AT}]
+t2: movzx ecx, word ptr [ecx*2 + {AGE_TAB}]
     mul ecx
     div dword ptr [{HUNDRED_AT}]
+    push eax
+    mul edi
+    div dword ptr [{HUNDRED_AT}]
+    cmp eax, dword ptr [{TALENT_CAP_AT}]
+    jbe t3
+    mov eax, dword ptr [{TALENT_CAP_AT}]
+t3: pop ecx
+    add eax, ecx
     mov ecx, dword ptr [ebx + 4]
     shr ecx, 28
     movzx ecx, word ptr [ecx*2 + {POSITION_TAB}]
@@ -165,19 +323,132 @@ BUDGET_S_SOURCE = f'''
     lea esi, [ecx + eax]
     jmp {MODE_OBJECT_GETTER}
 '''
+PRIZE_SOURCE = f'''
+    mov eax, dword ptr [esp + 4]
+    push eax
+    call {BALANCE_ADD}
+    add esp, 4
+    call {MENU_GETTER}
+    cmp dword ptr [eax + 0x20], {MASTER_LEAGUE}
+    jne p1
+    mov eax, dword ptr [esp + 4]
+    mov eax, dword ptr [eax]
+    imul dword ptr [{SHARE_AT}]
+    idiv dword ptr [{HUNDRED_AT}]
+    push eax
+    push esp
+    call {TRANSFER_BUDGET_ADD}
+    add esp, 8
+p1: ret
+'''
+BONUS_R_SOURCE = f'''
+    push eax
+    push edx
+    mov eax, esi
+    mul dword ptr [{BONUS_AT}]
+    div dword ptr [{HUNDRED_AT}]
+    mov esi, eax
+    pop edx
+    pop eax
+    add esi, dword ptr [ebp - 0x50]
+    ret
+'''
+BONUS_END_SOURCE = f'''
+    push edx
+    mov eax, dword ptr [ebp - 0x34]
+    add eax, dword ptr [ebp - 0x50]
+    mul dword ptr [{BONUS_AT}]
+    div dword ptr [{HUNDRED_AT}]
+    pop edx
+    ret
+'''
+INCOME_N_SOURCE = f'''
+    lea eax, [esi - 0x34a9c2]
+    call {INCOME_SCALE_CODE}
+    mov ecx, eax
+    mov eax, dword ptr [ebp - 4]
+    mul dword ptr [{INCOME_WAGES_AT}]
+    div dword ptr [{HUNDRED_AT}]
+    add eax, ecx
+    ret
+'''
+# [ebp - 4] of season_income holds a flag byte for the wage bill function, which nothing
+# reads after that call. The routine keeps the wage bill there and goes on to
+# club_popularity with the argument the replaced instructions pushed. With the percent at
+# INCOME_WAGES_AT 0 this routine is not used and whatever [ebp - 4] holds is multiplied by 0.
+WAGES_KEEP_SOURCE = f'''
+    mov dword ptr [ebp - 4], eax
+    pop eax
+    push dword ptr [ebp + 8]
+    push eax
+    jmp {CLUB_POPULARITY}
+'''
+INCOME_M_SOURCE = f'''
+    imul eax, eax, 0x1388
+    jmp {INCOME_SCALE_CODE}
+'''
+INCOME_SCALE_SOURCE = f'''
+    test eax, eax
+    jle i1
+    push edx
+    mul dword ptr [{INCOME_AT}]
+    div dword ptr [{HUNDRED_AT}]
+    pop edx
+i1: ret
+'''
+INCOME_S_SOURCE = f'''
+    add esi, 0x3a98
+    push eax
+    mov eax, esi
+    call {INCOME_SCALE_CODE}
+    mov esi, eax
+    pop eax
+    ret
+'''
+LEAGUE_SOURCE = f'''
+    xor ecx, ecx
+    jmp l3
+l1: movzx edx, word ptr [ecx*2 + {LEAGUE_IDS_AT}]
+    cmp edx, edi
+    je l2
+    inc ecx
+l3: cmp ecx, dword ptr [{LEAGUE_COUNT_AT}]
+    jb l1
+    mov eax, dword ptr [eax*4 + {LEAGUE1_TAB}]
+    ret
+l2: imul ecx, ecx, {LEAGUE_ROW_WORDS}
+    add ecx, eax
+    movzx eax, word ptr [ecx*2 + {LEAGUE_ROWS_TAB}]
+    imul eax, eax, {LEAGUE_UNIT}
+    ret
+'''
 # the assembled routines (python3 money_cave.py build checks them against the source above)
 FEE_BYTES = bytes.fromhex(
-    '83f8637605b8630000008b048500027b048b4b1cc1e90783e13f0fb70c4d20057b04f7e1f73554067b048b4b04'
-    'c1e91c0fb70c4d20067b04f7e1f73554067b040fb74b2c6953309301000131d169c9b179379ec1e9180faf0d48'
-    '067b04c1e908030d44067b04f7e1f73558067b043d9ce0f5057605b89ce0f50589c78b8bb4000000c1e90b81e1'
-    'ff0f00000faf0d40067b04f7e1b9a0860100f7f101c7c745f400000000c3')
-SALARY_BYTES = bytes.fromhex(
-    '83f8637605b8630000008b048590037b048b4b1cc1e90783e13f0fb70c4da0057b04f7e1f73554067b048945c8'
-    'c745cc00000000c3')
+    '83f8637605b86300000089c78b048500027b048b4b1cc1e90783e13f0fb69180067b0429d77f0231ff0faf3d800d7b043b3d840d7b0476'
+    '068b3d840d7b040fb70c4d20057b04f7e1f73554067b0450f7e7f73554067b043b05880d7b047605a1880d7b045901c88b4b04c1e91c0f'
+    'b70c4d20067b04f7e1f73554067b040fb74b2c6953309301000131d169c9b179379ec1e9180faf0d48067b04c1e908030d44067b04f7e1'
+    'f73558067b043d9ce0f5057605b89ce0f50589c78b8bb4000000c1e90b81e1ff0f00000faf0d40067b04f7e1b9a0860100f7f101c7c745'
+    'f400000000c3')
+SALARY_BYTES = bytes.fromhex('83f8637605b8630000008b048590037b048b4b1cc1e90783e13f0fb70c4da0057b04f7e1f73554067b048945c8c745cc00000000c3')
 BUDGET_T_BYTES = bytes.fromhex('8b4030505289f0f7254c067b04f73554067b0489c65a5885f6c3')
 BUDGET_S_BYTES = bytes.fromhex('52f72550067b04f73554067b045a8d3401e92fb906ff')
+PRIZE_BYTES = bytes.fromhex('8b44240450e80da50fff83c404e8b37f05ff83782013751c8b4424048b00f72d90087b04f73d54067b045054e8b6a30fff83c408c3')
+BONUS_R_BYTES = bytes.fromhex('505289f0f72594087b04f73554067b0489c65a580375b0c3')
+BONUS_END_BYTES = bytes.fromhex('528b45cc0345b0f72594087b04f73554067b045ac3')
+INCOME_N_BYTES = bytes.fromhex('8d863e56cbffe86d00000089c18b45fcf725ac0d7b04f73554067b0401c8c3')
+WAGES_KEEP_BYTES = bytes.fromhex('8945fc58ff750850e916810cff')
+INCOME_M_BYTES = bytes.fromhex('69c088130000eb04')
+INCOME_SCALE_BYTES = bytes.fromhex('85c07e0e52f7258c0d7b04f73554067b045ac3')
+INCOME_S_BYTES = bytes.fromhex('81c6983a00005089f0e8deffffff89c658c3')
+LEAGUE_BYTES = bytes.fromhex('31c9eb0d0fb7144d900d7b0439fa7411413b0da80d7b0472eb8b0485c0077b04c36bc91801c10fb7044db00d7b046bc064c3')
 ROUTINES = ((FEE_CODE, FEE_SOURCE, 'FEE_BYTES'), (SALARY_CODE, SALARY_SOURCE, 'SALARY_BYTES'),
-            (BUDGET_T_CODE, BUDGET_T_SOURCE, 'BUDGET_T_BYTES'), (BUDGET_S_CODE, BUDGET_S_SOURCE, 'BUDGET_S_BYTES'))
+            (BUDGET_T_CODE, BUDGET_T_SOURCE, 'BUDGET_T_BYTES'), (BUDGET_S_CODE, BUDGET_S_SOURCE, 'BUDGET_S_BYTES'),
+            (PRIZE_CODE, PRIZE_SOURCE, 'PRIZE_BYTES'), (BONUS_R_CODE, BONUS_R_SOURCE, 'BONUS_R_BYTES'),
+            (BONUS_END_CODE, BONUS_END_SOURCE, 'BONUS_END_BYTES'),
+            (INCOME_N_CODE, INCOME_N_SOURCE, 'INCOME_N_BYTES'), (INCOME_M_CODE, INCOME_M_SOURCE, 'INCOME_M_BYTES'),
+            (INCOME_SCALE_CODE, INCOME_SCALE_SOURCE, 'INCOME_SCALE_BYTES'),
+            (INCOME_S_CODE, INCOME_S_SOURCE, 'INCOME_S_BYTES'), (LEAGUE_CODE, LEAGUE_SOURCE, 'LEAGUE_BYTES'),
+            (WAGES_KEEP_CODE, WAGES_KEEP_SOURCE, 'WAGES_KEEP_BYTES'))
 
 # limits the module keeps, so that no step of the routines can overflow 32 bits
 MAX_AGE_PERCENT = 300
@@ -187,6 +458,16 @@ MAX_FAME = 100
 MAX_SALARY = 40000000
 MAX_SALARY_AGE_PERCENT = 200
 MIN_BUDGET, MAX_BUDGET = 0.1, 10.0
+MIN_PRIZE, MAX_PRIZE = 0.001, 2000      # millions on the screen
+MAX_SHARE = 100
+MIN_GAP, MAX_GAP = 1.0, 10.0
+MAX_BONUS = 1000
+MIN_YEARS, MAX_YEARS = 1, 5
+MAX_TALENT_STEP, MAX_TALENT_PERCENT = 50, 200
+MIN_INCOME, MAX_INCOME = 10, 1000
+MAX_INCOME_WAGES = 100                  # percent: the wage bill times this still fits the division
+MAX_LEAGUE_ROW = 650                    # millions: a place of a list by league is kept in 16 bits
+NO_TALENT = 255
 
 # the code the routines rely on: name, address, byte count (MLMoney.lua compares these
 # bytes of the running game with the bytes of the exe file before it writes anything)
@@ -194,10 +475,23 @@ CONTEXT = (
     ('fee code', 0x038ab832, 228),          # start of the fee function to the end of the changed part and its use
     ('salary code', 0x038ac6f8, 15),        # the player record goes into ebx
     ('salary code 2', 0x038ac86f, 110),     # the rating part and what follows
+    ('salary roles', 0x038ac937, 244),      # role bonus and club factor, up to the sum
     ('salary sum', 0x038aca2b, 49),         # where the two numbers are added
+    ('salary end', 0x038aca5c, 870),        # band bonus, award bonuses, the last sum and its limits
     ('budget code', 0x038adc0b, 346),       # both budget sums to the place they are stored
     ('position', 0x03827961, 17),           # getter of the registered position
     ('age', 0x03827ba9, 20),                # getter of the age
+    ('cup prize', 0x038aa307, 383),         # the whole function
+    ('cup table', CUP_TABLE, 876),          # the game's 73 rows
+    ('league prize', 0x038a9ebb, 1100),     # the whole function
+    ('prize step', 0x03640abe, 200),        # both places where a prize is paid
+    ('balance add', BALANCE_ADD, 98),       # the whole function
+    ('budget add', TRANSFER_BUDGET_ADD, 98),  # the whole function
+    ('mode number', MENU_GETTER, 6),        # the whole function
+    ('years limit', 0x03887f5d, 109),       # the whole function
+    ('income', 0x038ade76, 141),            # season_income, the whole function
+    ('rank income', 0x038a9e6b, 66),        # the whole function
+    ('career money', 0x038adfb6, 144),      # club_money_setup: the amount by club level
 )
 
 
@@ -210,9 +504,28 @@ SALARY_SITE_NEW = call(SALARY_SITE, SALARY_CODE) + b'\xeb' + bytes([SALARY_BLOCK
 BUDGET_T_SITE_NEW = call(BUDGET_T_SITE, BUDGET_T_CODE)
 BUDGET_S_SITE_NEW = call(BUDGET_S_SITE, BUDGET_S_CODE) + b'\x90' * 3
 #        name, address, bytes of the game, bytes of the module
+# ('years': the number in its last four bytes is a setting, and so are the amounts of the six
+# 'nat' places; Tables.sites() gives them as written)
 SITES = (('fee', FEE_SITE, FEE_SITE_OLD, FEE_SITE_NEW), ('salary', SALARY_SITE, SALARY_SITE_OLD, SALARY_SITE_NEW),
          ('budget 1', BUDGET_T_SITE, BUDGET_T_SITE_OLD, BUDGET_T_SITE_NEW),
-         ('budget 2', BUDGET_S_SITE, BUDGET_S_SITE_OLD, BUDGET_S_SITE_NEW))
+         ('budget 2', BUDGET_S_SITE, BUDGET_S_SITE_OLD, BUDGET_S_SITE_NEW),
+         ('cup 1', 0x038aa400, struct.pack('<I', CUP_TABLE), struct.pack('<I', CUP_TAB)),
+         ('cup 2', 0x038aa408, struct.pack('<I', CUP_TABLE + 4), struct.pack('<I', CUP_TAB + 4)),
+         ('cup 3', 0x038aa423, struct.pack('<I', CUP_TABLE + 8), struct.pack('<I', CUP_TAB + 8)),
+         ('league 1', LEAGUE1_SITE, LEAGUE1_SITE_OLD, call(LEAGUE1_SITE, LEAGUE_CODE) + b'\x90' * 2),
+         ('league 2', LEAGUE2_SITE, LEAGUE2_SITE_OLD, b'\x8b\x04\x85' + struct.pack('<I', LEAGUE2_TAB)),
+         ('prize 1', PRIZE_SITE_1, PRIZE_SITE_1_OLD, call(PRIZE_SITE_1, PRIZE_CODE)),
+         ('prize 2', PRIZE_SITE_2, PRIZE_SITE_2_OLD, call(PRIZE_SITE_2, PRIZE_CODE)),
+         ('pay gap', RANK_SITE, RANK_SITE_OLD, struct.pack('<I', RANK_STEP_AT)),
+         ('bonus 1', BONUS_R_SITE, BONUS_R_SITE_OLD, call(BONUS_R_SITE, BONUS_R_CODE) + b'\x90'),
+         ('bonus 2', BONUS_END_SITE, BONUS_END_SITE_OLD, call(BONUS_END_SITE, BONUS_END_CODE) + b'\x90' * 7),
+         ('years', YEARS_SITE, YEARS_SITE_OLD, b'\xb8\x05\x00\x00\x00'),
+         ('income 1', INCOME_N_SITE, INCOME_N_SITE_OLD, call(INCOME_N_SITE, INCOME_N_CODE) + b'\x90'),
+         ('income 2', INCOME_M_SITE, INCOME_M_SITE_OLD, call(INCOME_M_SITE, INCOME_M_CODE) + b'\x90'),
+         ('income 3', INCOME_S_SITE, INCOME_S_SITE_OLD, call(INCOME_S_SITE, INCOME_S_CODE) + b'\x90'),
+         ('income 4', INCOME_W_SITE, INCOME_W_SITE_OLD, call(INCOME_W_SITE, WAGES_KEEP_CODE) + b'\x90' * 4),
+         ) + tuple(('nat %d' % i, at, struct.pack('<I', old), struct.pack('<I', old))
+                   for i, (at, old) in enumerate(NATIONAL_SITES))
 assert all(len(old) == len(new) for _, _, old, new in SITES)
 
 
@@ -255,9 +568,20 @@ class Tables:
     value, age: lists of (x, y) knots; position: {name: percent}; spread: percent;
     fame: percent per 1,000 points; salary: knots or None (the salary formula stays the
     game's); salary_age: knots; budget_transfer, budget_salary: factor or None (the
-    game's own 2)."""
+    game's own 2); cup: list of (competition, stage, millions) or None; league, league_2:
+    millions for place 1 to 22 and 1 to 24, or None; prize_share: percent or None;
+    pay_gap: factor of the first club of the ranking or None (the game's own 2); bonus:
+    percent or None; young_years: 1 to 5 or None (the game's own 3); talent: knots (age,
+    rating) or None, talent_step: percent per rating point, talent_max: percent,
+    talent_cap: millions; income: percent or None; league_by_id: list of (league, list of
+    millions | percent of `league`) or None; cup_national: six amounts in millions or
+    None; cup_tv: list of (competition, millions) or None; income_wages: percent of the
+    wage bill added to the yearly income, or None."""
 
-    def __init__(self, value, age, position, spread, fame, salary, salary_age, budget_transfer, budget_salary):
+    def __init__(self, value, age, position, spread, fame, salary, salary_age, budget_transfer, budget_salary,
+                 cup=None, league=None, league_2=None, prize_share=None, pay_gap=None, bonus=None,
+                 young_years=None, talent=None, talent_step=0, talent_max=0, talent_cap=0, income=None,
+                 league_by_id=None, cup_national=None, cup_tv=None, income_wages=None):
         self.value = [clamp(amount(m), 1, CAP) for m in curve(value, 0, 99, True)]
         self.age = [clamp(int(p + 0.5), 0, MAX_AGE_PERCENT) for p in curve(age, 0, 63, False)]
         self.position = [clamp(int(position[n] + 0.5), 0, MAX_POSITION_PERCENT) for n in POSITIONS] + [100] * 3
@@ -265,15 +589,83 @@ class Tables:
         self.spread_low, self.spread_range = 1000 - 10 * s, 20 * s
         self.fame = clamp(int(fame + 0.5), 0, MAX_FAME)
         self.has_salary = bool(salary)
-        self.salary = [clamp(amount(m / 2.0), 1, MAX_SALARY) for m in curve(salary, 0, 99, True)] if salary else [0] * 100
+        self.has_gap = bool(pay_gap)
+        self.gap = clamp(float(pay_gap), MIN_GAP, MAX_GAP) if pay_gap else 2.0
+        self.rank_step = (self.gap - 1) / 250 if pay_gap else RANK_STEP_OLD
+        self.salary = ([clamp(amount(m / self.gap), 1, MAX_SALARY) for m in curve(salary, 0, 99, True)]
+                       if salary else [0] * 100)
         self.salary_age = [clamp(int(p + 0.5), 0, MAX_SALARY_AGE_PERCENT) for p in curve(salary_age, 0, 63, False)]
         self.budget_transfer = None if not budget_transfer else int(budget_transfer * 100 + 0.5)
         self.budget_salary = None if not budget_salary else int(budget_salary * 100 + 0.5)
+        self.has_cup = cup is not None
+        rows = [list(r) for r in GAME_CUP_ROWS]
+        tv = dict((int(c), m) for c, m in cup_tv or ())
+        for competition, stage, millions in cup or ():
+            hit = [r for r in rows if r[0] == competition and r[1] == stage]
+            assert hit, 'the game has no prize row for competition %d, stage %d' % (competition, stage)
+            hit[0][2] = prize(millions + tv.get(competition, 0))
+        self.cup_rows = [tuple(r) for r in rows]
+        self.has_league, self.has_league_2 = league is not None, league_2 is not None
+        assert league is None or len(league) == LEAGUE1_PLACES
+        assert league_2 is None or len(league_2) == LEAGUE2_PLACES
+        self.league = [0] + [prize(m, 0) for m in league] if self.has_league else [0] * (LEAGUE1_PLACES + 1)
+        self.league_2 = [0] + [prize(m, 0) for m in league_2] if self.has_league_2 else [0] * (LEAGUE2_PLACES + 1)
+        self.prize_share = None if not prize_share else clamp(int(prize_share + 0.5), 0, MAX_SHARE)
+        self.bonus = None if bonus is None else clamp(int(bonus + 0.5), 0, MAX_BONUS)
+        self.young_years = None if not young_years else clamp(int(young_years + 0.5), MIN_YEARS, MAX_YEARS)
+        # talent: the rating above which the bonus starts, by age; ages above the last entry have none
+        self.talent = [NO_TALENT] * 64
+        if talent:
+            last = int(talent[-1][0])
+            for a, r in enumerate(curve(talent, 0, 63, False)):
+                if a <= last:
+                    self.talent[a] = clamp(int(r + 0.5), 0, 254)
+        self.talent_step = clamp(int(talent_step + 0.5), 0, MAX_TALENT_STEP) if talent else 0
+        self.talent_max = clamp(int(talent_max + 0.5), 0, MAX_TALENT_PERCENT) if talent else 0
+        self.talent_cap = clamp(amount(talent_cap), 0, CAP) if talent else 0
+        self.income = None if not income else clamp(int(income + 0.5), MIN_INCOME, MAX_INCOME)
+        self.income_wages = None if not income_wages else clamp(int(income_wages + 0.5), 1, MAX_INCOME_WAGES)
+        # lists by league: only with `league` on. A list shorter than 22 is filled with its last number.
+        self.league_rows = []
+        for league_id, what in (league_by_id or ()) if self.has_league else ():
+            if isinstance(what, (list, tuple)):
+                full = [prize(m, 0) for m in what] + [prize(what[-1], 0)] * (LEAGUE1_PLACES - len(what))
+            else:
+                full = [a * int(what + 0.5) // 100 for a in self.league[1:]]
+            words = [0] + [min(a // LEAGUE_UNIT, 0xffff) for a in full[:LEAGUE1_PLACES]] + [0]
+            assert len(words) == LEAGUE_ROW_WORDS
+            self.league_rows.append((int(league_id), words))
+        assert len(self.league_rows) <= LEAGUE_ROWS
+        self.national = None if not cup_national else [prize(m) for m in cup_national]
+        assert self.national is None or len(self.national) == len(NATIONAL_SITES)
 
     def sites(self):
-        """The places the module changes with these settings."""
-        on = (True, self.has_salary, self.budget_transfer is not None, self.budget_salary is not None)
-        return [s for s, used in zip(SITES, on) if used]
+        """The places the module changes with these settings: (name, address, old, new)."""
+        share, bonus, income = self.prize_share is not None, self.bonus is not None, self.income is not None
+        wages = self.income_wages is not None
+        on = {'fee': True, 'salary': self.has_salary, 'budget 1': self.budget_transfer is not None,
+              'budget 2': self.budget_salary is not None, 'cup 1': self.has_cup, 'cup 2': self.has_cup,
+              'cup 3': self.has_cup, 'league 1': self.has_league, 'league 2': self.has_league_2,
+              'prize 1': share, 'prize 2': share, 'pay gap': self.has_gap, 'bonus 1': bonus, 'bonus 2': bonus,
+              'years': self.young_years is not None, 'income 1': income or wages, 'income 2': income, 'income 3': income,
+              'income 4': wages}
+        used = []
+        for name, at, old, new in SITES:
+            if name == 'years' and on[name]:
+                new = b'\xb8' + struct.pack('<I', self.young_years)
+            if name.startswith('nat '):
+                if self.national is None:
+                    continue
+                new = struct.pack('<I', self.national[int(name[4:])])
+            elif not on[name]:
+                continue
+            used.append((name, at, old, new))
+        return used
+
+
+def prize(millions, lowest=10):
+    """Millions on the screen -> stored prize."""
+    return clamp(amount(millions), lowest, amount(MAX_PRIZE))
 
 
 def image(t):
@@ -281,9 +673,20 @@ def image(t):
     d += struct.pack('<64H', *t.salary_age) + struct.pack('<16H', *t.position)
     assert len(d) == FAME_AT - CAVE
     d += struct.pack('<7I', t.fame, t.spread_low, t.spread_range, t.budget_transfer or 200, t.budget_salary or 200,
-                     100, 1000) + b'MLM2'
-    for at, _, name in ROUTINES:
-        d = d.ljust(at - CAVE, b'\0') + globals()[name]
+                     100, 1000) + b'MLM4'
+    pieces = [(at, globals()[name]) for at, _, name in ROUTINES]
+    pieces += [(LEAGUE1_TAB, struct.pack('<23I', *t.league)), (LEAGUE2_TAB, struct.pack('<25I', *t.league_2)),
+               (RANK_STEP_AT, struct.pack('<d', t.rank_step)),
+               (SHARE_AT, struct.pack('<2I', t.prize_share or 0, 100 if t.bonus is None else t.bonus)),
+               (CUP_TAB, b''.join(struct.pack('<3I', *r) for r in t.cup_rows)),
+               (TALENT_TAB, bytes(t.talent)),
+               (TALENT_STEP_AT, struct.pack('<4I', t.talent_step, t.talent_max, t.talent_cap, t.income or 100)),
+               (LEAGUE_IDS_AT, struct.pack('<%dH' % len(t.league_rows), *[i for i, _ in t.league_rows])),
+               (LEAGUE_COUNT_AT, struct.pack('<2I', len(t.league_rows), t.income_wages or 0)),
+               (LEAGUE_ROWS_TAB, b''.join(struct.pack('<%dH' % LEAGUE_ROW_WORDS, *w) for _, w in t.league_rows))]
+    for at, piece in sorted(pieces):
+        assert len(d) <= at - CAVE, hex(at)
+        d = d.ljust(at - CAVE, b'\0') + piece
     assert len(d) <= CAVE_SIZE
     return d.ljust(CAVE_SIZE, b'\0')
 
@@ -298,7 +701,10 @@ def fee(t, rating, age, popularity, position=5, player=(0, 0), base=0, percent=0
     """The transfer fee with MLMoney.lua in place (stored amount; the screen shows 100 times it).
     position: 0 GK ... 12 CF (the edit file's order); player: the two parts of the player's id;
     base, percent, keep: as in ../tools/money.py fee()."""
-    x = t.value[min(rating, 99)] * t.age[age] // 100
+    rating = min(rating, 99)
+    x = t.value[rating] * t.age[age] // 100
+    percent_more = min(max(0, rating - t.talent[age]) * t.talent_step, t.talent_max)
+    x += min(x * percent_more // 100, t.talent_cap)
     x = x * t.position[position] // 100
     x = min(CAP, x * (t.spread_low + (spread_hash(*player) * t.spread_range >> 8)) // 1000)
     x += x * (popularity * t.fame) // 100000
@@ -311,15 +717,140 @@ def fee(t, rating, age, popularity, position=5, player=(0, 0), base=0, percent=0
 
 def salary(t, rating, age, popularity, role_bonus=0, rank=300, band_bonus=0, awards=0):
     """The yearly salary with MLMoney.lua in place. role_bonus: R of MASTER_LEAGUE.md 6.1;
-    band_bonus: T (with its 20 * field 0x20)."""
+    band_bonus: T (with its 20 * field 0x20); awards: the sum of the award bonuses."""
     x = popularity
     if popularity > 800:
         x += (5 * popularity - 4000) * 2
     if popularity > 1800:
         x += (5 * popularity - 9000) * 4
-    f = f32(1.0) if rank > 250 else f32((251 - rank) * 0.004000000189989805 + 1.0)
-    part = t.salary[min(rating, 99)] * t.salary_age[age] // 100
+    f = f32(1.0) if rank > 250 else f32((251 - rank) * t.rank_step + 1.0)
+    if t.has_salary:
+        part = t.salary[min(rating, 99)] * t.salary_age[age] // 100
+    else:                                           # the game's own A + B
+        part = 30 * rating - 500 + 300 * max(0, rating - 65) + 500 * max(0, rating - 75) + 700 * max(0, rating - 85)
+    if t.bonus is not None:
+        role_bonus = role_bonus * t.bonus // 100
+        awards, band_bonus = (awards + band_bonus) * t.bonus // 100, 0
     return max(1, min(CAP, awards + band_bonus + int((role_bonus + x + part) * f)))
+
+
+def cup_prize(t, competition, stage):
+    """What cup_prize (fcn_038aa307) gives in Master League. t = None: the game's own."""
+    if competition in CUP_NONE or stage == 11:
+        return 0
+    for c, s, a in (t.cup_rows if t is not None and t.has_cup else GAME_CUP_ROWS):
+        if (c, s) == (competition, stage):
+            if a:
+                return a
+            break
+    if t is not None and t.national is not None:
+        for amount_, stages in zip(t.national, NATIONAL_STAGES):
+            if stage in stages:
+                return amount_
+    return CUP_FALLBACK.get(stage, 0)
+
+
+def league_prize(t, league, division, place, half=0):
+    """What league_prize (fcn_038a9ebb) gives. league: the number of the club's league
+    (60 and 61 have lists of their own); division: the two top bits of the league record's
+    +0x218 (0, 1: the first list, 2, 3: the second); place: 1 = first; half: 0, or 1 or 2
+    for a league played in two halves. t = None: the game's own."""
+    league &= 0xffff                                # the game keeps 16 bits of the number
+    if half == 1 and league not in (0x3458, 0x27d8) or half == 2 and league not in (0x3459, 0x27d9):
+        return 0
+    if league in (60, 61):
+        amounts = GAME_LEAGUE[league]
+    elif division < 2:
+        amounts = t.league if t is not None and t.has_league else GAME_LEAGUE['first']
+        for league_id, words in (t.league_rows if t is not None else ()):
+            if league_id == league:
+                amounts = [w * LEAGUE_UNIT for w in words[:LEAGUE1_PLACES + 1]]
+                break
+    else:
+        amounts = t.league_2 if t is not None and t.has_league_2 else GAME_LEAGUE['second']
+    a = amounts[place] if 0 <= place < len(amounts) else 0
+    return a // 2 if half else a
+
+
+def prize_paid(t, amount, mode=MASTER_LEAGUE):
+    """What a prize adds to (balance, transfer budget)."""
+    limit = lambda v: clamp(v, -99999999, 99999999)
+    share = t.prize_share if t is not None and t.prize_share is not None and mode == MASTER_LEAGUE else 0
+    part = abs(amount) * share // 100               # the division drops the remainder
+    return limit(amount), limit(part if amount >= 0 else -part)
+
+
+def scaled_income(t, v):
+    """An amount of yearly income as the module leaves it (amounts of 0 and below are not scaled)."""
+    return v if t is None or t.income is None or v <= 0 else v * t.income // 100
+
+
+def season_income(t, popularity, field, wage_bill=0):
+    """season_income (fcn_038ade76): popularity = club_popularity, field = the dword at +4 of
+    the club's record in the ranking, wage_bill = what fcn_038ad7a8 gives for the club (the
+    game works it out in this function and does not use it). t = None: the game's own."""
+    v = scaled_income(t, 25 * max(150000, popularity) - 670 * min(400, field) - 3451330)
+    if t is not None and t.income_wages is not None:
+        v = (v + wage_bill * t.income_wages // 100 + 2 ** 31) % 2 ** 32 - 2 ** 31     # 32 bits, as the code adds
+    return v if v > 0 else 1000
+
+
+def rank_income(t, rank):
+    """fcn_038a9e6b: the yearly amount by the club's place in the ranking."""
+    v = scaled_income(t, (403 - rank) * 5000)
+    return v if v > 0 else 1000
+
+
+def career_income(t, level):
+    """club_money_setup: the same kind of amount when a career starts, by club level 0-9,
+    before the random change of -10 to +10 percent."""
+    return scaled_income(t, 165000 * level + 15000)
+
+
+JUNE_28, JUNE_30 = 0.6000000238418579, 0.4000000059604645        # the doubles at 0x01f0a0a0 and 0x01f0a780
+GRANT_A, GRANT_B = (0.00699999975040555, 0.10000000149011612), (0.00215000007301569, 0.07000000029802322)
+GRANT_LOW, GRANT_LOWEST = 0.05000000074505806, 0.019999999552965164
+
+
+def june_grants(day, grade, rank, wage_bill, top_fees, salary_budget=None, extras=(0.0, 0.0)):
+    """What the yearly budget step (fcn_03640d19) works out on its two days:
+    (salary budget grant, transfer budget grant). day: 28 or 30 (June); grade: 1 to 6 as
+    the step numbers it on that day; rank: the club's place, 1 to 200; top_fees: the sum
+    top_fees_sum gives for 10 players. The two days differ in three things. The constant
+    (0.6 and 0.4). The grades (30 June has no grant for grades 3 and 4). And the transfer
+    grant: on 28 June it is taken from the salary grant and the wage bill; on 30 June the
+    salary grant first gets two extras (`extras`, two fractions the step works out
+    before; this model takes them as given) and is then set against `salary_budget`, the
+    salary budget of the account, not against the wage bill. The game's own numbers; the
+    module changes none of this."""
+    k = JUNE_28 if day == 28 else JUNE_30
+    by_rank = {28: {1: GRANT_A, 3: GRANT_B}, 30: {1: GRANT_A, 2: GRANT_B}}[day]
+    flat = {28: {2: GRANT_B[1], 4: GRANT_LOW, 5: GRANT_LOW, 6: GRANT_LOWEST}, 30: {5: GRANT_LOW, 6: GRANT_LOWEST}}[day]
+    if grade in by_rank:
+        a, b = by_rank[grade]
+        s = int((rank * a + b) * wage_bill * k)
+    elif grade in flat:
+        s = int(wage_bill * flat[grade] * k)
+    else:
+        s = 0
+    against = wage_bill
+    if day != 28:
+        for extra in extras:
+            s += int(s * f32(extra))
+        against = wage_bill if salary_budget is None else salary_budget
+    t = int(top_fees * f32((s + against) / against) / 5.0 * k)
+    return s, t
+
+
+def young_years(t, age):
+    """The limit of contract years by age (fcn_03887f5d)."""
+    if age >= 35:
+        return 1
+    if age >= 32:
+        return 2
+    if age <= 23:
+        return 3 if t is None or t.young_years is None else t.young_years
+    return 5
 
 
 def budgets(t, fees, salaries, wage_bill):
@@ -355,9 +886,26 @@ def context_lua(exe):
     return '\n'.join(lines)
 
 
+def lua_block(exe):
+    """The lines of MLMoney.lua from `local ROUTINES` to the end of CONTEXT."""
+    def quoted(h, first, width=88):
+        parts = [h[:first]] + [h[k:k + width] for k in range(first, len(h), width)]
+        return '\n      .. '.join('"%s"' % x for x in parts if x)
+    out = 'local ROUTINES = {\n'
+    for at, _, name in ROUTINES:
+        out += '    { 0x%03x, %s },\n' % (at - CAVE, quoted(globals()[name].hex(), 76))
+    out += ('}\n\n-- The places that are changed: name, address, bytes there now, bytes to write. (The\n'
+            '-- number in "years" is YOUNG_YEARS and the amounts of the six "nat" places are\n'
+            '-- CUP_NATIONAL; they are put in below.)\nlocal SITES = {\n')
+    for name, at, old, new in SITES:
+        out += '    { "%s", 0x%08x, "%s", "%s" },\n' % (name, at, old.hex(), new.hex())
+    return (out + '}\n\n-- The code and data those places and the routines rely on: name, address, bytes.\n'
+            + context_lua(exe) + '\n')
+
+
 if __name__ == '__main__':
-    if sys.argv[1:2] == ['context']:
-        print(context_lua(sys.argv[2]))
+    if sys.argv[1:2] == ['lua']:
+        print(lua_block(sys.argv[2]), end='')
         sys.exit(0)
     if sys.argv[1:] == ['build']:
         for name, code in build().items():

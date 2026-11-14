@@ -528,9 +528,11 @@ salary = trunc((R + X + B + A) * f) + T + awards        limited to 1 … 99,999,
   7; when that is 6 or 7 the band is counted from the rating against the steps 50,
   55, 60, 70, 80, 85, 88. Read; the exact count is not settled. In the proof the band
   was a free input from 0 to 7.
-- `awards` (read, not run; skipped for status 6): +10,000, +5,000, +5,000, +5,000 if
-  the player holds one of four awards (`fcn_0318c209(0 … 3)`), and +2,000 for each
-  entry of his in the lists of finished competitions (`fcn_035e5fa7`).
+- `awards` (skipped for status 6): +10,000, +5,000, +5,000, +5,000 if the player holds
+  one of four awards (`fcn_0318c209(0 … 3)` gives the holder's record, the ids are
+  compared by `fcn_02bddabe`); this part **runs in the emulator** in
+  `sider/test_money.py` with made-up holders. And +2,000 for each entry of his in the
+  lists of finished competitions (`fcn_035e5fa7`): read, not run.
 - Clubs whose league number (`fcn_03879e04`) is 60, 61 or 62, and in mode number 40
   players with status 3 (or status 2 and a certain mark) who have an entry number at
   `+0xbc`, use another formula, `fcn_038ab5ea`:
@@ -579,8 +581,10 @@ figure. 8 callers, among them the money step and the closing of the accounts.
 ### 6.4 Club money
 
 Level: `budgets_from_squad` **run in the emulator** (`sider/test_money.py`, ok 0: 40
-squads of 0 to 40 players); the other three functions below **read** (C and disassembly,
-not run). The names of the amounts are inferred. The rest **located**: `fcn_03640d19` (money step, events 3,
+squads of 0 to 40 players); `season_income`, the amount by rank and the piece of
+`club_money_setup` that makes `M` **run in the emulator** (the same test, with the
+popularity, the ranking record and the wage bill made up); the rest of the three
+functions below **read** (C and disassembly, not run). The names of the amounts are inferred. The rest **located**: `fcn_03640d19` (money step, events 3,
 23, 25, 49; 1,280 lines), `fcn_03649f1f` (616 lines, event 24),
 `process::ProcessCmnFinanceReportCheck` (`fcn_035e69ce`, event 25) and about twenty
 small functions at `0x038aa000`-`0x038ab400` that add and read account lines. The
@@ -598,7 +602,10 @@ budget step are in 6.7; what the screens call each amount is **not read**.
   `25 * max(150,000, V) - 670 * min(400, club field +4) - 3,451,330`, or 1,000 if that
   is below 1. `V = club_popularity` (`fcn_03878855`): 10,000 to 140,000 by the club's
   level (10, 15, 20, 25, 35, 50, 65, 80, 110, 140 thousand) plus twice the sum of the
-  16 highest `x` of the squad.
+  16 highest `x` of the squad. With `V` at least 150,000 and the field at most 400 the
+  amount is never below 30,670, so the 1,000 is not reached. The function also calls
+  `wage_bill` for the club, before `club_popularity` (`0x038adea5`), and does not use
+  the result. `sider/MLMoney.lua` keeps that result and adds a share of it (6.6).
 - `budgets_from_squad` (`fcn_038ad9c4(club)`), called by the set-up and in event 24 at
   what is taken to be a change of club: the fee of 6.2 (no random change) is computed
   for every player of the squad. **Transfer budget** (`+0xdddfc4`) += 2 x (sum of the
@@ -620,7 +627,13 @@ budget step are in 6.7; what the screens call each amount is **not read**.
   `(403 - club rank) * 5,000`, at least 1,000, changed by -10 to +10 percent; `+0xdddff0`
   = `season_income`, changed the same way; three amounts of another record are added to
   the balance. For the first club of the ranking the first figure is about 2,000,000
-  (200 million on the screen).
+  (200 million on the screen). The amount by rank is a function of its own
+  (`fcn_038a9e6b`), the multiplication by 5,000 at `0x038a9e9c`.
+  Neither amount looks at what the club pays. Worked from the squads of the edit file
+  with guessed ranking places (`sider/README.md` has the table): the two amounts
+  together are about 280 million for the strongest squads and 130 million for a second
+  division club, against wage bills of 90 and 13 million with the game's salary
+  formula.
 
 The user's two budget figures (480,137 and 123,735 stored) are odd numbers, so they are
 not the fresh results of `budgets_from_squad`; they are of the size it gives (twice
@@ -663,23 +676,50 @@ the game's with `fcn_0383890b`); the player's id, a word at `+0x2c` and a dword 
 in a list of ids the code compares the word and the dword the same way). The 98
 fields of the getter were mapped by running it on records with one bit set.
 
-### 6.6 A Sider module that changes values, salaries and budgets
+### 6.6 A Sider module that changes values, salaries, budgets and prize money
 
-`sider/MLMoney.lua` replaces the rating part of the fee by `VALUE[rating] x AGE[age] x
-POSITION[registered position] x (the player's own fixed factor) x (1 + popularity
-bonus)`, the rating part of the salary by `SALARY[rating] x SALARY_AGE[age]`, and the 2
-of the two budget sums of 6.4 by settings. What it writes and why is in
-`sider/money_cave.py`. `sider/test_money.py` runs the game's salary, fee and budget code
-with the changes in the emulator and compares random players and squads with the Python
-of `money_cave.py`, also with every setting at its limit. Not yet run in the game.
+`sider/MLMoney.lua` (version 4) replaces the rating part of the fee by `VALUE[rating] x
+AGE[age] x POSITION[registered position] x (the player's own fixed factor) x (1 +
+popularity bonus)`, the rating part of the salary by `SALARY[rating] x SALARY_AGE[age]`,
+and the 2 of the two budget sums of 6.4 by settings. Version 3 adds: other amounts in
+the cup table and in the two main league lists of 6.7, a share of every prize for the
+transfer budget, a setting for the 0.004 of the club factor of 6.1, a factor on the
+role, band and award bonuses of 6.1, and the contract limit of 7.3. What it writes and
+why is in `sider/money_cave.py`. `sider/test_money.py` runs the game's salary, fee,
+budget, prize and contract-limit code with the changes in the emulator and compares it
+with the Python of `money_cave.py`, also with every setting at its limit.
+
+Version 4 adds five things. A **talent bonus** on the value: the game keeps no
+potential (section 12), so the rating a player has at his age stands for it; a table
+gives the ordinary rating by age up to 23 and every point above it adds a percent.
+A share of the **wage bill** in the yearly income: `season_income` already calls
+`wage_bill`; the module keeps the result in the function's local at `[ebp - 4]`
+(changed place `0x038adeaa`) and adds a percent of it at the end (`0x038adeee`). A
+percent on the game's yearly amounts (`0x038adeee`, `0x038a9e9c`, and `0x038ae025` in
+`club_money_setup`), off by default. **Prize lists by league**: the instruction at
+`0x038aa2dd` becomes a call to a routine that compares the league number in `edi`
+with up to 12 numbers and takes the amount from that league's list. The six amounts
+for **cups without a row** (the immediates of six `mov edi` from `0x038aa43a`), and
+television money added to the rows of a cup. The yearly budget step of 6.7 is left
+alone: it follows the wage bill and the fees.
+
+Seen in the game (version 2, the user's PC, a new career with Manchester United,
+`SPREAD = 0`): Bruno Fernandes, rating 89, AMF, age 32, value 52,973,200, which is the
+module's formula at popularity 910 exactly; transfer budget 106,925,700. This also
+confirms that `+0xdddfc4` is the transfer budget of the screen. The parts added in
+versions 3 and 4 have not run in the game.
 
 ### 6.7 Prize money and the yearly budget step
 
 Level: the cup table and `cup_prize` **run in the emulator** (`tools/prize.py <exe>
-check`: 330 pairs, none differs); `league_prize` **run in the emulator** for every
-place (`tools/prize.py <exe>` prints all lists); the rest of this section **read**
-(disassembly, not run). Stage names and the names of the competitions 2 to 8 are
-**inferred**. Nothing here was seen in a game.
+check`: 330 pairs, none differs; `sider/test_money.py`: competitions 0 to 100, stages
+0 to 12); `league_prize` **run in the emulator** for every list, place and half;
+`balance_add`, `transfer_budget_add` and the two pieces of `prize_step` that pay a
+prize **run in the emulator** on a made-up stack frame (`sider/test_money.py`); the
+two pieces of the money step that turn a grade into the grants of 28 and 30 June **run
+in the emulator** the same way (2,000 cases each against `money_cave.june_grants`);
+the rest of this section **read** (disassembly, not run). Stage names and the names of the
+competitions 2 to 8 are **inferred**. Nothing here was seen in a game.
 
 **Who pays.** `prize_step` (`fcn_03640686`, in the day end, section 3) walks the
 competitions of the user's club. For a league, on the day the club's place is final,
@@ -703,7 +743,9 @@ of 12-byte rows (competition, stage, amount) at `0x0216b178`, 73 rows, plain dat
 | 73 to 79, 82, 83, 84 (national super cups) | winner 5,000; loser 3,000 |
 
 A cup that is not in the table (the national cups) gets, by stage 0 to 6: 20,000,
-10,000, 5,000, 5,000, 1,000, 500, 300 (switch at `0x038aa42b`). Competitions 45, 46,
+10,000, 5,000, 5,000, 1,000, 500, 300 (switch at `0x038aa42b`; the six amounts are the
+immediates at `0x038aa43a`, `...446`, `...452`, `...45e`, `...46a`, `...476`, stages 2
+and 3 sharing one). Competitions 45, 46,
 47, 54, 55, 70, 71, 72, leagues, and stage 11 get nothing. Game mode `0x28` uses a
 second table (`0x0216b4e8`, 26 rows). Stages as `cup_stage` gives them: 0 winner, 1
 runner-up, 2 third, 3 and 4 the semi-final and quarter-final, 5 and 6 the rounds
@@ -718,35 +760,63 @@ or by the two top bits of the league record's `+0x218` (2 or 3 = the short list,
 taken to be a second division). First list, place 1 to 22: 150,000, 130,000,
 100,000, 80,000, 60,000, 50,000, 45,000, 40,000, 35,000, 30,000, 27,000, 24,000,
 21,000, 18,000, 15,000, 12,000, 9,000, 7,000, 5,000, 3,000, 3,000, 3,000. Second
-list, place 1 to 24: 20,000 down to 250. Leagues played in two halves (ids `0x3458`,
-`0x27d8` and the next number) pay half per half. The amount is in `eax` at
-`0x038aa2e4`, before the halving: one place where a factor could be put.
+list, place 1 to 24: 20,000 down to 250. The third argument is the half: 0 = a whole
+season, the full amount; 1 = first half, paid only to the leagues `0x3458` and
+`0x27d8`; 2 = second half, only to `0x3459` and `0x27d9`; a half pays half the amount,
+any other league gets nothing for a half. The amount is in `eax` at `0x038aa2e4`,
+before the halving. The league number comes from `fcn_03879e04(club)` and is kept in
+16 bits (`movzx edi, ax` at `0x038aa206`); it is still in `edi` where the list is
+read, which is what lets a module pay by league. After `0x038aa2e4` the function
+loads `edx` and `ecx` anew before it uses them. `sider/MLMoney.lua` replaces the two instructions that read the
+first and the second list (`0x038aa2dd`, `0x038aa2c6`), the three address operands of
+the cup table in `cup_prize`, and the two calls of `balance_add` in `prize_step`
+(6.6).
 
 **What the budgets get each year** (money step `fcn_03640d19`). The balance and the
 prize lines are *not* turned into budget. The step adds to both budgets twice, on
 28 June (event 49) and on 30 June (event 23), from the squad and a grade:
 
 ```
-S = wage bill * g * k                         added to the salary budget (+0xdddfdc)
-T = (sum of the 10 highest fees of the squad) * (old salary budget + S) / old salary budget / 5 * k
-                                              added to the transfer budget (+0xdddfc4)
-k = 0.6 on 28 June, 0.4 on 30 June
-g = 0.1 + 0.007 * rank       grade 1          rank = place of the club in the mode's
-    0.07 + 0.00215 * rank    grade 2          ranking, kept within 1 to 200 (3 to 200
-    0                        grades 3, 4      on 28 June)
-    0.05                     grade 5
-    0.02                     grade 6
+W = wage bill (fcn_038ad7a8), rank = place of the club in the mode's ranking, kept within 1 to 200
+
+28 June (code from 0x03642bab), k = 0.6
+  S = W * g * k                                           added to the salary budget (+0xdddfdc)
+  T = (sum of the 10 highest fees) * (W + S) / W / 5 * k   added to the transfer budget (+0xdddfc4)
+  g = 0.1 + 0.007 * rank       grade 1
+      0.07                     grade 2
+      0.07 + 0.00215 * rank    grade 3
+      0.05                     grades 4, 5
+      0.02                     grade 6
+
+30 June (code from 0x03642011), k = 0.4
+  S = W * g * k, then S = S + S * a, then S = S + S * b    (a, b: two fractions, below)
+  T = (sum of the 10 highest fees) * (B + S) / B / 5 * k   B = the salary budget before the grant
+  g = 0.1 + 0.007 * rank       grade 1
+      0.07 + 0.00215 * rank    grade 2
+      0                        grades 3, 4
+      0.05                     grade 5
+      0.02                     grade 6
 ```
+
+So the two days differ: 28 June sets the transfer grant against the wage bill, 30 June
+against the salary budget, and the grades are numbered differently. `(W + S) / W` and
+`(B + S) / B` are kept as 32-bit floats; each product is cut to a whole number by
+`fcn_038e6c62`, which keeps the low 32 bits if the number is larger. An earlier
+version of this section gave one formula for both days, with the salary budget in
+both; the disassembly and the emulator run show the above.
 
 On 30 June the grade comes from the year's result (the three incomes, the account
 lines with the prize money and the transfers, less the costs; stored at `+0xdddfe8`)
 against the figure of the year before: 15 percent more or better = grade 1, 5 percent
 = 2, down to minus 5 percent = 5, below = 6. On 28 June it comes from a comparison
 of two rankings (`fcn_0387cab5`, `fcn_03138333`) and a draw; that part is not read.
-On 30 June both amounts are raised by 5 percent for each player with team role 18
-(at most 4) and by one more term, and two sums are taken off `T`; those are read as
-code but not followed to their data. The sum of the 10 highest fees is
-`fcn_038acf42(club, 10)`, read from a decompile with gaps.
+The two fractions of 30 June: `a` is (a number of the step - 59) / 100, `b` is 5
+percent for each of a count that the step makes before (an earlier reading took it
+to be the players with team role 18, at most 4); neither was followed to its data.
+After `T`, the 30 June code adds the same two fractions to it and takes two sums
+off; those are read as code only. The sum of the 10 highest fees is
+`fcn_038acf42(club, 10)`, read from a decompile with gaps and replaced by a made-up
+number in the emulator runs.
 
 What follows:
 
@@ -754,7 +824,8 @@ What follows:
   does not put its 8 million into the transfer budget.
 - The yearly transfer money follows the fees of the squad, so a module that raises
   the fees (6.6) raises it in the same proportion; the yearly salary money follows
-  the wage bill.
+  the wage bill. Nothing in the two grants is a fixed amount of money, which is why
+  `sider/MLMoney.lua` does not change this step.
 - The factors `0.4`, `0.6`, `5.0` and the grade numbers are shared constants (12 to
   667 references each), except `0.007` and `0.00215` (2 each, this function only).
   A change has to give the instruction its own constant, not change the shared one.
@@ -827,7 +898,7 @@ The screens: `menu::MenuModeMLNegociationMenu`, `…List`, `…Detail`, `…Adju
 `complete_transfer`). `complete_transfer` (`fcn_0389840a`, 11 callers) →
 `fcn_038913b5` (745 lines). Not read.
 
-### 7.1 Years of a contract: `deal_years` = `fcn_0388a1be(&player, club, &flag)`
+### 7.3 Years of a contract: `deal_years` = `fcn_0388a1be(&player, club, &flag)`
 
 Level: **read** (disassembly of the first part; not run). 12 call sites.
 
@@ -842,7 +913,9 @@ years = at least 1; at most 2 from age 32
 If the flag byte is 0, more follows (for game mode 13 the years are cut so that the
 contract ends within 5 years of a date in the record; in some months 1 year becomes
 2); that part is read from the decompile only. The limit of 3 years below age 24 is
-one immediate in `fcn_03887f5d` (16 call sites).
+one immediate in `years_limit` (`fcn_03887f5d(&player)`, 16 call sites, **run in the
+emulator** for every age): `mov eax, 3` at `0x03887fc1`. `sider/MLMoney.lua` changes
+that number (6.6).
 
 ## 8 Scouts
 
@@ -1057,7 +1130,7 @@ part):
 - **Fee, salary and years** come from the user's deal record if one exists for the
   player (`+0x28`, `+0x2c`, `+0x14` bits 8-11). Otherwise fee = `transfer_fee`
   (section 6.2, with its random change), salary = `salary` for the new club
-  (section 6.1), years = `fcn_0388a1be` (section 7.1), at least 1.
+  (section 6.1), years = `fcn_0388a1be` (section 7.3), at least 1.
 - The player's years at the club (`+0xb4` bits 6-10) and his marks are cleared and
   the day is stored at `+0xdc`.
 - By the kind of move (four cases): 1 transfer: out of the old squad
@@ -1065,11 +1138,19 @@ part):
   `+0xcc`; 2 loan: the same and **bit 28 of `+0xb8` is set**; 4: bit 28 is cleared
   (return from a loan); 3: the player goes to the club id at `0x2521194` (taken to
   be "no club").
-- `fcn_03889e24` and `fcn_03888c69` are called around the move with the two clubs
-  and the amounts; they are taken to move the money. **Not read**, so it is not
-  established that a computer club's budget limits what it buys. Nothing in the
-  choosing code of 9.5 and 9.6 looks at money: the choice goes by overall, level,
-  age, position and squad size only.
+- `fcn_03889e24` is called around the move with the two clubs and the amounts. Read
+  from the decompiled C: it books money only when the buying or the selling club is
+  the club that `fcn_0381e2eb` returns for a fixed key (**taken to be the user's
+  club**). Then `fcn_038aab52` writes one line (player id, amount with the sign of the
+  side, kind) into a list of 100 lines of `0x28` bytes through `fcn_038a9c7a`. For a
+  move between two computer clubs nothing is booked. No account, budget or balance of
+  a computer club has turned up in any of the code read so far (the mode data was not
+  searched for one): the one account known is the user's (`+0xdddfc4`, 6.4). `fcn_03888c69` works on a dated record of the player and was
+  not read further.
+- So, as far as read, **a computer club has no money**. Nothing in the choosing code of 9.5 and 9.6
+  looks at a price: the choice goes by overall, level, age, position and squad size
+  only, and the fee computed in `do_transfer` is paid by nobody and received by
+  nobody unless the user's club is one of the two.
 
 ### 9.8 Other steps that end in `complete_transfer`
 
@@ -1090,7 +1171,7 @@ part):
 
 ### 9.9 What this means in play
 
-- A computer club shops by **level**, not by money: a level-9 club looks at overall
+- A computer club has no account that was found (9.7). It shops by **level**, not by money: a level-9 club looks at overall
   83 to 99, a level-0 club at 47 to 74 (9.4).
 - It takes **the best three that fit** and prefers listed players and players
   without a club among them (9.6).
@@ -1145,7 +1226,20 @@ What the factor is applied to (one caller, `fcn_038b4368`) is not read. Roles al
 
 ## 12 Growth, team spirit, youth, retirement
 
-Level: **located**. None of these rules is read.
+Level: **located**, with one part **read** (November 2026, C and disassembly, not
+run): whether the game keeps a potential for a player.
+
+**No potential was found.** The player record of the edit file has no such field
+(`output/edit_fields.tsv`); field `0x2e` of the mode's record is a status band. Age is
+field `0x2b`; `fcn_036236a2` raises it once a year. Abilities are raised by
+`fcn_03625c10` and `fcn_038b2fc4` in fixed amounts; the one byte argument of
+`fcn_03625c10` that could have been a rate is a constant of its caller (`0x3c`). So
+what a player becomes is a matter of his age and of what he plays, not of a stored
+number, and a module cannot read "potential" from the game. `sider/MLMoney.lua` uses
+the rating a player has at his age in its place (6.6). Of the functions named in the
+table below, `fcn_038b805c`, `fcn_038679a9`, `fcn_0360e02f` and `fcn_0360f0fc` were
+read far enough to see that they are not the growth arithmetic (nor is
+`fcn_0360f928`); `fcn_038b9827` belongs to the match day and sets field `0x60`.
 
 | topic | where to start |
 |---|---|
