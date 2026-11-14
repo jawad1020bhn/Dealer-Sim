@@ -104,7 +104,7 @@ address	name	topic	note
 0x04067cfa	team_strength	master league	sorts 32 values, mean of the best 11; kind 6: limited to 40..99
 0x038ba942	role_effects	master league	(role, out): the up to 3 effects of a role from table 0x0216f85c
 0x038bb0f0	role_multiplier	master league	(club) -> factor from the roles; read
-0x03640d19	money_step	master league	day begin, events 3, 23, 25, 49; 1,280 lines; not read
+0x03640d19	money_step	master league	day begin, events 3, 23, 25, 49; 1,280 lines; read in part: the two incomes of 1 July, the grants of 28 June (from 0x03642bab) and 30 June (from 0x03642011), those two pieces run in the emulator
 0x037741b4	league_creation_pick	master league	process::LeagueCreation, second function: after the circle method, fixed tables for some ids and for four teams, else fcn_03774035 (every 3rd and 7th round changes halves); proven (check 10)
 0x0377111e	make_fixtures	master league	(competition id): picks the creator by competition +0x5c (1 league, 3, 4); reached from the day end; read
 0x03774725	league_fixtures	master league	process::LeagueCreation (competition id, turn): circle method table, then writes the match records; proven for two legs (check 10)
@@ -130,9 +130,9 @@ address	name	topic	note
 0x0385a329	popularity_start	master league	(player id, &rating, &band) -> starting value of the 12-bit number at player +0xb4 bit 11: club part + max(band part, 10 * (rating - 50)); read
 0x038adf0c	club_money_setup	master league	(club, &with budgets): balance, start money and season income of the user's club when the career is made; read
 0x038ad9c4	budgets_from_squad	master league	(club): transfer budget = 2 x mean of the 16 highest fees, salary budget = wage bill + 2 x mean of the 16 highest salaries; read
-0x038ade76	season_income	master league	(club) -> 25 * max(150000, club_popularity) - 670 * min(400, field) - 3451330; read
+0x038ade76	season_income	master league	(club) -> 25 * max(150000, club_popularity) - 670 * min(400, field) - 3451330; also calls wage_bill and does not use the result; run in the emulator
 0x03878855	club_popularity	master league	(club) -> 10,000 to 140,000 by club level + 2 x sum of the 16 highest popularity numbers of the squad; read
-0x038a9e6b	season_income_by_rank	master league	(club) -> (403 - club rank) * 5000, at least 1000; read
+0x038a9e6b	season_income_by_rank	master league	(club) -> (403 - club rank) * 5000, at least 1000; run in the emulator
 0x03640686	prize_step	master league	day end: pays league and cup prize money of the user's club into the balance (+0xdddfe4) and a competition line; read
 0x038aa307	cup_prize	master league	(&competition, &stage, &club) -> amount from the table at 0x0216b178 (73 rows of competition, stage, amount); run in the emulator
 0x038a9ebb	league_prize	master league	(&club, &place, &half) -> amount by final place, four lists built on the stack; run in the emulator
@@ -141,3 +141,8 @@ address	name	topic	note
 0x038aac87	transfer_budget_add	master league	(&amount): adds to +0xdddfc4, amount kept within +-99,999,999; run in the emulator (sider/test_money.py)
 0x038aacf7	salary_budget_add	master league	(&amount): adds to +0xdddfdc; read
 0x038acf42	top_fees_sum	master league	(&club, &count): taken to be the sum of the count highest fees of the squad; read with gaps
+0x036236a2	yearly_ageing	master league	raises the age (field 0x2b) once a year; read
+0x03625c10	ability_growth	master league	raises abilities by fixed amounts; its byte argument is a constant of the caller (0x3c); read in part
+0x038b2fc4	ability_growth_2	master league	second function that raises abilities by fixed amounts; read in part
+0x03879e04	club_league	master league	(club) -> league number of the club, 16 bits; used by league_prize; replaced in the emulator runs
+0x038e6c62	float_to_int	runtime	cuts st(0) to a whole number, low 32 bits in eax; used by the money step

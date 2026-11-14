@@ -1,16 +1,21 @@
--- MLMoney.lua, version 3: real-world player values, salaries, budgets and prize money in
--- the PES 2017 Master League (Sider Lua module). Made for PES2017.exe sha256 44b0caaa...;
--- MLCheck.lua must have said "6 of 6 as expected" on your game before you use this one.
+-- MLMoney.lua, version 4: real-world player values, salaries, budgets, income and prize
+-- money in the PES 2017 Master League (Sider Lua module). Made for PES2017.exe sha256
+-- 44b0caaa...; MLCheck.lua must have said "6 of 6 as expected" on your game before you use
+-- this one.
 --
 -- What it changes, in the running game only (no file is touched):
 --   * the value of a player (the transfer fee the game computes) becomes
---         VALUE[rating] x AGE[age] x POSITION[position] x spread x (1 + popularity bonus)
+--         VALUE[rating] x AGE[age] x (1 + talent bonus) x POSITION[position] x spread
+--         x (1 + popularity bonus)
 --     instead of  salary x 2.2..3.3 + 9,000 x (rating - 68);
 --   * the rating part of the yearly salary becomes SALARY[rating] x SALARY_AGE[age]; the
 --     popularity part stays the game's own;
 --   * the transfer budget your club gets when a career starts becomes BUDGET_TRANSFER
 --     times the mean value of its 16 best players (the game: 2 times);
---   * the prize money of cups (CUP) and of the leagues (LEAGUE, LEAGUE_2);
+--   * the yearly income of your club grows by INCOME_WAGES percent of its wage bill, so
+--     that it carries the larger salaries (INCOME multiplies the game's amounts instead);
+--   * the prize money of cups (CUP, CUP_TV, CUP_NATIONAL) and of the leagues (LEAGUE,
+--     LEAGUE_BY_ID, LEAGUE_2);
 --   * PRIZE_TO_BUDGET percent of every prize is added to the transfer budget (the game
 --     puts a prize into the club's balance only);
 --   * the first club of the game's club ranking pays PAY_GAP times the salary of a club
@@ -29,8 +34,8 @@
 --
 -- Salaries are stored in the contracts: a running career keeps its old salaries until
 -- contracts are renewed, and its budgets were made from the old numbers. Start a new
--- career for numbers that fit together, or set SALARY, PAY_GAP and BONUS to false for a
--- running one. Prizes and the contract limit work in a running career at once.
+-- career for numbers that fit together, or set SALARY, PAY_GAP, BONUS and INCOME_WAGES to
+-- false for a running one. Prizes and the contract limit work in a running career at once.
 --
 -- Uses only: log, memory.read, memory.write, string, table, math, ipairs, tonumber, type.
 
@@ -72,6 +77,20 @@ local SPREAD = 12
 -- game keeps 0 to 3,000 points per player). 0 to 100.
 local FAME = 10
 
+-- Talent: a young player who is already good for his age costs more. The game keeps no
+-- "potential" number for a player that this module could read (see README.md), so the
+-- rating a player has at his age stands for it. { age, rating }: the rating that is
+-- ordinary at that age, straight lines between the entries; ages above the last entry get
+-- no bonus. false: no talent bonus.
+local TALENT = { { 16, 62 }, { 18, 66 }, { 20, 70 }, { 22, 74 }, { 23, 76 } }
+
+-- Percent added to the value for every rating point above that rating (0 to 50), the most
+-- percent it can add (0 to 200) and the most millions it can add (0 to 999). The bonus is
+-- worked out before position, spread and popularity.
+local TALENT_STEP = 6
+local TALENT_MAX = 60
+local TALENT_CAP = 40
+
 -- Rating part of the yearly salary at the first club of the game's club ranking:
 -- { rating, millions }. A club outside the first 250 pays this divided by PAY_GAP, the
 -- clubs between pay in proportion. false: leave the game's salary formula alone.
@@ -95,6 +114,26 @@ local BUDGET_TRANSFER = 3
 -- 0.1 to 10; false: leave the game's code.
 local BUDGET_SALARY = false
 
+-- Yearly income of your club. The game books two amounts on the first day of a season:
+-- one by the club's place in its club ranking (about 200 million for the first club, 75
+-- million for place 250) and one by the popularity of the club and its players (30 to 80
+-- million). Neither knows what the club pays its players, and SALARY above makes a strong
+-- squad cost two to two and a half times what it costs in the game.
+--
+-- INCOME_WAGES: this percent of the club's wage bill of that day is added to the second
+-- amount. With 60, the year's income less the wages comes out within about 15 million of
+-- what the game alone gives, for a strong squad and for a weak one (README.md has the
+-- table). It also means that of every salary you add, 60 percent comes back as income.
+-- 1 to 100; false: nothing is added.
+local INCOME_WAGES = 60
+
+-- INCOME: both amounts in percent of the game's, and with them the amount of the first
+-- kind that a new career starts with. A blunt tool: 150 gives the richest clubs what
+-- INCOME_WAGES = 60 gives them, and gives every small club 50 to 90 million a year more
+-- than it needs. Prizes are not part of either setting. 10 to 1000; false: the game's
+-- amounts.
+local INCOME = false
+
 -- Prize of a cup: { competition, stage, millions }. The game pays a cup once, when your
 -- club is out or has won it, so each amount is the money of the whole run. competition is
 -- the game's number of the cup. stage: 0 winner, 1 runner-up, 2 third place, 3 out in
@@ -104,8 +143,8 @@ local BUDGET_SALARY = false
 -- ones not named here keep the game's amount, and so do the national cups. 0.001 to 2000.
 -- false: leave the game's cup prizes alone.
 -- These numbers: the fixed payments of 2025/26 (Sudamericana and Libertadores 2025, AFC
--- 2024/25) added up to the stage; the payments per win and the television shares are not
--- in them. Euros and dollars are taken as the same.
+-- 2024/25) added up to the stage; the payments per win are not in them, the television
+-- shares are in CUP_TV. Euros, pounds and dollars are taken as the same.
 local CUP = {
     -- 2: Champions League
     { 2, 0, 82.12 }, { 2, 1, 75.62 }, { 2, 3, 57.12 }, { 2, 4, 42.12 }, { 2, 7, 29.62 }, { 2, 9, 18.62 },
@@ -124,16 +163,64 @@ local CUP = {
     { 1, 0, 5 }, { 1, 1, 4 },
 }
 
--- Prize of a first division by place, millions, place 1 to 22 (22 numbers). The game has
--- one list for all first divisions. These numbers: the Premier League's payments by
--- place of 2024/25. 0 to 2000. false: leave the game's list alone.
+-- Television money of a cup: { competition, millions }, added to every amount CUP names
+-- for that competition. These numbers: UEFA's "value" share of 2024/25 divided by the 36
+-- clubs (853 million in the Champions League, 198 million in the Europa League); in
+-- reality a club gets between a few million and about 45, by its ranking and country.
+-- 0 to 2000; false: nothing is added. With CUP = false this setting does nothing.
+local CUP_TV = { { 2, 23.7 }, { 3, 5.5 } }
+
+-- Prize of every cup the game has no row for, which is every national cup: millions for
+-- { winner, runner-up, out in the semi-final (and third place), out in the quarter-final,
+-- out in the round of 16, out in the round before }. The game: 2, 1, 0.5, 0.1, 0.05, 0.03.
+-- One list serves all countries. These numbers: the FA Cup's payments of 2024/25 from the
+-- third round on, added up (the DFB-Pokal pays about 11 million to its winner, added up
+-- the same way). 0.001 to 2000; false: leave the game's amounts.
+local CUP_NATIONAL = { 3.91, 2.91, 1.41, 0.46, 0.235, 0.115 }
+
+-- Prize of a first division by place, millions, place 1 to 22 (22 numbers). This list
+-- serves every first division that LEAGUE_BY_ID does not name. These numbers: the
+-- Premier League's payments by place of 2024/25. 0 to 2000. false: leave the game's list
+-- alone (and LEAGUE_BY_ID does nothing).
 local LEAGUE = {
     53.1, 50.4, 47.7, 45.0, 42.4, 39.8, 37.1, 34.5, 31.9, 29.1, 26.5,
     23.8, 21.2, 18.6, 15.9, 13.3, 10.7, 7.9, 5.3, 2.6, 2.6, 2.6,
 }
 
+-- First divisions with numbers of their own: { league, { millions by place } } with up to
+-- 22 numbers (places after the last number get the last number), or { league, percent }
+-- for that percent of LEAGUE. league is the game's number of the league: 17 England,
+-- 18 Italy, 19 Spain, 20 France, 21 Netherlands, 22 Portugal, 29 Brazil, 30 Argentina,
+-- 50, 51 and 52 the three leagues without a licence (50 is Germany in the usual patches),
+-- 67 Chile. At most 12 entries; an amount is at most 650 and is kept in steps of 10,000.
+-- false: LEAGUE for every first division.
+-- These numbers are not all of one kind, because the leagues publish different things:
+--   19 Spain: the quarter of LaLiga's television money that is shared by place, 2023/24;
+--   50 Germany: a club's television money of 2024/25 less about 26 million, which is
+--      roughly the part every club gets (shared by results of several years, not by place);
+--   18 Italy: the same for 2023/24 less the equal share of 26.8 million; only the first
+--      ten amounts are published figures, places 11 to 20 are filled in evenly;
+--   21 Netherlands: all of a club's media money of 2026/27 (by results of several years);
+--   29 Brazil: the prize by place of 2024 at 6 reais to the euro; places 17 to 20 get none;
+--   20 France: 9 percent, the size of the television money of 2025/26 (80 million in all);
+--   22, 30, 51, 52, 67: 5 percent, an estimate without a published list behind it.
+local LEAGUE_BY_ID = {
+    { 19, { 58.4, 51.5, 44.6, 37.8, 30.9, 24.0, 17.2, 12.0, 10.3, 9.4,
+            8.6, 7.7, 6.9, 6.0, 5.1, 4.3, 3.4, 2.6, 1.7, 0.9 } },
+    { 50, { 71.1, 61.5, 60.4, 57.5, 53.3, 46.7, 43.8, 41.6, 39.1, 35.2,
+            31.6, 27.3, 24.0, 19.9, 17.3, 14.4, 8.9, 6.6 } },
+    { 18, { 74.2, 60.6, 59.9, 44.6, 40.1, 40.0, 33.6, 32.6, 29.4, 20.6,
+            18.6, 16.9, 15.1, 13.4, 11.7, 9.9, 8.2, 6.5, 4.7, 3.0 } },
+    { 21, { 14.73, 13.22, 11.7, 10.19, 9.38, 8.15, 6.93, 5.71, 4.78, 4.37,
+            4.09, 3.8, 3.56, 3.47, 3.44, 3.42, 3.4, 3.37 } },
+    { 29, { 8.0, 7.6, 7.2, 6.8, 6.4, 6.0, 5.6, 5.2, 4.8, 4.4,
+            3.5, 3.2, 3.0, 2.9, 2.8, 2.7, 0, 0, 0, 0 } },
+    { 20, 9 }, { 22, 5 }, { 30, 5 }, { 51, 5 }, { 52, 5 }, { 67, 5 },
+}
+
 -- Prize of a second division by place, millions, place 1 to 24 (24 numbers).
--- false: leave the game's list alone (2 million for place 1 down to 25,000).
+-- false: leave the game's list alone (2 million for place 1 down to 25,000). The English
+-- second division pays no prize by place at all, so the game's size is about right.
 local LEAGUE_2 = false
 
 -- Percent of every cup and league prize that is added to your transfer budget on the day
@@ -159,20 +246,28 @@ local YOUNG_YEARS = 5
 -- ========================= end of settings =========================
 
 local CAP = 99999900            -- the game's largest amount (9,999,990,000 on the screen)
-local CAVE = 0x047b0200         -- unused end of the code section: tables and seven routines
-local CAVE_SIZE = 0xa90
+local CAVE = 0x047b0200         -- unused end of the code section: tables and 13 routines
+local CAVE_SIZE = 0xdf0
 local NUMBERS_AT = 0x440         -- offset of the single numbers in that memory
 local LEAGUE_AT, LEAGUE_2_AT = 0x5c0, 0x620     -- the two league lists
 local GAP_AT = 0x688             -- rise of the club factor per place of the ranking (a double)
 local SHARE_AT = 0x690           -- PRIZE_TO_BUDGET, then BONUS
 local CUP_AT = 0x720             -- the cup table
 local CUP_ROWS = 73
+local TALENT_AT = 0x480            -- by age: the rating above which the talent bonus starts
+local NUMBERS_2_AT = 0xb80         -- talent step, most percent, most amount, income percent
+local LEAGUE_IDS_AT = 0xb90        -- the leagues of LEAGUE_BY_ID
+local LEAGUE_COUNT_AT = 0xba8      -- how many there are, then INCOME_WAGES
+local LEAGUE_ROWS_AT = 0xbb0       -- their lists
+local LEAGUE_ROWS = 12
 -- the routines: offset in that memory, machine code (source: money_cave.py)
 local ROUTINES = {
-    { 0x480, "83f8637605b8630000008b048500027b048b4b1cc1e90783e13f0fb70c4d20057b04f7e1f735"
-      .. "54067b048b4b04c1e91c0fb70c4d20067b04f7e1f73554067b040fb74b2c6953309301000131d169c9b17937"
-      .. "9ec1e9180faf0d48067b04c1e908030d44067b04f7e1f73558067b043d9ce0f5057605b89ce0f50589c78b8b"
-      .. "b4000000c1e90b81e1ff0f00000faf0d40067b04f7e1b9a0860100f7f101c7c745f400000000c3" },
+    { 0xa90, "83f8637605b86300000089c78b048500027b048b4b1cc1e90783e13f0fb69180067b0429d77f"
+      .. "0231ff0faf3d800d7b043b3d840d7b0476068b3d840d7b040fb70c4d20057b04f7e1f73554067b0450f7e7f7"
+      .. "3554067b043b05880d7b047605a1880d7b045901c88b4b04c1e91c0fb70c4d20067b04f7e1f73554067b040f"
+      .. "b74b2c6953309301000131d169c9b179379ec1e9180faf0d48067b04c1e908030d44067b04f7e1f73558067b"
+      .. "043d9ce0f5057605b89ce0f50589c78b8bb4000000c1e90b81e1ff0f00000faf0d40067b04f7e1b9a0860100"
+      .. "f7f101c7c745f400000000c3" },
     { 0x540, "83f8637605b8630000008b048590037b048b4b1cc1e90783e13f0fb70c4da0057b04f7e1f735"
       .. "54067b048945c8c745cc00000000c3" },
     { 0x580, "8b4030505289f0f7254c067b04f73554067b0489c65a5885f6c3" },
@@ -181,19 +276,27 @@ local ROUTINES = {
       .. "54067b045054e8b6a30fff83c408c3" },
     { 0x6e0, "505289f0f72594087b04f73554067b0489c65a580375b0c3" },
     { 0x700, "528b45cc0345b0f72594087b04f73554067b045ac3" },
+    { 0x460, "8d863e56cbffe86d00000089c18b45fcf725ac0d7b04f73554067b0401c8c3" },
+    { 0x4cc, "69c088130000eb04" },
+    { 0x4d8, "85c07e0e52f7258c0d7b04f73554067b045ac3" },
+    { 0x4ec, "81c6983a00005089f0e8deffffff89c658c3" },
+    { 0x500, "31c9eb0d0fb7144d900d7b0439fa7411413b0da80d7b0472eb8b0485c0077b04c36bc91801c1"
+      .. "0fb7044db00d7b046bc064c3" },
+    { 0x532, "8945fc58ff750850e916810cff" },
 }
 
 -- The places that are changed: name, address, bytes there now, bytes to write. (The
--- number in "years" is YOUNG_YEARS; it is put in below.)
+-- number in "years" is YOUNG_YEARS and the amounts of the six "nat" places are
+-- CUP_NATIONAL; they are put in below.)
 local SITES = {
-    { "fee", 0x038ab8db, "83f844760c8db8bcffffff69ff28230000", "e8a04df000909090909090909090909090" },
+    { "fee", 0x038ab8db, "83f844760c8db8bcffffff69ff28230000", "e8b053f000909090909090909090909090" },
     { "salary", 0x038ac875, "89c1c1e10429c1", "e8c63ef000eb5b" },
     { "budget 1", 0x038adc47, "01f68b4030", "e8342bf000" },
     { "budget 2", 0x038add08, "8d3441e8d5e3f6ff", "e8932af000909090" },
     { "cup 1", 0x038aa400, "78b11602", "20097b04" },
     { "cup 2", 0x038aa408, "7cb11602", "24097b04" },
     { "cup 3", 0x038aa423, "80b11602", "28097b04" },
-    { "league 1", 0x038aa2dd, "8b848584feffff", "8b0485c0077b04" },
+    { "league 1", 0x038aa2dd, "8b848584feffff", "e81e64f0009090" },
     { "league 2", 0x038aa2c6, "8b8485e0feffff", "8b048520087b04" },
     { "prize 1", 0x03640ac5, "e8eda22600", "e8d6fd1601" },
     { "prize 2", 0x03640b78, "e83aa22600", "e823fd1601" },
@@ -201,6 +304,16 @@ local SITES = {
     { "bonus 1", 0x038aca2b, "03b5b0ffffff", "e8b03ef00090" },
     { "bonus 2", 0x038acd96, "8b85ccffffff0385b0ffffff", "e8653bf00090909090909090" },
     { "years", 0x03887fc1, "b803000000", "b805000000" },
+    { "income 1", 0x038adeee, "8d863e56cbff", "e86d27f00090" },
+    { "income 2", 0x038a9e9c, "69c088130000", "e82b68f00090" },
+    { "income 3", 0x038ae025, "81c6983a0000", "e8c226f00090" },
+    { "income 4", 0x038adeaa, "8b450850e8a2a9fcff", "e88328f00090909090" },
+    { "nat 0", 0x038aa43a, "204e0000", "204e0000" },
+    { "nat 1", 0x038aa446, "10270000", "10270000" },
+    { "nat 2", 0x038aa452, "88130000", "88130000" },
+    { "nat 3", 0x038aa45e, "e8030000", "e8030000" },
+    { "nat 4", 0x038aa46a, "f4010000", "f4010000" },
+    { "nat 5", 0x038aa476, "2c010000", "2c010000" },
 }
 
 -- The code and data those places and the routines rely on: name, address, bytes.
@@ -339,6 +452,19 @@ local CONTEXT = {
       "5589e551e87f41f9ff8b4d088b51048b098b4030525189c1e8bba8f9ff8d95fcffffff526a2b89c1c785fcff"
       .. "ffff14000000e81cf9f9ff0fb68dfcffffffb80500000083f9237209b80100000089ec5dc383f9207209b802"
       .. "00000089ec5dc383f9177705b80300000089ec5dc3" },
+    { "income", 0x038ade76,
+      "5589e55157e865e2f6ff8b78308d87c4dfdd0085c075055f89ec5dc3568d8dffffffff518d550852c685ffff"
+      .. "ffff00e8fef8ffff8b450850e8a2a9fcff83c40c8d4d08518d8fcc84cc0089c6e86d3d90ff8b40043d900100"
+      .. "007605b89001000081fef04902007d05bef049020069c09e0200006bf61929c68d863e56cbff5e85c07f05b8"
+      .. "e80300005f89ec5dc3" },
+    { "rank income", 0x038a9e6b,
+      "5589e5e87222f7ff8b40308d88c4dfdd0085c9750431c05dc38d5508528d88cc84cc00e8a0e488ff89c1b893"
+      .. "01000029c869c08813000085c07f05b8e80300005dc3" },
+    { "career money", 0x038adfb6,
+      "e8bbfeffff8d8dffffffff518d95f8ffffff528985f4ffffffc685ffffffff00c785f8ffffff15000000e8b3"
+      .. "79faff8b8df0ffffff83e80a8985f8ffffff83c4108d85f0ffffff50e86f83dcff508d8bcc84cc00e8253c90"
+      .. "ffdb85f8ffffff0fb6700e69f688840200dc35806dee0181c6983a000089b5f0ffffffda8df0ffffffe8268c"
+      .. "03008d8df8ffffff01f05189" },
 }
 
 -- registered position as the game numbers it -> name in POSITION
@@ -478,6 +604,82 @@ local function cup_fault()
     return nil
 end
 
+-- nil, or what is wrong with LEAGUE_BY_ID
+local function league_by_id_fault()
+    if LEAGUE_BY_ID == false then return nil end
+    if type(LEAGUE_BY_ID) ~= "table" or #LEAGUE_BY_ID > LEAGUE_ROWS then
+        return "LEAGUE_BY_ID is not a list of at most " .. LEAGUE_ROWS .. " entries or false"
+    end
+    for i, e in ipairs(LEAGUE_BY_ID) do
+        local name = "LEAGUE_BY_ID: entry " .. i
+        if type(e) ~= "table" or type(e[1]) ~= "number" or e[1] < 1 or e[1] > 65000
+            or e[1] ~= math.floor(e[1]) then
+            return name .. " does not start with the number of a league"
+        end
+        for k = 1, i - 1 do
+            if LEAGUE_BY_ID[k][1] == e[1] then return name .. " names league " .. e[1] .. " a second time" end
+        end
+        if type(e[2]) == "number" then
+            if e[2] < 0 or e[2] > 1000 then return name .. ": the percent is not from 0 to 1000" end
+        elseif type(e[2]) == "table" and #e[2] >= 1 and #e[2] <= 22 then
+            for k = 1, #e[2] do
+                if type(e[2][k]) ~= "number" or e[2][k] < 0 or e[2][k] > 650 then
+                    return name .. ": amount " .. k .. " is not a number from 0 to 650"
+                end
+            end
+        else
+            return name .. " has neither a percent nor a list of 1 to 22 amounts"
+        end
+    end
+    return nil
+end
+
+-- nil, or what is wrong with TALENT and its three numbers
+local function talent_fault()
+    if TALENT == false then return nil end
+    local fault = list_fault("TALENT", TALENT, false)
+    if fault then return fault end
+    for i, k in ipairs(TALENT) do
+        if k[1] > 63 or k[1] ~= math.floor(k[1]) or k[2] > 254 then
+            return "TALENT: entry " .. i .. " is not { age up to 63, rating up to 254 }"
+        end
+    end
+    return number_fault("TALENT_STEP", TALENT_STEP, 0, 50, false)
+        or number_fault("TALENT_MAX", TALENT_MAX, 0, 200, false)
+        or number_fault("TALENT_CAP", TALENT_CAP, 0, 999, false)
+end
+
+-- nil, or what is wrong with CUP_TV and CUP_NATIONAL
+local function cup_more_fault()
+    if CUP_TV ~= false then
+        if type(CUP_TV) ~= "table" then return "CUP_TV is not a list or false" end
+        for i, r in ipairs(CUP_TV) do
+            if type(r) ~= "table" or type(r[1]) ~= "number" or type(r[2]) ~= "number"
+                or r[2] < 0 or r[2] > 2000 then
+                return "CUP_TV: entry " .. i .. " is not { competition, millions from 0 to 2000 }"
+            end
+            local named = not CUP                -- CUP = false: nothing to add to
+            for _, c in ipairs(CUP or {}) do
+                if c[1] == r[1] then named = true end
+            end
+            if not named then
+                return "CUP_TV: entry " .. i .. ": CUP has no amounts for competition " .. tostring(r[1])
+            end
+        end
+    end
+    if CUP_NATIONAL ~= false then
+        if type(CUP_NATIONAL) ~= "table" or #CUP_NATIONAL ~= 6 then
+            return "CUP_NATIONAL is not a list of 6 numbers or false"
+        end
+        for i = 1, 6 do
+            if type(CUP_NATIONAL[i]) ~= "number" or CUP_NATIONAL[i] < 0.001 or CUP_NATIONAL[i] > 2000 then
+                return "CUP_NATIONAL: entry " .. i .. " is not a number from 0.001 to 2000"
+            end
+        end
+    end
+    return nil
+end
+
 local function settings_fault()
     if #GAME_CUP ~= CUP_ROWS then return "the module file is damaged (cup table)" end
     local fault = list_fault("VALUE", VALUE, true) or list_fault("AGE", AGE, false)
@@ -500,6 +702,9 @@ local function settings_fault()
         or number_fault("PAY_GAP", PAY_GAP, 1, 10, true)
         or number_fault("BONUS", BONUS, 0, 1000, true)
         or number_fault("YOUNG_YEARS", YOUNG_YEARS, 1, 5, true)
+        or number_fault("INCOME", INCOME, 10, 1000, true)
+        or number_fault("INCOME_WAGES", INCOME_WAGES, 1, 100, true)
+        or talent_fault() or league_by_id_fault() or cup_more_fault()
 end
 
 -- value for every whole number lo..hi (index 1 = lo)
@@ -538,7 +743,7 @@ local function amount(millions)
 end
 
 function m.init(ctx)
-    log("MLMoney 3: player values, salaries, budgets and prize money from the tables in MLMoney.lua")
+    log("MLMoney 4: player values, salaries, budgets, income and prize money from the tables in MLMoney.lua")
 
     local fault = settings_fault()
     if fault then
@@ -572,13 +777,57 @@ function m.init(ctx)
     local cup, league, league_2 = {}, { 0 }, { 0 }
     for i, r in ipairs(GAME_CUP) do cup[i] = r[3] end
     if CUP then
-        for _, r in ipairs(CUP) do cup[cup_row(r[1], r[2])] = clamp(amount(r[3]), 10, 20000000) end
+        local tv = {}
+        if CUP_TV then
+            for _, r in ipairs(CUP_TV) do tv[r[1]] = r[2] end
+        end
+        for _, r in ipairs(CUP) do
+            cup[cup_row(r[1], r[2])] = clamp(amount(r[3] + (tv[r[1]] or 0)), 10, 20000000)
+        end
+    end
+    local national = {}
+    if CUP_NATIONAL then
+        for i = 1, 6 do national[i] = clamp(amount(CUP_NATIONAL[i]), 10, 20000000) end
     end
     for i = 1, 22 do league[i + 1] = LEAGUE and clamp(amount(LEAGUE[i]), 0, 20000000) or 0 end
     for i = 1, 24 do league_2[i + 1] = LEAGUE_2 and clamp(amount(LEAGUE_2[i]), 0, 20000000) or 0 end
     local share = PRIZE_TO_BUDGET and math.floor(PRIZE_TO_BUDGET + 0.5) or 0
     local bonus = BONUS and math.floor(BONUS + 0.5) or 100
     local years = YOUNG_YEARS and math.floor(YOUNG_YEARS + 0.5) or 3
+    local income = INCOME and math.floor(INCOME + 0.5) or 100
+    local income_wages = INCOME_WAGES and math.floor(INCOME_WAGES + 0.5) or 0
+    -- talent: by age, the rating above which the bonus starts (255: no bonus at that age)
+    local talent, talent_step, talent_max, talent_cap = {}, 0, 0, 0
+    for i = 1, 64 do talent[i] = 255 end
+    if TALENT then
+        local last = TALENT[#TALENT][1]
+        for i, v in ipairs(curve(TALENT, 0, 63, false)) do
+            if i - 1 <= last then talent[i] = clamp(math.floor(v + 0.5), 0, 254) end
+        end
+        talent_step = math.floor(TALENT_STEP + 0.5)
+        talent_max = math.floor(TALENT_MAX + 0.5)
+        talent_cap = clamp(amount(TALENT_CAP), 0, CAP)
+    end
+    -- the first divisions with numbers of their own: league number, then 24 amounts in
+    -- units of 100 (the first and the last are not places)
+    local league_ids, league_rows = {}, {}
+    if LEAGUE and LEAGUE_BY_ID then
+        for _, e in ipairs(LEAGUE_BY_ID) do
+            local row = { 0 }
+            for i = 1, 22 do
+                local a
+                if type(e[2]) == "table" then
+                    a = clamp(amount(e[2][math.min(i, #e[2])]), 0, 20000000)
+                else
+                    a = math.floor(league[i + 1] * math.floor(e[2] + 0.5) / 100)
+                end
+                row[i + 1] = math.min(math.floor(a / 100), 65535)
+            end
+            row[24] = 0
+            league_ids[#league_ids + 1] = e[1]
+            league_rows[#league_rows + 1] = row
+        end
+    end
 
     local parts = {}
     for i = 1, 100 do parts[#parts + 1] = u32(value[i]) end
@@ -594,7 +843,7 @@ function m.init(ctx)
     -- popularity percent, lowest spread factor and width of the spread in thousandths,
     -- the two budget factors in percent, 100, 1000, a mark
     image = image .. u32(fame) .. u32(1000 - 10 * spread) .. u32(20 * spread) .. u32(budget_t)
-        .. u32(budget_s) .. u32(100) .. u32(1000) .. "MLM3"
+        .. u32(budget_s) .. u32(100) .. u32(1000) .. "MLM4"
     -- then the routines and the newer tables, each at its offset
     local pieces = {}
     for _, r in ipairs(ROUTINES) do pieces[#pieces + 1] = { r[1], unhex(r[2]) } end
@@ -610,6 +859,19 @@ function m.init(ctx)
     parts = {}
     for i, r in ipairs(GAME_CUP) do parts[i] = u32(r[1]) .. u32(r[2]) .. u32(cup[i]) end
     pieces[#pieces + 1] = { CUP_AT, table.concat(parts) }
+    parts = {}
+    for i = 1, 64 do parts[i] = string.char(talent[i]) end
+    pieces[#pieces + 1] = { TALENT_AT, table.concat(parts) }
+    pieces[#pieces + 1] = { NUMBERS_2_AT, u32(talent_step) .. u32(talent_max) .. u32(talent_cap) .. u32(income) }
+    parts = {}
+    for i = 1, #league_ids do parts[i] = u16(league_ids[i]) end
+    pieces[#pieces + 1] = { LEAGUE_IDS_AT, table.concat(parts) }
+    pieces[#pieces + 1] = { LEAGUE_COUNT_AT, u32(#league_ids) .. u32(income_wages) }
+    parts = {}
+    for _, row in ipairs(league_rows) do
+        for i = 1, 24 do parts[#parts + 1] = u16(row[i]) end
+    end
+    pieces[#pieces + 1] = { LEAGUE_ROWS_AT, table.concat(parts) }
     table.sort(pieces, function(a, b) return a[1] < b[1] end)
     for _, piece in ipairs(pieces) do
         if piece[1] < #image then
@@ -659,11 +921,15 @@ function m.init(ctx)
         ["cup 1"] = CUP, ["cup 2"] = CUP, ["cup 3"] = CUP, ["league 1"] = LEAGUE, ["league 2"] = LEAGUE_2,
         ["prize 1"] = PRIZE_TO_BUDGET, ["prize 2"] = PRIZE_TO_BUDGET, ["pay gap"] = PAY_GAP,
         ["bonus 1"] = BONUS, ["bonus 2"] = BONUS, ["years"] = YOUNG_YEARS,
+        ["income 1"] = INCOME or INCOME_WAGES, ["income 2"] = INCOME, ["income 3"] = INCOME,
+        ["income 4"] = INCOME_WAGES,
     }
+    for i = 0, 5 do on["nat " .. i] = CUP_NATIONAL end
     for _, s in ipairs(SITES) do
         if on[s[1]] then
             local at, new = s[2], unhex(s[4])
             if s[1] == "years" then new = string.sub(new, 1, 1) .. u32(years) end
+            if string.sub(s[1], 1, 4) == "nat " then new = u32(national[tonumber(string.sub(s[1], 5)) + 1]) end
             memory.write(at, new)
             local same = (memory.read(at, #new) == new)
             log(string.format("written: %-8s at %08x  %s", s[1], at, same and "ok" or "FAILED"))
@@ -678,7 +944,8 @@ function m.init(ctx)
         { SALARY, "salaries" }, { BUDGET_TRANSFER, "transfer budget" }, { BUDGET_SALARY, "salary budget" },
         { CUP, "cup prizes" }, { LEAGUE or LEAGUE_2, "league prizes" },
         { PRIZE_TO_BUDGET, "prizes into the transfer budget" }, { PAY_GAP, "pay gap" },
-        { BONUS, "salary bonuses" }, { YOUNG_YEARS, "contract years" } }) do
+        { BONUS, "salary bonuses" }, { YOUNG_YEARS, "contract years" }, { INCOME or INCOME_WAGES, "yearly income" },
+        { CUP_NATIONAL, "national cup prizes" } }) do
         if c[1] then changed = changed .. ", " .. c[2] end
     end
 
@@ -694,6 +961,13 @@ function m.init(ctx)
     for _, rating in ipairs({ 65, 70, 75, 80, 85, 88, 90, 92, 94 }) do
         log(string.format("  %6d %15s %15s %15s %15s", rating, shown(rating, 20), shown(rating, 25),
             shown(rating, 30), shown(rating, 33)))
+    end
+    if TALENT then
+        local line = "talent bonus: " .. talent_step .. " % of the value per rating point above"
+        for _, a in ipairs({ 17, 19, 21, 23 }) do
+            if talent[a + 1] < 255 then line = line .. " " .. talent[a + 1] .. " at " .. a .. "," end
+        end
+        log(line .. " at most " .. talent_max .. " % and " .. commas(talent_cap * 100))
     end
     local line = "position percent:"
     for i, name in ipairs(POSITIONS) do line = line .. " " .. name .. " " .. position[i] end
@@ -742,6 +1016,23 @@ function m.init(ctx)
                 end
             end
         end
+    end
+    for k, id in ipairs(league_ids) do
+        log(string.format("league %d, place 1, 2, 10, 18: %s, %s, %s, %s", id, commas(league_rows[k][2] * 10000),
+            commas(league_rows[k][3] * 10000), commas(league_rows[k][11] * 10000), commas(league_rows[k][19] * 10000)))
+    end
+    if CUP_NATIONAL then
+        local line = "cups without a row of their own (national cups), winner to the round before the round of 16:"
+        for i = 1, 6 do line = line .. " " .. commas(national[i] * 100) end
+        log(line)
+    end
+    if INCOME_WAGES then
+        log("yearly income of your club: the game's, plus " .. income_wages .. " % of the wage bill (a wage bill of "
+            .. "150,000,000 adds " .. commas(math.floor(1500000 * income_wages / 100) * 100) .. ")")
+    end
+    if INCOME then
+        log("yearly income of your club: " .. income .. " % of the game's (first club of the ranking: "
+            .. commas(math.floor(2010000 * income / 100) * 100) .. " by place)")
     end
     if PRIZE_TO_BUDGET then
         log("of every cup and league prize, " .. share .. " % is added to the transfer budget as well")
