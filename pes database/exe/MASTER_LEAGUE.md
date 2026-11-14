@@ -1085,11 +1085,19 @@ part):
   `+0xcc`; 2 loan: the same and **bit 28 of `+0xb8` is set**; 4: bit 28 is cleared
   (return from a loan); 3: the player goes to the club id at `0x2521194` (taken to
   be "no club").
-- `fcn_03889e24` and `fcn_03888c69` are called around the move with the two clubs
-  and the amounts; they are taken to move the money. **Not read**, so it is not
-  established that a computer club's budget limits what it buys. Nothing in the
-  choosing code of 9.5 and 9.6 looks at money: the choice goes by overall, level,
-  age, position and squad size only.
+- `fcn_03889e24` is called around the move with the two clubs and the amounts. Read
+  from the decompiled C: it books money only when the buying or the selling club is
+  the club that `fcn_0381e2eb` returns for a fixed key (**taken to be the user's
+  club**). Then `fcn_038aab52` writes one line (player id, amount with the sign of the
+  side, kind) into a list of 100 lines of `0x28` bytes through `fcn_038a9c7a`. For a
+  move between two computer clubs nothing is booked. No account, budget or balance of
+  a computer club was found anywhere in the mode data: the one account is the user's
+  (`+0xdddfc4`, 6.4). `fcn_03888c69` works on a dated record of the player and was
+  not read further.
+- So **a computer club has no money**. Nothing in the choosing code of 9.5 and 9.6
+  looks at a price: the choice goes by overall, level, age, position and squad size
+  only, and the fee computed in `do_transfer` is paid by nobody and received by
+  nobody unless the user's club is one of the two.
 
 ### 9.8 Other steps that end in `complete_transfer`
 
@@ -1110,7 +1118,7 @@ part):
 
 ### 9.9 What this means in play
 
-- A computer club shops by **level**, not by money: a level-9 club looks at overall
+- A computer club has no account (9.7). It shops by **level**, not by money: a level-9 club looks at overall
   83 to 99, a level-0 club at 47 to 74 (9.4).
 - It takes **the best three that fit** and prefers listed players and players
   without a club among them (9.6).
