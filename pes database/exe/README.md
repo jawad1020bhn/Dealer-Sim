@@ -62,6 +62,13 @@ They need `pip install unicorn capstone` and the exe (`rea-setup.sh` puts it in
 | `clubai.py` | overall window of the players a computer club looks for, by club level (check 11) |
 | `rtti.py <exe>` | class names and their function tables from the exe's type records → `output/classes.tsv.xz` (9,814 tables of 6,932 classes) |
 
+## Sider modules
+
+`sider/` holds Lua modules for the Sider of this game and how to install them
+(`sider/README.md`). So far one: `MLCheck.lua`, a read-only test that writes the level
+table of the computer clubs and the fee numbers of the running game to `sider.log`.
+`sider/test_module.py <exe>` runs it outside the game against the exe file.
+
 ## What the file looks like
 
 - The exe is protected. The original code section (`.srdata`, at `0x00401000`) is blanked
