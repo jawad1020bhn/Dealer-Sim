@@ -1,0 +1,10 @@
+# REA and its Node runtime: restored by `npm ci` (393 MB, not for Git)
+node_modules/
+# the game files of pes.7z.001-005 when extracted here (PES2017.exe is over GitHub's 100 MB limit)
+/PES2017.exe
+/sider.dll
+/sider.exe
+/sider.ini
+/sider.ini.bak-*
+/SiderX Launcher.*
+__pycache__/
