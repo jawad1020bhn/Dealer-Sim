@@ -7,9 +7,10 @@ enabled in `sider.ini`). They work on the running game; `PES2017.exe` is not edi
 |---|---|
 | `MLCheck.lua` | **read-only test.** Reads the overall window of computer clubs by level (section 9.4 of `../MASTER_LEAGUE.md`) and four numbers of the transfer fee formula (section 6.2) from the running game and writes them to `sider.log`. It writes nothing to the game |
 | `test_module.py <PES2017.exe>` | runs `MLCheck.lua` outside the game against the bytes of the exe file (needs `pip install lupa`) |
-| `MLMoney.lua` | **changes the game.** Player values by rating, age, talent, position and popularity, salaries, the transfer budget of a new career, the yearly income of the club, cup and league prizes, from tables at the top of the file. Checks the game's code first and writes nothing if it differs. Version 2 ran in the game and version 5 was played by hand (no log); versions 3, 4 and 6 have run in the emulator only |
-| `money_cave.py` | what `MLMoney.lua` writes (13 small routines, with their source) and the same arithmetic as Python |
-| `test_money.py <PES2017.exe>` | runs `MLMoney.lua` on the exe in the emulator, then runs the game's salary, fee, budget, prize and income code with the changes in and compares it with `money_cave.py` (needs `pip install lupa unicorn`) |
+| `MLMoney.lua` | **changes the game.** Player values by rating, age, talent, position and popularity, salaries, the transfer budget of a new career, the yearly income of the club, cup and league prizes, from tables at the top of the file. Checks the game's code first and writes nothing if it differs. Version 2 ran in the game and version 5 was played by hand (no log); versions 3, 4, 6 and 7 have run in the emulator only |
+| `MLTransfers.lua` | **changes the game.** The transfers between computer clubs; version 1 holds the price ceiling, which was a part of `MLMoney.lua` up to its version 6. Needs `MLMoney.lua` (version 7) in the line above its own in `sider.ini`. Has run in the emulator only |
+| `money_cave.py` | what the two modules write (13 small routines, with their source) and the same arithmetic as Python |
+| `test_money.py <PES2017.exe>` | runs `MLMoney.lua` and then `MLTransfers.lua` on the exe in the emulator, then runs the game's salary, fee, budget, prize and income code with the changes in and compares it with `money_cave.py` (needs `pip install lupa unicorn`) |
 
 ## Install and run `MLCheck.lua`
 
@@ -73,7 +74,25 @@ What else the same `sider.log` shows:
   for events this Sider does not know: `key_down`, `overlay_on`, `set_teams`,
   `gamepad_input`).
 
-## `MLMoney.lua`, version 6: values, salaries, budgets, income, prize money, and what a computer club can afford
+## `MLMoney.lua`, version 7, and `MLTransfers.lua`, version 1: values, salaries, budgets, income, prize money, and what a computer club can afford
+
+**Two files since version 7.** `MLMoney.lua` holds the money: values, salaries,
+budgets, income, prizes. `MLTransfers.lua` holds the transfers between computer clubs:
+today the price ceiling (every setting whose name starts with `CEILING`), moved out of
+`MLMoney.lua` without a change. The bytes written to the game and their addresses are
+those of version 6, except for the four letters of the mark (`MLM7`). The reasons for
+the second file: the money settings are finished and are not touched by the coming
+transfer work, a fault in one file does not stop the other, and the transfers can be
+switched off by taking one line out of `sider.ini`. Both run once, when the game
+starts, and cost nothing during play.
+
+`MLTransfers.lua` needs `MLMoney.lua`: its routine calls the value routine of
+`MLMoney.lua` to price a player. Sider runs the modules in the order of their
+`lua.module` lines, so the line of `MLMoney.lua` must stand above. `MLTransfers.lua`
+looks for the mark of `MLMoney.lua` in the memory and compares the value routine
+(1,376 bytes) and the number 100 it uses with what version 7 writes; if they are not
+there, or differ, it writes nothing and says so. `MLMoney.lua` alone works as before.
+A setting `WRITE` stands in both files; each rules its own file.
 
 ### What the game does without it
 
@@ -168,10 +187,10 @@ New in version 4, each with its own switch:
 - **Television money of the big cups** (`CUP_TV`): an amount per competition that is
   added to every amount of `CUP` for it.
 
-New in version 5, changed in version 6:
+New in version 5, changed in version 6, in `MLTransfers.lua` since version 7:
 
 - **Price ceiling of the computer clubs** (`CEILING`, `CEILING_RATING`). This is the
-  first part of the module that changes the transfers between computer clubs.
+  first part that changes the transfers between computer clubs.
 
   *The game.* A computer club has no money (section 9 of `MASTER_LEAGUE.md`). For each
   open position it goes through lists of players sorted by overall, from the top of a
@@ -261,6 +280,8 @@ mode `0x28`, the growth of players, the rest of the way computer clubs choose pl
 | `BONUS` | 300 percent; `false` leaves the game's code |
 | `YOUNG_YEARS` | 5 (the game: 3); `false` leaves the game's code |
 | `WRITE` | `true`; `false` = check and report only |
+| **in `MLTransfers.lua`:** | |
+| `WRITE` | the same, for this file |
 | `CEILING` (ranking places 1-10, 11-20, 21-50, 51-80, 81-120, 121-170, 171-220, 221-260, 261-300, others) | 200, 100, 50, 28, 18, 12, 8, 6, 4.5, 3: the highest value a computer club of that group signs; 0 in a place = no ceiling for the group; `false` = computer clubs choose as in the game |
 | `CEILING_STRETCH` (0 to 300) | 50: a club reaches a player up to 50 percent above its ceiling, the further above the less often; 0 = nothing above the ceiling, as in version 5 |
 | `CEILING_NEED` (0 to 300) | 30: the ceiling of a club in need (second search, or a slot that asks for a player of a certain standing) counts 30 percent higher; 0 = need changes nothing |
@@ -413,27 +434,58 @@ for that group.
 
 ### Install
 
-1. Copy `MLMoney.lua` into the `modules` folder next to `sider.exe`, over the older
-   version.
-2. `sider.ini` needs the line `lua.module = "MLMoney.lua"` (once).
-3. Start the game. `sider.log` must show twenty-five `check:` lines "as expected" (the
-   last five are `choose`, `pick`, `range`, `rating`, `take`: the transfer code of the
-   computer clubs), the lines "free memory ... empty" and "free memory 2 ... empty",
-   twenty-two `written:` lines "ok" (the last one `ceiling`), the tables, the ceilings
-   with the line "above the ceiling: the chance falls to none at 50 percent above it;
-   a club in need counts its ceiling 30 percent higher; a listed player counts at 70
-   percent of his value, a player without a contract at 50 percent", and `RESULT: installed. Changed: values, salaries, transfer budget, cup prizes,
-   league prizes, prizes into the transfer budget, pay gap, salary bonuses, contract
-   years, yearly income, national cup prizes, price ceiling of the computer clubs.`
+1. Copy `MLMoney.lua` and `MLTransfers.lua` into the `modules` folder next to
+   `sider.exe`. `MLMoney.lua` goes over the older version; an `MLMoney.lua` of version 5
+   or 6 must not stay, because it holds a ceiling of its own.
+2. `sider.ini` needs these two lines, once and in this order:
 
-If one of the five `check:` lines of the transfer code says `DIFFERENT`, or "free
-memory 2" says `NOT EMPTY`, nothing at all is written. Set `CEILING = false` to get
-the rest of the module as in version 4, and send the log. "Free memory 2" is a new
-place in version 6 (`0x047d3c40`): the file of the game holds zeros there, but whether
-the running game leaves it alone has not been seen yet, which is why this line of the
-log matters.
+   ```
+   lua.module = "MLMoney.lua"
+   lua.module = "MLTransfers.lua"
+   ```
+3. Start the game. `sider.log` must show, from `MLMoney.lua`: "MLMoney 7: ...", twenty
+   `check:` lines "as expected", the line "free memory ... empty", twenty-one
+   `written:` lines "ok", the tables, and `RESULT: installed. Changed: values, salaries,
+   transfer budget, cup prizes, league prizes, prizes into the transfer budget, pay gap,
+   salary bonuses, contract years, yearly income, national cup prizes.`
+4. Below it, from `MLTransfers.lua`:
 
-To undo: remove the line from `sider.ini`. No file of the game is changed.
+   ```
+   MLTransfers 1: the price ceiling of the computer clubs from the settings in MLTransfers.lua
+   check: MLMoney.lua   at 047b065c  installed, version 7
+   check: value routine at 047b0c90  as expected
+   check: number 100    at 047b0654  as expected
+   check: choose        at 0365f5c2  as expected
+   check: pick          at 03660c52  as expected
+   check: range         at 0365d08d  as expected
+   check: rating        at 03853b42  as expected
+   check: take          at 041293c0  as expected
+   check: free memory   at 047d3c40  empty
+   written: ceiling  at 0365fb0d  ok
+   ```
+
+   then the ceilings with the line "above the ceiling: the chance falls to none at 50
+   percent above it; a club in need counts its ceiling 30 percent higher; a listed
+   player counts at 70 percent of his value, a player without a contract at 50
+   percent", and `RESULT: installed. Changed: price ceiling of the computer clubs.`
+
+What `MLTransfers.lua` says when it writes nothing:
+
+| line in `sider.log` | cause | what to do |
+|---|---|---|
+| `RESULT: nothing written. MLMoney.lua is not installed ...` | no line for `MLMoney.lua` in `sider.ini`, or it stands below, or `MLMoney.lua` itself wrote nothing | put its line above; read the `RESULT` line of `MLMoney.lua` |
+| `... The MLMoney.lua that is installed is not the version this module was made for` | another version of `MLMoney.lua` | take both files from the same folder of this repository |
+| `... The price ceiling is in the game already` | an `MLMoney.lua` of version 6 is still in use, or `MLTransfers.lua` stands twice in `sider.ini` | replace the old file; one line only |
+| `... This game does not hold what the module expects` | one of the five `check:` lines of the transfer code says `DIFFERENT`, or "free memory" says `NOT EMPTY` | send the log |
+| `... CEILING = false` | the setting | |
+
+In each of these cases the money part stays in. The "free memory" line of
+`MLTransfers.lua` is the place new in version 6 (`0x047d3c40`): the file of the game
+holds zeros there, but whether the running game leaves it alone has not been seen yet,
+which is why this line of the log matters.
+
+To undo: remove the two lines from `sider.ini` (the line of `MLTransfers.lua` alone: the
+transfers of the game come back and the money stays). No file of the game is changed.
 
 **A running career.** Salaries are stored in the contracts and the budgets were made
 from the old numbers. With the module on, values change at once, salaries only at a new
@@ -592,23 +644,26 @@ Order of the module's work: check the settings; build the tables; compare 5,120 
 of the game, in twenty pieces, with what the exe file has (the code around every
 changed place, whole functions where they are short: `cup_prize`, `league_prize`,
 `balance_add`, `transfer_budget_add`, the contract limit, `season_income`, the amount
-by rank; the game's cup table), and with `CEILING` on 2,110 bytes more in five pieces
+by rank; the game's cup table), and in `MLTransfers.lua` 2,110 bytes more in five pieces
 (`ai_candidates` whole, `ai_pick_candidate` up to its two calls, the function with the
 rating ranges, the rating call, the function that adds a candidate); see
 that the memory is all zero; write tables and routines; read them back; only then
 change the places one by one and read each back. If a comparison fails, nothing more is
-written. The part of `MLMoney.lua` that holds the routines, the places and the compared
-bytes is made by `python3 money_cave.py lua <exe>`; the test fails if the two differ.
+written. `MLTransfers.lua` works in the same order on its own piece of memory and its
+one place, after it has found `MLMoney.lua`. The part of each file that holds the
+routines, the places and the compared bytes is made by `python3 money_cave.py lua <exe>`
+(`MLMoney.lua`) and `python3 money_cave.py lua <exe> transfers` (`MLTransfers.lua`);
+the test fails if a file differs from it.
 
 ### What the test shows
 
 ```
 python3 test_money.py ~/pes-work/game/PES2017.exe
 ok 0: without the module the emulated game gives the amounts of ../tools/money.py (salary with role, age band and award bonuses at every place of the club ranking; fee); its budget function adds twice the mean of the 16 highest fees and the wage bill plus twice the mean of the 16 highest salaries; cup_prize and league_prize give the game's lists (2626 and 6720 cases); a prize goes to the balance only; the contract limit is 3 years up to age 23; the three amounts of yearly income are 25 x popularity - 670 x the club's number - 3,451,330 (whatever the wage bill), (403 - rank) x 5,000 and 15,000 + 165,000 x club level; on 28 and on 30 June the yearly budget step gives the two grants of money_cave.june_grants for 2,000 cases each (to within 2); ai_candidates, the code that lists the players a computer club may sign, run whole through its two calls in ai_pick_candidate and, for three cases in eight, with ai_pick_candidate itself run from its first instruction to the end of its two searches, lists the first three players of the lists from the highest overall down who pass its tests (in a deal, on loan, the status band a slot asks for), whatever their value; ai_pick_candidate searches the first set of lists and then the second, a plan of kind 1 or 4 the second only, in the rating range of the club level, or from 99 down to 41 when the lowest overall handed in is 0
-ok 1: the module passes its checks, writes only its memory and the places it reports, and what it wrote is what money_cave.py builds from the same settings
+ok 1: MLMoney.lua and then MLTransfers.lua pass their checks, write only their own memory and the places they report, and what they wrote is what money_cave.py builds from the same settings
 ok 2: with the changes in, the game's code gives the amounts of money_cave.py: salary and fee for 3000 + 3000 random players (ratings 40 to 255, ages 0 to 63, every position, with and without awards and the random change) and for every place of the club ranking; the budgets of 150 squads of 0 to 40 players; cup_prize for 2626 cases (competitions 0 to 100, stages 0 to 12, two game modes; mode 0x28 keeps its own table); league_prize for 11648 cases (every list, place and half); the two places that pay a prize, in Master League and four other modes: balance, transfer budget, account line, registers and stack; the two bonus routines leave every other register as it was; the contract limit for every age; the three amounts of yearly income for 600 cases each, with wage bills from 0 to the largest number; ai_candidates run whole for 750 random sets of lists (club levels 0 to 9 and six numbers that are no level, both searches, both sets of lists, any buying club, slots that ask for a status band, players without a contract, listed, in a deal and on loan among them, the ceiling put where one player is just within the club's limit for him and 1 below that; three cases in eight with ai_pick_candidate itself run up to the end of its two searches, so that level, range and the mark of the second search are where the game puts them): it lists the players of money_cave.candidates, passes over the others and goes on, leaves stack, registers, player records and plan as the game does, and entered from anywhere else it lists as the game
 ok 3: with every optional part switched off only the fee place is written and salary, prizes and contract limit are the game's own; each of the 17 optional parts switched on alone changes its own places and nothing else; BUDGET_SALARY changes the salary budget; with spread, position and salary age switched off the value is VALUE x AGE plus popularity; PAY_GAP = 1, 1.5, 2, 2.75, 7.3, 10 give the club factor of money_cave.py at every place of the ranking; with every setting at its limit the code and money_cave.py still agree; the ceiling without the rating rule, with groups without a ceiling, with none at all (the rating rule alone) and with the lowest amount everywhere; the hard ceiling of version 5 (CEILING_STRETCH = 0, CEILING_NEED = 0, CEILING_LISTED = CEILING_FREE = 100), each of the four alone, and all four at their limits
-ok 4: WRITE = false, one changed byte at 75 places of the checked code and data, memory not empty, 67 kinds of faulty settings: nothing is written; a write that does not stick, to either piece of memory: the code is not touched; with CEILING = false the module does not look at the transfer code or the second piece of memory and installs the rest whatever is there
+ok 4: WRITE = false, one changed byte at 60 places of the checked code and data, memory not empty, 57 kinds of faulty settings: MLMoney.lua writes nothing, and MLTransfers.lua after it writes nothing either; a write to its memory that does not stick: the code is not touched. MLTransfers.lua: WRITE = false, one changed byte at 15 places of the transfer code, its memory not empty, 11 kinds of faulty settings, a write that does not stick: it writes no place of the code and MLMoney.lua is installed as without it; run without MLMoney.lua, before it, with a mark that is not MLMoney.lua's, with a changed byte at 6 places of the value routine and the 100 it uses, or a second time: it writes nothing; with another version number in the mark and the same value routine it installs; with CEILING = false it does not look at the game at all
 ok 5: Bruno Fernandes as the user saw him without a module (rating 89, salary 7,259,700, value 36,743,200): the game's formula gives exactly that value from that salary with popularity 955, and with no other rating from 60 to 99
       as the user saw him with version 2 and SPREAD = 0 in a new career (age 32, value 52,973,200): the module's formula gives exactly that for an AMF of rating 89 with popularity 910, and with no other popularity
 ```
@@ -690,15 +745,16 @@ all the game keeps of it. The wage share added after the floor of 1,000 is seen 
 with a wage bill near the largest number, because the game's amount never reaches
 that floor.
 
-Versions 5 and 6 (`python3 planted_faults.py <exe> routine` and `files`): every one of
-the 2,504 bits of the ceiling routine of version 6 was flipped in turn. 2,497 flips
+The price ceiling (`python3 planted_faults.py <exe> routine` and `files`; run again
+after the ceiling moved to `MLTransfers.lua`, with the same counts for the routine):
+every one of the 2,504 bits of the ceiling routine was flipped in turn. 2,497 flips
 made the cases fail (version 5: 1,169 of 1,176). Six of the other seven turn the
 `push ebx` or `push edi` at its start into the push of another register, so a wrong
 value comes back in `ebx` or `edi`; the game loads both anew right after
 (`0x0365fb28`) or returns, so no result changes, and the routine restores them all the
 same. The seventh turns `sub esp, 0x1c` into `and esp, 0x1c`; the emulator has memory
 at address 0 and the test answers the rating call itself, so the routine still works
-there, while the real game would stop. Then 32
+there, while the real game would stop. Then 37
 faults in the files, each with a whole run of the test: in the Lua the ceilings or the
 ratings in reverse order, the place not written, the comparison of the transfer code or
 the test for empty memory left out, "no ceiling" written as 0, wrong limits, the rating
@@ -709,8 +765,10 @@ lowest list searched too, the ceilings in reverse; and for version 6, in the Lua
 need written without its 100, the two discounts swapped, a negative number let
 through, in `money_cave.py` need counted in only one of its two cases, a wrong divisor
 of the stretch, the club left out of the hash, the discount for only one of the two
-statuses, both discounts for a listed player without a contract. All 32 made the test
-fail.
+statuses, both discounts for a listed player without a contract; and for the two
+files, in `MLTransfers.lua` the mark of `MLMoney.lua` not looked at or looked for at a
+wrong address, the value routine not compared, a ceiling that is in already not seen,
+`WRITE = false` not obeyed. All 37 made the test fail.
 
 Not shown by the test: for the price ceiling, anything above the two searches of
 `ai_pick_candidate` (how the game calls it in a transfer window, how often the first

@@ -118,7 +118,7 @@ address	name	topic	note
 0x03661380	ai_pool	master league	sorts the players that may be bought into two sets of 60 lists by overall; read
 0x03661b15	ai_fill_slots	master league	at most 5 clubs per call; fills empty slots while squad + open slots < 32; read
 0x03660c52	ai_pick_candidate	master league	picks one of up to three candidates in random order: marked, status 2, status 1, then another only if his club lets him go (level below 8, or set B, or slot kind 1 or 4); nobody if none passes; read; its first half (the two searches) run in the emulator (sider/test_money.py)
-0x0365f5c2	ai_candidates	master league	first three players of the pool that pass age, position, club and league tests; no test of a price; run in the emulator (sider/test_money.py); MLMoney.lua adds a price ceiling at 0x0365fb0d
+0x0365f5c2	ai_candidates	master league	first three players of the pool that pass age, position, club and league tests; no test of a price; run in the emulator (sider/test_money.py); MLTransfers.lua adds a price ceiling at 0x0365fb0d
 0x041293c0	id_list_add	master league	(this = list, -> id pair): appends 8 bytes to a list; ai_candidates notes a candidate with it; run in the emulator
 0x0365d08d	ai_max_overall	master league	(&level) -> highest overall a club of that level looks for; proven (check 11)
 0x0365d12d	ai_min_overall	master league	(&level) -> lowest overall a club of that level looks for; proven (check 11)

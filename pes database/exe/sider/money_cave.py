@@ -1,4 +1,4 @@
-"""What MLMoney.lua puts into the game, and the same arithmetic as Python.
+"""What MLMoney.lua and MLTransfers.lua put into the game, and the same arithmetic as Python.
 
     python3 money_cave.py            print the layout and the code bytes
     python3 money_cave.py build      assemble the code again (needs: pip install keystone-engine)
@@ -7,9 +7,15 @@
                                      print the part of MLMoney.lua that is made from this file and
                                      the exe: ROUTINES, SITES and CONTEXT (test_money.py checks that
                                      MLMoney.lua holds exactly this text)
+    python3 money_cave.py lua <PES2017.exe> transfers
+                                     the same for MLTransfers.lua: ROUTINE, SITE, MONEY and CONTEXT
 
 MLMoney.lua changes up to 25 places of PES2017.exe (sha256 44b0caaa...) and fills a
-piece of unused memory with 13 small routines and their tables.
+piece of unused memory with 13 small routines and their tables. MLTransfers.lua changes
+one place more and fills a second piece (the price ceiling of the computer clubs, which
+was part of MLMoney.lua in its versions 5 and 6). Its routine calls FEE_CODE and divides
+by the 100 at HUNDRED_AT, both in the memory of MLMoney.lua, so it writes nothing unless
+it finds them there (MONEY_NEEDED).
 
 Fee, fcn_038ab832 (MASTER_LEAGUE.md 6.2). The 17 bytes at 0x038ab8db hold the rating part
 of the formula, `9000 * max(0, rating - 68)`, left in edi. They become a call to FEE_CODE:
@@ -96,7 +102,7 @@ starting amount in club_money_setup) become calls that do the same and apply INC
 The yearly budget step (6.7) is not changed. june_grants() below is its arithmetic, and
 test_money.py runs the game's code for both days against it.
 
-Transfers of the computer clubs (9.6, 9.10). ai_candidates (fcn_0365f5c2) lists up to
+Transfers of the computer clubs (9.6, 9.10; MLTransfers.lua). ai_candidates (fcn_0365f5c2) lists up to
 three players a computer club may sign for a position: it walks lists of players by
 overall from the top of the club's rating range down and adds every player who passes
 its tests with `mov ecx, [ebp + 0x24]; push esi; call 0x041293c0` at 0x0365fb0d. None of
@@ -160,7 +166,8 @@ BUDGET_T_AT = CAVE + 0x44c      # dword: transfer budget, percent of the mean va
 BUDGET_S_AT = CAVE + 0x450      # dword: salary budget, percent of the mean salary of the best 16
 HUNDRED_AT = CAVE + 0x454       # dword 100
 THOUSAND_AT = CAVE + 0x458      # dword 1000
-MARK_AT = CAVE + 0x45c          # 4 bytes "MLM6"
+MARK_AT = CAVE + 0x45c          # 4 bytes: MARK
+MARK = b'MLM7'                  # MLTransfers.lua looks for its first three bytes
 TALENT_TAB = CAVE + 0x480       # 64 bytes, by age 0-63: the rating above which a young player gets the
                                 # talent bonus (255: no bonus at this age)
 INCOME_N_CODE = CAVE + 0x460     # (0x4c0 to 0x4cb are not used)
@@ -694,7 +701,7 @@ CONTEXT = (
 )
 
 
-# the same for the price ceiling; compared only when CEILING is on
+# the same for MLTransfers.lua (the price ceiling); compared only when CEILING is on
 CONTEXT_CEILING = (
     ('choose', AI_CANDIDATES, 1462),        # ai_candidates, the whole function
     ('pick', AI_PICK, 373),                 # ai_pick_candidate up to the end of its two calls of ai_candidates
@@ -706,6 +713,11 @@ CONTEXT_CEILING = (
 
 def call(site, target):
     return b'\xe8' + struct.pack('<i', target - (site + 5))
+
+
+# what MLTransfers.lua must find in the memory of MLMoney.lua before it writes: name,
+# address, bytes. (FEE_BYTES is defined above; the mark is compared apart, for the log.)
+MONEY_NEEDED = (('value routine', FEE_CODE, FEE_BYTES), ('number 100', HUNDRED_AT, struct.pack('<I', 100)))
 
 
 FEE_SITE_NEW = call(FEE_SITE, FEE_CODE) + b'\x90' * 12
@@ -899,7 +911,7 @@ def image(t):
     d += struct.pack('<64H', *t.salary_age) + struct.pack('<16H', *t.position)
     assert len(d) == FAME_AT - CAVE
     d += struct.pack('<7I', t.fame, t.spread_low, t.spread_range, t.budget_transfer or 200, t.budget_salary or 200,
-                     100, 1000) + b'MLM6'
+                     100, 1000) + MARK
     pieces = [(at, globals()[name]) for at, _, name in ROUTINES]
     pieces += [(LEAGUE1_TAB, struct.pack('<23I', *t.league)), (LEAGUE2_TAB, struct.pack('<25I', *t.league_2)),
                (RANK_STEP_AT, struct.pack('<d', t.rank_step)),
@@ -1192,11 +1204,13 @@ def context_lua(exe, name='CONTEXT', pieces=None):
     return '\n'.join(lines)
 
 
+def quoted(h, first, width=88):
+    parts = [h[:first]] + [h[k:k + width] for k in range(first, len(h), width)]
+    return '\n      .. '.join('"%s"' % x for x in parts if x)
+
+
 def lua_block(exe):
     """The lines of MLMoney.lua from `local ROUTINES` to the end of CONTEXT."""
-    def quoted(h, first, width=88):
-        parts = [h[:first]] + [h[k:k + width] for k in range(first, len(h), width)]
-        return '\n      .. '.join('"%s"' % x for x in parts if x)
     out = 'local ROUTINES = {\n'
     for at, _, name in ROUTINES:
         out += '    { 0x%03x, %s },\n' % (at - CAVE, quoted(globals()[name].hex(), 76))
@@ -1204,24 +1218,35 @@ def lua_block(exe):
             '-- number in "years" is YOUNG_YEARS and the amounts of the six "nat" places are\n'
             '-- CUP_NATIONAL; they are put in below.)\nlocal SITES = {\n')
     for name, at, old, new in SITES:
-        out += '    { "%s", 0x%08x, "%s", "%s" },\n' % (name, at, old.hex(), new.hex())
+        if name != 'ceiling':                                # that place belongs to MLTransfers.lua
+            out += '    { "%s", 0x%08x, "%s", "%s" },\n' % (name, at, old.hex(), new.hex())
     return (out + '}\n\n-- The code and data those places and the routines rely on: name, address, bytes.\n'
-            + context_lua(exe) + '\n\n-- The price ceiling: its routine (offset in the second piece of memory) and the code\n'
-            '-- it relies on, which is compared only when CEILING is on.\n'
-            'local CEILING_ROUTINE = { 0x%02x, %s }\n' % (CEILING_CODE - CAVE_2, quoted(CEILING_BYTES.hex(), 60))
-            + context_lua(exe, 'CEILING_CONTEXT', CONTEXT_CEILING) + '\n')
+            + context_lua(exe) + '\n')
+
+
+def lua_block_transfers(exe):
+    """The lines of MLTransfers.lua from `local ROUTINE` to the end of CONTEXT."""
+    (name, at, old, new), = [x for x in SITES if x[0] == 'ceiling']
+    out = ('local ROUTINE = { 0x%02x, %s }\n\n-- The place that is changed: name, address, bytes there now, bytes to write.\n'
+           'local SITE = { "%s", 0x%08x, "%s", "%s" }\n\n'
+           '-- What MLMoney.lua must have put into its memory: name, address, bytes.\nlocal MONEY = {\n' % (
+               CEILING_CODE - CAVE_2, quoted(CEILING_BYTES.hex(), 60), name, at, old.hex(), new.hex()))
+    for name, at, data in MONEY_NEEDED:
+        out += '    { "%s", 0x%08x,\n      %s },\n' % (name, at, quoted(data.hex(), 88))
+    return (out + '}\n\n-- The code of the game the place and the routine rely on: name, address, bytes.\n'
+            + context_lua(exe, 'CONTEXT', CONTEXT_CEILING) + '\n')
 
 
 if __name__ == '__main__':
     if sys.argv[1:2] == ['lua']:
-        print(lua_block(sys.argv[2]), end='')
+        print((lua_block_transfers if sys.argv[3:] == ['transfers'] else lua_block)(sys.argv[2]), end='')
         sys.exit(0)
     if sys.argv[1:] == ['build']:
         for name, code in build().items():
             assert code == globals()[name], '%s: the bytes kept in this file are not what the source assembles to: %s' % (name, code.hex())
         print('ok: the source assembles to the bytes kept in this file')
     print('memory   %08x - %08x' % (CAVE, CAVE + CAVE_SIZE - 1))
-    print('memory 2 %08x - %08x (the price ceiling)' % (CAVE_2, CAVE_2 + CAVE_2_SIZE - 1))
+    print('memory 2 %08x - %08x (MLTransfers.lua: the price ceiling)' % (CAVE_2, CAVE_2 + CAVE_2_SIZE - 1))
     for name, at, old, new in SITES:
         print('%-9s %08x: %s -> %s' % (name, at, old.hex(), new.hex()))
     for at, _, name in ROUTINES:

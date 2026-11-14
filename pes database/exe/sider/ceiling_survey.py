@@ -58,7 +58,7 @@ def players(exe, edit):
 
 
 def main(exe, edit, ceilings=None):
-    t = test_money.settings(open(test_money.MODULE, encoding='utf-8').read())
+    t = test_money.settings(test_money.two_modules())
     t.spread_low, t.spread_range = 1000, 0
     if ceilings is None:
         ceilings = [c / 10000.0 if c != mc.NO_CEILING else float('inf') for c in reversed(t.ceiling)]
