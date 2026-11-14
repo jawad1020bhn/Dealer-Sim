@@ -226,9 +226,10 @@ class Harness:
             v['holders'] = won is not None
             for i in range(4):
                 g.write(self.holder[i] + 8, struct.pack('<II', 1234 if won and won[i] else 4321, 1))
-            awards = 0 if not won else 10000 * won[0] + 5000 * sum(won[1:])
+            status = random.choice([0, 0, 6, random.randint(0, 15)])      # 6: the game skips the awards
+            awards = 0 if not won or status == 6 else 10000 * won[0] + 5000 * sum(won[1:])
             self.player(rec, o, age, x, position, (1234, 1), level=level)
-            g.write(rec + 0xb4, struct.pack('<II', x << 11, level << 26))
+            g.write(rec + 0xb4, struct.pack('<II', x << 11 | status, level << 26))
             g.write(rec + 0xc4, bytes([role]))
             g.write(self.number, struct.pack('<I', o if given else 0))
             got = g.call(SALARY, [self.pid, self.team, self.zero, self.zero, self.number])

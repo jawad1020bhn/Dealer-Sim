@@ -7,8 +7,7 @@
 --         VALUE[rating] x AGE[age] x POSITION[position] x spread x (1 + popularity bonus)
 --     instead of  salary x 2.2..3.3 + 9,000 x (rating - 68);
 --   * the rating part of the yearly salary becomes SALARY[rating] x SALARY_AGE[age]; the
---     club's place in the ranking, the role bonuses, the popularity part and the award
---     bonuses stay the game's own;
+--     popularity part stays the game's own;
 --   * the transfer budget your club gets when a career starts becomes BUDGET_TRANSFER
 --     times the mean value of its 16 best players (the game: 2 times);
 --   * the prize money of cups (CUP) and of the leagues (LEAGUE, LEAGUE_2);
@@ -30,7 +29,8 @@
 --
 -- Salaries are stored in the contracts: a running career keeps its old salaries until
 -- contracts are renewed, and its budgets were made from the old numbers. Start a new
--- career for numbers that fit together, or set SALARY = false for a running one.
+-- career for numbers that fit together, or set SALARY, PAY_GAP and BONUS to false for a
+-- running one. Prizes and the contract limit work in a running career at once.
 --
 -- Uses only: log, memory.read, memory.write, string, table, math, ipairs, tonumber, type.
 
