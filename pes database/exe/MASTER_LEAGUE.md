@@ -679,9 +679,10 @@ fields of the getter were mapped by running it on records with one bit set.
 ### 6.6 A Sider module that changes values, salaries, budgets and prize money
 
 Version 5 of the module adds a price ceiling to the transfers of the computer clubs
-and version 6 lets it give way; that part is described in 9.10.
+and version 6 lets it give way; since version 7 that part is a file of its own,
+`sider/MLTransfers.lua`. It is described in 9.10.
 
-`sider/MLMoney.lua` (version 6) replaces the rating part of the fee by `VALUE[rating] x
+`sider/MLMoney.lua` (version 7) replaces the rating part of the fee by `VALUE[rating] x
 AGE[age] x POSITION[registered position] x (the player's own fixed factor) x (1 +
 popularity bonus)`, the rating part of the salary by `SALARY[rating] x SALARY_AGE[age]`,
 and the 2 of the two budget sums of 6.4 by settings. Version 3 adds: other amounts in
@@ -1216,7 +1217,7 @@ part):
 ### 9.9 What this means in play
 
 - A computer club has no account that was found (9.7). It shops by **level**, not by money: a level-9 club looks at overall
-  83 to 99, a level-0 club at 47 to 74 (9.4). `sider/MLMoney.lua` (version 6) adds a
+  83 to 99, a level-0 club at 47 to 74 (9.4). `sider/MLTransfers.lua` adds a
   highest value per level, which gives way for a club in need (9.10).
 - It takes **the best three that fit** and prefers listed players and players
   without a club among them (9.6).
@@ -1226,7 +1227,12 @@ part):
 - Deals are chosen at the start of the season and on the day after each window, and
   close when the next window is open (9.2, 9.7). Squads end between 23 and 32.
 
-### 9.10 A price ceiling by a module (`sider/MLMoney.lua`, versions 5 and 6)
+### 9.10 A price ceiling by a module (`sider/MLTransfers.lua`; in `sider/MLMoney.lua` in versions 5 and 6)
+
+The ceiling was written by `MLMoney.lua` in its versions 5 and 6. Since version 7 of
+`MLMoney.lua` it is written by `MLTransfers.lua` (version 1), with the same bytes at the
+same addresses as version 6; "version 6" below is that state. `MLTransfers.lua` runs
+after `MLMoney.lua` and uses its value routine.
 
 The module adds one test to `ai_candidates`, at `0x0365fb0d`, where a player who
 passed everything is added to the list (`mov ecx, [ebp + 0x24]; push esi; call

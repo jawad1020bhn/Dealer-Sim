@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Does test_money.py notice faults? Planted faults for the price ceiling (version 6).
+"""Does test_money.py notice faults? Planted faults for the price ceiling (MLTransfers.lua).
 
     python3 planted_faults.py <PES2017.exe> routine      about 1 minute
     python3 planted_faults.py <PES2017.exe> files        about 15 minutes on two processors
 
 routine: every bit of the ceiling routine is flipped in turn in the emulator's memory,
-after the module is in, and the cases of Harness.choose_cases are run. Printed: the
+after the two modules are in, and the cases of Harness.choose_cases are run. Printed: the
 flips after which all cases still passed.
-files: one line of MLMoney.lua or money_cave.py is changed in a copy of this folder and
+files: one line of MLTransfers.lua or money_cave.py is changed in a copy of this folder and
 the whole test is run there. It must fail every time.
 """
 import os
@@ -22,27 +22,28 @@ from concurrent.futures import ThreadPoolExecutor
 HERE = os.path.dirname(os.path.abspath(__file__))
 FAULTS = (
     # the ceilings and the ratings in the wrong order, a place not written, checks left out
-    ('MLMoney.lua', 'local v = CEILING[10 - level]', 'local v = CEILING[level + 1]'),
-    ('MLMoney.lua', 'RANGE_TOP[level + 1] or 255', 'RANGE_TOP[10 - level] or 255'),
-    ('MLMoney.lua', '["ceiling"] = ceiling.on,', '["ceiling"] = false,'),
-    ('MLMoney.lua', '    return good and empty\nend\n\nfunction ceiling.write', '    return good\nend\n\nfunction ceiling.write'),
-    ('MLMoney.lua', 'if ceiling.on and not ceiling.checks() then good = false end', 'if false then good = false end'),
+    ('MLTransfers.lua', 'local v = CEILING[10 - level]', 'local v = CEILING[level + 1]'),
+    ('MLTransfers.lua', 'RANGE_TOP[level + 1] or 255', 'RANGE_TOP[10 - level] or 255'),
+    ('MLTransfers.lua', '    memory.write(SITE[2], new)\n', ''),
+    ('MLTransfers.lua', 'if not (good and empty) then', 'if not good then'),
+    ('MLTransfers.lua', 'for _, c in ipairs(CONTEXT) do\n        if not same(c[1], c[2], c[3]) then good = false end',
+     'for _, c in ipairs(CONTEXT) do\n        if not same(c[1], c[2], c[3]) then good = true end'),
     # "no ceiling" written as 0, wrong limits of the amounts, the rating rule always on
-    ('MLMoney.lua', '(v == 0) and 0xffffffff or', '(v == 0) and 0 or'),
-    ('MLMoney.lua', 'clamp(amount(v), 100, 99990000)', 'clamp(amount(v), 100, 9999000)'),
-    ('MLMoney.lua', 'clamp(amount(v), 100, 99990000)', 'clamp(amount(v), 1000, 99990000)'),
-    ('MLMoney.lua', 'string.char(CEILING_RATING and RANGE_TOP', 'string.char(true and RANGE_TOP'),
-    ('MLMoney.lua', '(v ~= 0 and (v < 0.01 or v > 9999))', '(v ~= 0 and (v < 0.01 or v > 99999))'),
-    ('MLMoney.lua', '(v ~= 0 and (v < 0.01 or v > 9999))', '(v ~= 0 and (v < 0.001 or v > 9999))'),
+    ('MLTransfers.lua', '(v == 0) and 0xffffffff or', '(v == 0) and 0 or'),
+    ('MLTransfers.lua', 'clamp(amount(v), 100, 99990000)', 'clamp(amount(v), 100, 9999000)'),
+    ('MLTransfers.lua', 'clamp(amount(v), 100, 99990000)', 'clamp(amount(v), 1000, 99990000)'),
+    ('MLTransfers.lua', 'string.char(CEILING_RATING and RANGE_TOP', 'string.char(true and RANGE_TOP'),
+    ('MLTransfers.lua', '(v ~= 0 and (v < 0.01 or v > 9999))', '(v ~= 0 and (v < 0.01 or v > 99999))'),
+    ('MLTransfers.lua', '(v ~= 0 and (v < 0.01 or v > 9999))', '(v ~= 0 and (v < 0.001 or v > 9999))'),
     # the second piece of memory: not read back, not written, a faulty setting let through,
     # a wrong rating, a wrong size, a wrong address
-    ('MLMoney.lua', '    return memory.read(CAVE_2, CAVE_2_SIZE) == image\n', '    return true\n'),
-    ('MLMoney.lua', 'if ceiling.on and not ceiling.write(image_2) then', 'if false then'),
-    ('MLMoney.lua', 'if type(CEILING_RATING) ~= "boolean" then', 'if false then'),
-    ('MLMoney.lua', 'local RANGE_TOP = { 74, 75, 76, 77, 78, 79, 80, 83, 86, 99 }',
+    ('MLTransfers.lua', 'if memory.read(CAVE, CAVE_SIZE) ~= memory_image then', 'if false then'),
+    ('MLTransfers.lua', '    memory.write(CAVE, memory_image)\n', ''),
+    ('MLTransfers.lua', 'if type(CEILING_RATING) ~= "boolean" then', 'if false then'),
+    ('MLTransfers.lua', 'local RANGE_TOP = { 74, 75, 76, 77, 78, 79, 80, 83, 86, 99 }',
      'local RANGE_TOP = { 74, 75, 76, 77, 78, 79, 80, 83, 85, 99 }'),
-    ('MLMoney.lua', 'local CAVE_2_SIZE = 0x180', 'local CAVE_2_SIZE = 0x17c'),
-    ('MLMoney.lua', 'local CAVE_2 = 0x047d3c40', 'local CAVE_2 = 0x047d3c38'),
+    ('MLTransfers.lua', 'local CAVE_SIZE = 0x180', 'local CAVE_SIZE = 0x17c'),
+    ('MLTransfers.lua', 'local CAVE = 0x047d3c40 ', 'local CAVE = 0x047d3c38 '),
     # the model: a rating equal to the top refused, the rating rule in both searches, a value
     # equal to the ceiling refused, the lowest list searched too, the order of the ceilings,
     # the place counted as written when it is off
@@ -54,10 +55,10 @@ FAULTS = (
     ('money_cave.py', "'ceiling': self.ceiling is not None}", "'ceiling': True}"),
     # version 6, the limit. In the module: need written without its 100, the two discounts
     # swapped, a negative number let through
-    ('MLMoney.lua', 'u32(100 + math.floor(CEILING_NEED + 0.5))', 'u32(math.floor(CEILING_NEED + 0.5))'),
-    ('MLMoney.lua', '.. u32(math.floor(CEILING_LISTED + 0.5))\n        .. u32(math.floor(CEILING_FREE + 0.5))',
+    ('MLTransfers.lua', 'u32(100 + math.floor(CEILING_NEED + 0.5))', 'u32(math.floor(CEILING_NEED + 0.5))'),
+    ('MLTransfers.lua', '.. u32(math.floor(CEILING_LISTED + 0.5))\n        .. u32(math.floor(CEILING_FREE + 0.5))',
      '.. u32(math.floor(CEILING_FREE + 0.5))\n        .. u32(math.floor(CEILING_LISTED + 0.5))'),
-    ('MLMoney.lua', 'c[1] < 0 or c[1] > c[3] then', 'c[1] > c[3] then'),
+    ('MLTransfers.lua', 'c[1] < 0 or c[1] > c[3] then', 'c[1] > c[3] then'),
     # in the model: need only in the second search, only for a slot with a band; a wrong
     # divisor of the stretch; the club left out of the hash; the discount for status 2
     # only; both discounts for a listed player without a contract
@@ -69,6 +70,14 @@ FAULTS = (
      '    if status in (2,):\n        price = price * t.ceiling_free // 100\n    elif listed:'),
     ('money_cave.py', '        price = price * t.ceiling_free // 100\n    elif listed:',
      '        price = price * t.ceiling_free // 100\n    if listed:'),
+    # the two files: MLTransfers.lua does not look for MLMoney.lua, looks at the wrong place,
+    # does not compare the value routine, does not see that the ceiling is in already, writes
+    # with WRITE = false
+    ('MLTransfers.lua', 'local found = (mark ~= nil and string.sub(mark, 1, 3) == "MLM")', 'local found = (mark ~= nil)'),
+    ('MLTransfers.lua', 'local MONEY_MARK = 0x047b065c', 'local MONEY_MARK = 0x047b0658'),
+    ('MLTransfers.lua', 'if not same(c[1], c[2], c[3]) then money = false end', 'if not same(c[1], c[2], c[3]) then money = true end'),
+    ('MLTransfers.lua', 'if there ~= nil and hex(there) == SITE[4] then', 'if false then'),
+    ('MLTransfers.lua', '    if not WRITE then\n', '    if false then\n'),
 )
 
 
@@ -79,7 +88,7 @@ def routine(exe):
     import test_money as tm
     h = tm.Harness(exe)
     g = h.g
-    source = open(tm.MODULE, encoding='utf-8').read()
+    source = tm.two_modules()
     tm.run(g, source)
     t = tm.settings(source)
     usual = t.ceiling[:]
