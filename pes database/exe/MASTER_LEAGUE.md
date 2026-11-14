@@ -1091,10 +1091,10 @@ part):
   club**). Then `fcn_038aab52` writes one line (player id, amount with the sign of the
   side, kind) into a list of 100 lines of `0x28` bytes through `fcn_038a9c7a`. For a
   move between two computer clubs nothing is booked. No account, budget or balance of
-  a computer club was found anywhere in the mode data: the one account is the user's
-  (`+0xdddfc4`, 6.4). `fcn_03888c69` works on a dated record of the player and was
+  a computer club has turned up in any of the code read so far (the mode data was not
+  searched for one): the one account known is the user's (`+0xdddfc4`, 6.4). `fcn_03888c69` works on a dated record of the player and was
   not read further.
-- So **a computer club has no money**. Nothing in the choosing code of 9.5 and 9.6
+- So, as far as read, **a computer club has no money**. Nothing in the choosing code of 9.5 and 9.6
   looks at a price: the choice goes by overall, level, age, position and squad size
   only, and the fee computed in `do_transfer` is paid by nobody and received by
   nobody unless the user's club is one of the two.
@@ -1118,7 +1118,7 @@ part):
 
 ### 9.9 What this means in play
 
-- A computer club has no account (9.7). It shops by **level**, not by money: a level-9 club looks at overall
+- A computer club has no account that was found (9.7). It shops by **level**, not by money: a level-9 club looks at overall
   83 to 99, a level-0 club at 47 to 74 (9.4).
 - It takes **the best three that fit** and prefers listed players and players
   without a club among them (9.6).
