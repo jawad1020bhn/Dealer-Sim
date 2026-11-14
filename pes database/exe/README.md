@@ -150,7 +150,7 @@ read back from the exe; the import slots match the file.
 
 ## Not done
 
-- 133 functions are named (`names.tsv`); the rest is not understood. Of Master League
+- 141 functions are named (`names.tsv`); the rest is not understood. Of Master League
   five pieces are proven and many rules are only located (`MASTER_LEAGUE.md`, section 14). Of the edit data, the
   player, team and manager fields are mapped; five blocks are not read (`NOTES.md`).
 - Virtual calls are not resolved, so `calls.tsv.xz` misses every call through a vtable.

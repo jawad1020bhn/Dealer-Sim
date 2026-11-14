@@ -58,8 +58,9 @@ What else the same `sider.log` shows:
   mode object, and `0x04062701`, the competition id table function. Two addresses of the
   notes confirmed from another side.
 - Sider changes code at 31 places of the running game (hooks and small patches). None of
-  them lies in one of the 133 functions named in `../names.tsv`, so the salary, fee,
-  fixture and computer-club code runs as analysed. A later module must check this again
+  them lies in one of the 133 functions that `../names.tsv` named when this was checked,
+  so the salary, fee, fixture and computer-club code runs as analysed. The eight names
+  added later (prize money, account lines) were not checked against the 31 places. A later module must check this again
   for every place it writes to.
 - Sider's gameplay settings point at the constants `0x01F0F2A8` and `0x01F0F2C0`, the
   neighbours of the shared 2.2 at `0x01f0f2b8`. One more reason not to change that
