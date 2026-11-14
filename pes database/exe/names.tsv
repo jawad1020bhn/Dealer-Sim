@@ -51,7 +51,7 @@ address	name	topic	note
 0x04067af3	overall_rating	rating	(39 values, position) -> rating
 0x04067a53	overall_blend	rating	
 0x0383899a	player_rating_now	rating	rating with the condition arrow
-0x038278b0	player_value	rating	one ability of a database player
+0x038278b0	player_value	rating	(this = player record, field 0-0x61, &out): one field of a player; 0x00 registered position, 0x2b age
 0x038e6c48	stack_cookie_check	runtime	
 0x038e6e2b	memset_thunk	runtime	
 0x038e6d6f	memcpy_thunk	runtime	

@@ -70,10 +70,11 @@ They need `pip install unicorn capstone` and the exe (`rea-setup.sh` puts it in
 - `MLCheck.lua`, a read-only test that writes the level table of the computer clubs and
   the fee numbers of the running game to `sider.log` (6 of 6 on the user's game).
   `sider/test_module.py <exe>` runs it outside the game against the exe file.
-- `MLMoney.lua`, which changes the running game: player values by rating, age and
-  popularity, salaries by rating, from tables in the file. `sider/test_money.py <exe>`
-  runs the game's salary and fee code with its changes in the emulator. Not yet run in
-  the game.
+- `MLMoney.lua`, which changes the running game: player values by rating, age, position
+  and popularity with a fixed spread per player, salaries by rating and age, and the
+  transfer budget of a new career, from tables in the file. `sider/test_money.py <exe>`
+  runs the game's salary, fee and budget code with its changes in the emulator. Not yet
+  run in the game.
 
 ## What the file looks like
 

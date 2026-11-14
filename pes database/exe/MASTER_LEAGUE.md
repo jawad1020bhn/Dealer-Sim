@@ -578,8 +578,9 @@ figure. 8 callers, among them the money step and the closing of the accounts.
 
 ### 6.4 Club money
 
-Level: **read** for the four functions below (C and disassembly, not run; the names of
-the amounts are inferred); the rest **located**: `fcn_03640d19` (money step, events 3,
+Level: `budgets_from_squad` **run in the emulator** (`sider/test_money.py`, ok 0: 40
+squads of 0 to 40 players); the other three functions below **read** (C and disassembly,
+not run). The names of the amounts are inferred. The rest **located**: `fcn_03640d19` (money step, events 3,
 23, 25, 49; 1,280 lines), `fcn_03649f1f` (616 lines, event 24),
 `process::ProcessCmnFinanceReportCheck` (`fcn_035e69ce`, event 25) and about twenty
 small functions at `0x038aa000`-`0x038ab400` that add and read account lines. The
@@ -607,13 +608,14 @@ screens call each amount are **not read**.
   The two factors are in the code, not in data: `add esi, esi` at `0x038adc47` for the
   transfer budget and `lea esi, [ecx + eax*2]` at `0x038add08` for the salary budget
   (`ecx` = wage bill). A sum of 0 counts as 10,000; each amount added is kept within
-  -99,999,999 to 99,999,999. Worked from the squads of the edit file in this
-  repository, with every club taken at ranking place 10 and club part 300 (rough for
-  the salary budget), on the screen's scale: Manchester United about 39 million
-  transfer budget and 71 million salary budget with the game's formulas; with the
-  default tables of `sider/MLMoney.lua` about 75 and 171 million; Real Madrid about 52
-  / 154 million transfer budget, Burnley about 19 / 14 million. Not compared with a
-  new career in the game.
+  -99,999,999 to 99,999,999. The squad is the list of 8-byte player ids at `+0xf8` of
+  the club record, its length the 7 bits at `+0x328`, bit 9. Worked from the squads of
+  the edit file in this repository, with club part 300 for every club, on the screen's
+  scale: Manchester United about 39 million transfer budget with the game's formulas,
+  Real Madrid about 52, Burnley about 19. With the default tables of
+  `sider/MLMoney.lua` (factor 3): about 107, 232 and 19 million. The user saw 70 million
+  for Manchester United in a new career; whether a module was running then is not
+  known.
 - First day of a season (money step, event 3): `+0xdddfec` =
   `(403 - club rank) * 5,000`, at least 1,000, changed by -10 to +10 percent; `+0xdddff0`
   = `season_income`, changed the same way; three amounts of another record are added to
@@ -648,15 +650,28 @@ During the career `fcn_0385944c(player, change)` adds to it (11 callers at
 
 Age: the player record holds it in 6 bits at `+0x1c`, bits 7-12 (field `0x2b` of the
 getter `fcn_038278b0`; the next field is the 5-bit playing style, as in the edit file,
-where age is the only 6-bit field). The code tests it against 36, 37 and 45.
+where age is the only 6-bit field). The code tests it against 36, 37 and 45, the getter
+is called with `0x2b` at 94 places (the byte pattern of `push 0x2b` followed by the
+call), and at `0x038b585f` the setter `fcn_038281b0` writes 16 into it (taken to be a
+new youth player).
 
-### 6.6 A Sider module that changes values and salaries
+Other fields of the player record used by `sider/MLMoney.lua`: the registered position,
+4 bits at `+0x04`, bits 28-31 (field `0x00` of the same getter; the rating function
+`fcn_0383899a` reads it this way and turns the edit file's order, 0 GK to 12 CF, into
+the game's with `fcn_0383890b`); the player's id, a word at `+0x2c` and a dword at
+`+0x30` (`fcn_0383899a` compares the two with a "no player" id before anything else;
+in a list of ids the code compares the word and the dword the same way). The 98
+fields of the getter were mapped by running it on records with one bit set.
+
+### 6.6 A Sider module that changes values, salaries and budgets
 
 `sider/MLMoney.lua` replaces the rating part of the fee by `VALUE[rating] x AGE[age] x
-(1 + popularity bonus)` and the rating part of the salary by a table. What it writes and
-why is in `sider/money_cave.py`; `sider/test_money.py` runs the game's salary and fee
-code with the changes in the emulator and compares 6,000 random players with the Python
-of `money_cave.py`. Not yet run in the game.
+POSITION[registered position] x (the player's own fixed factor) x (1 + popularity
+bonus)`, the rating part of the salary by `SALARY[rating] x SALARY_AGE[age]`, and the 2
+of the two budget sums of 6.4 by settings. What it writes and why is in
+`sider/money_cave.py`. `sider/test_money.py` runs the game's salary, fee and budget code
+with the changes in the emulator and compares random players and squads with the Python
+of `money_cave.py`, also with every setting at its limit. Not yet run in the game.
 
 ## 7 Negotiations of the user's club
 
