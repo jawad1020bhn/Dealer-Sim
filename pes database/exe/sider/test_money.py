@@ -51,6 +51,12 @@ MODES = (0x13, 0x13, 0x13, 0x12, 0x14, 0x28, 0)              # Master League and
 # its memory. Writes: its memory and the places it changes.
 CAVE = ((mc.CAVE, mc.CAVE_SIZE),)
 READS = tuple((at, n) for _, at, n in mc.CONTEXT) + CAVE
+# the same for the price ceiling: touched only when CEILING is on
+CAVE_2 = ((mc.CAVE_2, mc.CAVE_2_SIZE),)
+READS_2 = tuple((at, n) for _, at, n in mc.CONTEXT_CEILING) + CAVE_2
+# ai_candidates: its two calls in ai_pick_candidate (the call, where it returns to), and what it asks
+CHOOSE_CALLS = ((0x03660d53, 0x03660d58), (0x03660db4, 0x03660db9))
+RECORD_BY_ID, PLAYER_CLUB, TODAY, FOREIGN_RULE, SQUAD_RULE = 0x03822663, 0x0382b087, 0x038ae451, 0x0388bce3, 0x0388f107
 ALL_SITES = tuple((at, len(old)) for _, at, old, _ in mc.SITES)
 INSTALLED = 'RESULT: installed. Changed: '
 
@@ -85,7 +91,7 @@ def settings(source):
                      numbers('LEAGUE'), numbers('LEAGUE_2'), number('PRIZE_TO_BUDGET'), number('PAY_GAP'),
                      number('BONUS'), number('YOUNG_YEARS'), knots('TALENT'), number('TALENT_STEP'),
                      number('TALENT_MAX'), number('TALENT_CAP'), number('INCOME'), by_id(), numbers('CUP_NATIONAL'),
-                     knots('CUP_TV'), number('INCOME_WAGES'))
+                     knots('CUP_TV'), number('INCOME_WAGES'), numbers('CEILING'), text('CEILING_RATING') == 'true')
 
 
 def setting(source, name, new):
@@ -97,7 +103,8 @@ def setting(source, name, new):
 
 
 def run(g, source, sticky=True):
-    """Runs the module's init on the emulator's memory. -> (log lines, reads, writes)"""
+    """Runs the module's init on the emulator's memory. sticky: do writes go in (or a
+    function of the address that says so)? -> (log lines, reads, writes)"""
     lua = LuaRuntime(encoding=None, unpack_returned_tuples=True)
     lines, reads, writes = [], [], []
 
@@ -107,7 +114,7 @@ def run(g, source, sticky=True):
 
     def write(address, data):
         writes.append((int(address), len(data)))
-        if sticky:
+        if sticky(int(address)) if callable(sticky) else sticky:
             poke(g, int(address), data)
 
     make = lua.eval('''function(source, log, read, write)
@@ -199,7 +206,16 @@ class Harness:
         g.write(rec + 0x2c, struct.pack('<II', 1234, 1))
         g.write(rec + 0xbc, struct.pack('<h', -1))
         self.heap = g.top
-        self.clean = [(a, g.read(a, n)) for a, n in READS + ALL_SITES]
+        self.clean = [(a, g.read(a, n)) for a, n in READS + READS_2 + ALL_SITES]
+        # for choose_cases: the object with the lists of players, a transfer plan, the list of
+        # candidates, the frame of ai_pick_candidate with room below it for the stack
+        self.pool, self.plan = g.alloc(size=0x800), g.alloc(size=0x118)
+        self.entries, self.found, self.found_data = g.alloc(size=16 * 64), g.alloc(size=16), g.alloc(size=64)
+        self.cells = [g.alloc(size=4) for _ in range(9)]
+        self.pick_frame = g.alloc(size=0x4000) + 0x3f00
+        g.write(self.pool + 0x7a0, b'\xff' * 8)              # no club shut out of the search
+        g.write(self.plan, struct.pack('<I', 100))           # the buying club
+        self.heap = g.top
 
     def restore(self):
         for a, d in self.clean:
@@ -365,6 +381,108 @@ class Harness:
         out = {k: mu.reg_read(REG[k]) for k in REG}
         out['ebp'] = mu.reg_read(UC_X86_REG_EBP)
         return out, mu.reg_read(UC_X86_REG_ESP) - esp
+
+    def choose_cases(self, n, t):
+        """The whole of ai_candidates (the game's code that lists up to three players a
+        computer club may sign), entered through its two calls in ai_pick_candidate and,
+        every eighth time, from somewhere else. Random lists of players by overall, club
+        levels 0 to 9 and six numbers that are no level, both searches, both sets of lists. The players it lists must be those
+        of money_cave.candidates. -> (cases in which the ceiling changed the list, players
+        refused by it)."""
+        g, v, mu = self.g, self.v, self.g.mu
+        answers = ((TODAY, lambda g, a: 0), (SQUAD_RULE, lambda g, a: 1), (FOREIGN_RULE, lambda g, a: 1),
+                   (PLAYER_CLUB, lambda g, a: self.team), (RECORD_BY_ID, lambda g, a: self.by_id.get(a(0) & 0xffff, 0)))
+        for address, fn in answers:
+            assert address not in g.replaced
+            g.replace(address, fn)
+        saved = dict(v)
+        v.update(overall=None, band=3, age=25)
+        sel, top, low, pos, flag, age_low, age_high, band, level_at = self.cells
+        frame, changed, refused = self.pick_frame, 0, 0
+        for case in range(n):
+            level = random.choice(list(range(10)) * 4 + [10, 11, 0x100, 0x109, 0x80000003, 0xffffffff])
+            wide, which = random.randint(0, 1), random.randint(0, 1)
+            lowest, highest = (40, 99) if wide else (random.randint(40, 70), random.randint(71, 99))
+            g.write(self.pool, b'\0' * 0x780)
+            self.by_id.clear()
+            lists, records, at = {}, [], self.entries
+            for k in range(random.randint(1, 14)):
+                rec = self.squad[k]
+                o, age, position, ident = self.some_player()
+                ident = (ident[0] & 0xffff0000 | k + 1, ident[1])
+                x = random.randint(0, 4095)
+                self.player(rec, o, age, x, position, ident)
+                # status 0, 1 or 2 (with or without a club); one in eight is already in a deal
+                # and one in eight on loan: the game's own tests refuse those
+                deal, loan = random.randint(0, 7) == 0, random.randint(0, 7) == 0
+                g.write(rec + 0xb4, struct.pack('<II', x << 11 | random.choice([0, 0, 1, 2]) | deal << 4
+                                                | random.getrandbits(9) << 23, loan << 28))
+                self.by_id[k + 1] = rec
+                lists.setdefault(random.randint(lowest - 1, highest), []).append(dict(
+                    rating=o, age=age, popularity=x, position=position, id=ident, passes=not deal and not loan))
+                records.append(rec)
+            for o in sorted(lists):
+                begin = at
+                for p in lists[o]:
+                    g.write(at, struct.pack('<II', *p['id']) + bytes(random.getrandbits(8) for _ in range(8)))
+                    at += 16
+                g.write(self.pool + (0x3c0 if which == 1 else 0) + (99 - o) * 16, struct.pack('<III', begin, at, at))
+            g.write(self.found, struct.pack('<III', self.found_data, self.found_data, self.found_data + 64))
+            g.write(self.plan + 8, b'\0' * 0x110)
+            for cell, value in ((sel, which), (top, highest), (low, lowest), (pos, 13), (flag, wide), (age_low, 0),
+                                (age_high, 99), (band, 0), (level_at, level)):
+                g.write(cell, struct.pack('<I', value))
+            g.write(frame + 0x1b, bytes([wide]))
+            g.write(frame + 0x1c, struct.pack('<I', level_at))
+            args = [sel, top, low, pos, self.plan, 0, flag, self.found, age_low, age_high, band]
+            before = [g.read(rec, 0x100) for rec in records]
+            from_pick = case % 8 != 7
+            # every other time the ceiling of this level is put exactly at one player's value
+            # (he is taken), or 1 below it (he is not)
+            edge = t is not None and t.ceiling is not None and level < mc.LEVELS and case % 2 == 0
+            if edge:
+                p = random.choice([p for group in lists.values() for p in group])
+                usual = t.ceiling[level]
+                t.ceiling[level] = max(0, mc.value(t, p['rating'], p['age'], p['popularity'], p['position'], p['id'])
+                                       - random.randint(0, 1))
+                g.write(mc.CEILING_TAB + 4 * level, struct.pack('<I', t.ceiling[level]))
+            if from_pick:
+                site, back = random.choice(CHOOSE_CALLS)
+                esp = frame - 0x60
+                mu.mem_write(esp - 0x1000, random.getrandbits(8 * 0x1000).to_bytes(0x1000, 'little'))   # what the stack held before
+                mu.mem_write(esp, struct.pack('<11I', *args))
+                for k in REG:
+                    mu.reg_write(REG[k], random.getrandbits(32))
+                kept = {k: mu.reg_read(REG[k]) for k in ('ebx', 'esi', 'edi')}
+                mu.reg_write(REG['ecx'], self.pool)
+                mu.reg_write(UC_X86_REG_ESP, esp)
+                mu.reg_write(UC_X86_REG_EBP, frame)
+                mu.emu_start(site, back)
+                assert mu.reg_read(UC_X86_REG_ESP) == esp + 0x2c and mu.reg_read(UC_X86_REG_EBP) == frame, 'stack'
+                assert all(mu.reg_read(REG[k]) == value for k, value in kept.items()), 'registers'
+            else:
+                g.call(mc.AI_CANDIDATES, args, ecx=self.pool)
+            begin, end, room = struct.unpack('<III', g.read(self.found, 12))
+            got = [struct.unpack('<II', g.read(a, 8)) for a in range(begin, end, 8)]
+
+            def walk(tables, **more):
+                return [p['id'] for p in mc.candidates(tables, level, lists, lowest, highest, wide,
+                                                       passes=lambda p: p['passes'], **more)]
+            want, free = walk(t if from_pick else None), walk(None)
+            assert got == want, (level, wide, which, lowest, highest, from_pick, got, want, lists)
+            assert begin == self.found_data and room == begin + 64 and len(got) <= 3
+            assert [g.read(rec, 0x100) for rec in records] == before, 'a player record was written to'
+            assert g.read(self.plan + 8, 0x110) == b'\0' * 0x110
+            changed += want != free
+            refused += len(walk(None, most=99)) - len(walk(t if from_pick else None, most=99))
+            if edge:
+                t.ceiling[level] = usual
+                g.write(mc.CEILING_TAB + 4 * level, struct.pack('<I', usual))
+        for address, _ in answers:
+            del g.replaced[address]
+        v.clear()
+        v.update(saved)
+        return changed, refused
 
     def prize_cases(self, n, t):
         """The two places of prize_step that pay a prize: what reaches the balance, the
@@ -546,6 +664,8 @@ def main(exe):
         h.income_cases(max(100, n // 5), t)
         if t is not None and t.bonus is not None:
             h.bonus_routines(200, t)
+        chosen = h.choose_cases(max(160, n // 4), t)
+        assert (chosen[0] > 0) == (t is not None and t.ceiling is not None), chosen
         return cups, leagues
 
     def names(t):
@@ -559,9 +679,11 @@ def main(exe):
         assert lines[-1] == INSTALLED + changed + '.', lines[-1]
         used = {name: (at, old, new) for name, at, old, new in t.sites()}
         places = tuple((at, len(old)) for at, old, _ in used.values())
-        assert inside(reads, READS + places), reads
-        assert inside(writes, CAVE + places), writes
+        ceiling = t.ceiling is not None                      # only then the second piece of memory is touched
+        assert inside(reads, READS + places + (READS_2 if ceiling else ())), reads
+        assert inside(writes, CAVE + places + (CAVE_2 if ceiling else ())), writes
         assert g.read(mc.CAVE, mc.CAVE_SIZE) == mc.image(t), 'the tables or routines differ from money_cave.py'
+        assert g.read(mc.CAVE_2, mc.CAVE_2_SIZE) == (mc.image_2(t) if ceiling else b'\0' * mc.CAVE_2_SIZE), 'ceiling'
         for name, at, old, _ in mc.SITES:
             assert g.read(at, len(old)) == (used[name][2] if name in used else old), name
         assert [l.split()[1] + (' ' + l.split()[2] if l.split()[3] == 'at' else '') for l in lines if l.startswith('written:')] == list(used)
@@ -581,13 +703,20 @@ def main(exe):
           'only; the contract limit is 3 years up to age 23; the three amounts of yearly income are 25 x '
           'popularity - 670 x the club\'s number - 3,451,330 (whatever the wage bill), (403 - rank) x 5,000 and '
           '15,000 + 165,000 x club level; on 28 and on 30 June the yearly budget step gives the two grants of money_cave.june_grants '
-          'for 2,000 cases each (to within 2)' % (cups, leagues))
+          'for 2,000 cases each (to within 2); ai_candidates, the code that lists the players a computer club may '
+          'sign, run whole through its two calls in ai_pick_candidate, lists the first three players of the '
+          'lists from the highest overall down who pass its tests, whatever their value' % (cups, leagues))
 
     # 1. the module as it is
     assert mc.lua_block(exe) in source, 'ROUTINES, SITES or CONTEXT of MLMoney.lua are not what money_cave.py makes'
-    assert mc.build() == {name: getattr(mc, name) for _, _, name in mc.ROUTINES} if KEYSTONE else True
+    assert mc.build() == {name: getattr(mc, name) for name in [r[2] for r in mc.ROUTINES] + ['CEILING_BYTES']} if KEYSTONE else True
     everything = ('values, salaries, transfer budget, cup prizes, league prizes, prizes into the transfer budget, '
-                  'pay gap, salary bonuses, contract years, yearly income, national cup prizes')
+                  'pay gap, salary bonuses, contract years, yearly income, national cup prizes, '
+                  'price ceiling of the computer clubs')
+    # the numbers of the game the ceiling goes by: the rating range by club level, the ranking places by level
+    assert [g.call(mc.AI_MAX_OVERALL, [g.alloc(struct.pack('<I', i))]) for i in range(11)] == list(mc.WINDOW_TOP) + [74]
+    assert [mc.level_of_place(p) for p in (1, 10, 11, 20, 21, 50, 51, 80, 81, 120, 121, 170, 171, 220, 221, 260, 261,
+                                           300, 301, 650)] == [9, 9, 8, 8, 7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 0, 0]
     t, lines = install(source, everything)
     print('\n'.join('    ' + l for l in lines))
     print('ok 1: the module passes its checks, writes only its memory and the places it reports, and what it '
@@ -616,12 +745,17 @@ def main(exe):
           'that pay a prize, in Master League and four other modes: balance, transfer budget, account line, '
           'registers and stack; the two bonus routines leave every other register as it was; the contract '
           'limit for every age; the three amounts of yearly income for %d cases each, with wage bills from 0 to '
-          'the largest number' % (n, n, cups, leagues, n // 5))
+          'the largest number; ai_candidates run whole for %d random sets of lists (club levels 0 to 9 and six '
+          'numbers that are no level, both searches, both sets of lists, players in a deal and on loan among '
+          'them, the ceiling put exactly at a player\'s value and 1 below it): it lists the players of '
+          'money_cave.candidates, passes over the others and goes on, leaves stack, registers, player records '
+          'and plan as the game does, and entered from anywhere else it lists as the game' % (
+              n, n, cups, leagues, n // 5, max(160, n // 4)))
 
     # 3. the switches, and settings at their limits
     optional = ('SALARY', 'BUDGET_TRANSFER', 'BUDGET_SALARY', 'CUP', 'LEAGUE', 'LEAGUE_2', 'PRIZE_TO_BUDGET',
                 'PAY_GAP', 'BONUS', 'YOUNG_YEARS', 'TALENT', 'INCOME', 'LEAGUE_BY_ID', 'CUP_NATIONAL', 'CUP_TV',
-                'INCOME_WAGES')
+                'INCOME_WAGES', 'CEILING')
 
     def only(**kept):
         """The module with every optional part off but the ones named (None: as in the file)."""
@@ -647,7 +781,7 @@ def main(exe):
              ('PRIZE_TO_BUDGET', None, 'prizes into the transfer budget'), ('PAY_GAP', None, 'pay gap'),
              ('BONUS', None, 'salary bonuses'), ('YOUNG_YEARS', None, 'contract years'),
              ('INCOME', '150', 'yearly income'), ('INCOME_WAGES', None, 'yearly income'),
-             ('CUP_NATIONAL', None, 'national cup prizes'),
+             ('CUP_NATIONAL', None, 'national cup prizes'), ('CEILING', None, 'price ceiling of the computer clubs'),
              # these three change no place of their own: the talent bonus is part of the fee
              # routine, a list by league needs LEAGUE, television money needs CUP
              ('TALENT', None, None), ('LEAGUE_BY_ID', None, None), ('CUP_TV', None, None))
@@ -686,6 +820,17 @@ def main(exe):
     t, _ = install(only(CUP_NATIONAL=national), 'values, national cup prizes')
     assert [mc.cup_prize(t, 23, st) for st in range(8)] == [20000000, 10, 70000, 70000, 5000, 2500, 1250, 0]
     h.cup_cases(t)
+    # the ceiling: without the rating rule; a group without a ceiling; the lowest and the highest amounts
+    for amounts, rating in ((None, 'false'), ('{ 0, 100, 50, 28, 18, 12, 8, 6, 4.5, 0 }', 'true'),
+                            ('{ 9999, 0.01, 0, 0.5, 1, 2, 3, 9999, 0.01, 0.02 }', 'true'),
+                            ('{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }', 'true'), ('{ 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01 }', 'false')):
+        t, lines = install(setting(only(CEILING=amounts), 'CEILING_RATING', rating), 'values, price ceiling of the computer clubs')
+        assert t.ceiling_top == (list(mc.WINDOW_TOP) if rating == 'true' else [255] * 10)
+        assert lines[-2].startswith('  second search: no player rated above' if rating == 'true' else '  second search: from rating 99')
+        assert h.choose_cases(500, t)[0] > 0
+    assert t.ceiling == [100] * 10
+    t = settings(setting(source, 'CEILING', '{ 9999, 0.01, 0, 0.5, 1, 2, 3, 9999, 0.01, 0.02 }'))
+    assert t.ceiling == [200, 100, 99990000, 30000, 20000, 10000, 5000, mc.NO_CEILING, 100, 99990000]
     both = setting(setting(source, 'BUDGET_SALARY', '2.5'), 'BUDGET_TRANSFER', '0.1')
     t, _ = install(both, everything.replace('transfer budget, cup', 'transfer budget, salary budget, cup'))
     assert (t.budget_transfer, t.budget_salary) == (10, 250)
@@ -728,6 +873,7 @@ def main(exe):
                       ('PAY_GAP', '10'), ('BONUS', '1000'), ('YOUNG_YEARS', '1'), ('INCOME', '1000'), ('INCOME_WAGES', '100'),
                       ('TALENT', '{ { 0, 0 }, { 63, 0 } }'), ('TALENT_STEP', '50'), ('TALENT_MAX', '200'), ('TALENT_CAP', '999'),
                       ('CUP_TV', '{ { 2, 2000 }, { 3, 0 } }'), ('CUP_NATIONAL', '{ 2000, 0.001, 2000, 0.001, 1234.567, 2000 }'),
+                      ('CEILING', '{ 9999, 0.01, 0, 0.5, 1, 2, 3, 9999, 0.01, 0.02 }'),
                       ('LEAGUE_BY_ID', '{\n    %s,\n}' % ', '.join(
                           '{ %d, %s }' % (i, '{ %s }' % ', '.join(['650', '0'] * 11) if i % 2 else '1000') for i in range(17, 29)))):
         limits = setting(limits, name, new)
@@ -743,18 +889,20 @@ def main(exe):
           'own places and nothing else; BUDGET_SALARY changes the salary budget; with spread, position and '
           'salary age switched off the value is VALUE x AGE plus popularity; PAY_GAP = %s give the club '
           'factor of money_cave.py at every place of the ranking; with every setting at its limit the code '
-          'and money_cave.py still agree' % (len(alone), ', '.join(gaps)))
+          'and money_cave.py still agree; the ceiling without the rating rule, with groups without a ceiling, '
+          'with none at all (the rating rule alone) and with the lowest amount everywhere' % (len(alone), ', '.join(gaps)))
 
     # 4. cases in which nothing may be written
     def refused(name, source, prepare, last, sticky=True, may_write_cave=False):
         h.restore()
         prepare()
-        before = [(a, g.read(a, n)) for a, n in READS + ALL_SITES]
+        before = [(a, g.read(a, n)) for a, n in READS + READS_2 + ALL_SITES]
         lines, reads, writes = run(g, source, sticky)
         assert lines[-1].startswith(last), (name, lines[-1])
-        assert inside(reads, READS), name
+        assert inside(reads, READS + READS_2), name
         if may_write_cave:
-            assert writes == [(mc.CAVE, mc.CAVE_SIZE)], (name, writes)
+            assert writes == [(mc.CAVE, mc.CAVE_SIZE), (mc.CAVE_2, mc.CAVE_2_SIZE)][:may_write_cave], (name, writes)
+            assert all(g.read(a, len(d)) == d for a, d in before if (a, len(d)) not in CAVE + CAVE_2), name
         else:
             assert writes == [] and all(g.read(a, len(d)) == d for a, d in before), name
         return lines
@@ -768,8 +916,33 @@ def main(exe):
                             'RESULT: nothing written. This game')
             assert [l for l in lines if l.endswith('DIFFERENT')] == ['check: %-13s at %08x  DIFFERENT' % (name, at)], lines
             flips += 1
-    for _, at, old, _ in mc.SITES:                           # every changed place lies inside a checked piece
-        assert any(a <= at and at + len(old) <= a + n for _, a, n in mc.CONTEXT), hex(at)
+    # the code the ceiling relies on, and its memory: checked while CEILING is on; with
+    # CEILING = false the module does not look there and installs the rest
+    without = setting(source, 'CEILING', 'false')
+    rest = everything.replace(', price ceiling of the computer clubs', '')
+
+    def others(prepare):
+        h.restore()
+        prepare()
+        lines, reads, writes = run(g, without)
+        used = tuple((at, len(old)) for _, at, old, _ in settings(without).sites())
+        assert lines[-1] == INSTALLED + rest + '.' and inside(reads, READS + used) and inside(writes, CAVE + used), lines[-1]
+    for name, at, size in mc.CONTEXT_CEILING:
+        for where in sorted({at, at + size // 2, at + size - 1}):
+            lines = refused(name, source, lambda: poke(g, where, bytes([g.read(where, 1)[0] ^ 1])),
+                            'RESULT: nothing written. This game')
+            assert [l for l in lines if l.endswith('DIFFERENT')] == ['check: %-13s at %08x  DIFFERENT' % (name, at)], lines
+            others(lambda: poke(g, where, bytes([g.read(where, 1)[0] ^ 1])))
+            flips += 1
+    for where in (0, mc.CAVE_2_SIZE // 2, mc.CAVE_2_SIZE - 1):
+        lines = refused('memory 2 in use', source, lambda: poke(g, mc.CAVE_2 + where, b'\x01'), 'RESULT: nothing written. This game')
+        assert [l for l in lines if l.endswith('NOT EMPTY')] == ['check: %-13s at %08x  NOT EMPTY' % ('free memory 2', mc.CAVE_2)]
+        assert not any(l.endswith('DIFFERENT') for l in lines), lines
+        others(lambda: poke(g, mc.CAVE_2 + where, b'\x01'))
+    for name, at, old, _ in mc.SITES:                        # every changed place lies inside a checked piece
+        pieces = mc.CONTEXT_CEILING if name == 'ceiling' else mc.CONTEXT
+        assert any(a <= at and at + len(old) <= a + n for _, a, n in pieces), hex(at)
+    assert mc.CAVE_2 + mc.CAVE_2_SIZE <= mc.CAVE and mc.CAVE + mc.CAVE_SIZE <= mc.CAVE_LIMIT
     for where in (0, mc.CAVE_SIZE // 2, mc.CAVE_SIZE - 1):
         lines = refused('memory in use', source, lambda: poke(g, mc.CAVE + where, b'\x01'), 'RESULT: nothing written. This game')
         assert any(l.endswith('NOT EMPTY') for l in lines) and not any(l.endswith('DIFFERENT') for l in lines), lines
@@ -814,17 +987,27 @@ def main(exe):
            ('CUP_TV: entry 2: CUP has no amounts for competition 7', source.replace('{ 3, 5.5 } }', '{ 7, 5.5 } }')),
            ('CUP_TV: entry 2 is not', source.replace('{ 3, 5.5 } }', '{ 3, 2001 } }')), ('CUP_TV is not', setting(source, 'CUP_TV', '24')),
            ('CUP_NATIONAL is not a list of 6', setting(source, 'CUP_NATIONAL', '{ 3, 2, 1, 0.5, 0.2 }')),
-           ('CUP_NATIONAL: entry 6 is not', setting(source, 'CUP_NATIONAL', '{ 3, 2, 1, 0.5, 0.2, 0 }')))
+           ('CUP_NATIONAL: entry 6 is not', setting(source, 'CUP_NATIONAL', '{ 3, 2, 1, 0.5, 0.2, 0 }')),
+           ('CEILING is not a list of 10', setting(source, 'CEILING', '{ 200, 100, 50, 28, 18, 12, 8, 6, 4.5 }')),
+           ('CEILING is not a list of 10', setting(source, 'CEILING', 'true')),
+           ('CEILING: entry 3 is not 0 or', setting(source, 'CEILING', '{ 200, 100, 0.001, 28, 18, 12, 8, 6, 4.5, 3 }')),
+           ('CEILING: entry 1 is not 0 or', setting(source, 'CEILING', '{ 10000, 100, 50, 28, 18, 12, 8, 6, 4.5, 3 }')),
+           ('CEILING: entry 10 is not 0 or', setting(source, 'CEILING', '{ 200, 100, 50, 28, 18, 12, 8, 6, 4.5, -3 }')),
+           ('CEILING_RATING is not', setting(source, 'CEILING_RATING', '5')))
     for name, text in bad:
         assert text != source, name
         refused('bad settings', text, lambda: None, 'RESULT: nothing written. Settings: ' + name)
     refused('write does not stick', source, lambda: None, 'RESULT: the tables could not be written', sticky=False,
-            may_write_cave=True)
+            may_write_cave=1)
+    refused('write to the second memory does not stick', source, lambda: None, 'RESULT: the tables could not be written',
+            sticky=lambda address: address != mc.CAVE_2, may_write_cave=2)
     h.restore()
     assert h.unchanged()
     check(None, 200, 20)
     print('ok 4: WRITE = false, one changed byte at %d places of the checked code and data, memory not empty, %d '
-          'kinds of faulty settings: nothing is written; a write that does not stick: the code is not touched' % (flips, len(bad)))
+          'kinds of faulty settings: nothing is written; a write that does not stick, to either piece of memory: the '
+          'code is not touched; with CEILING = false the module does not look at the transfer code or the second '
+          'piece of memory and installs the rest whatever is there' % (flips, len(bad)))
 
     # 5. the one player we have screen numbers of
     assert money.fee(72597, 89, 955) * mc.UNIT == 36743200

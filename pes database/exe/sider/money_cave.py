@@ -96,9 +96,27 @@ starting amount in club_money_setup) become calls that do the same and apply INC
 The yearly budget step (6.7) is not changed. june_grants() below is its arithmetic, and
 test_money.py runs the game's code for both days against it.
 
+Transfers of the computer clubs (9.6, 9.10). ai_candidates (fcn_0365f5c2) lists up to
+three players a computer club may sign for a position: it walks lists of players by
+overall from the top of the club's rating range down and adds every player who passes
+its tests with `mov ecx, [ebp + 0x24]; push esi; call 0x041293c0` at 0x0365fb0d. None of
+the tests reads a price. Those nine bytes become a call to CEILING_CODE, which works out
+the player's value (the game's rating call, then FEE_CODE) and compares it with
+CEILING_TAB[club level]; in the club's second search, among all players, it first compares
+the rating with CEILING_TOP[club level]. Above either, it drops its return address and
+jumps to 0x0365fb28, where the game's own failed tests go: the next player. The level and
+the "second search" byte are arguments and locals of ai_pick_candidate (fcn_03660c52),
+the only caller; the routine reads them through the saved ebp, and only if ai_candidates
+will return to one of its two calls there. Otherwise, and with a level above 9, the player
+is added as in the game. candidates() below is the walk with and without the ceiling;
+test_money.py runs the whole of ai_candidates against it.
+
 The memory used is the end of the section .trace: the section's content ends at
 0x047b005d, its declared size at 0x047b0123, and its last page runs to 0x047b0fff. The
 section is readable, writable and executable. No call or jump of the exe goes there.
+The ceiling's tables and routine are in a second piece of the same page, below the first
+and after the declared size (CAVE_2); the file holds zeros there and no call, jump or
+stored address of the exe points into 0x047b0124-0x047b01fe.
 """
 import struct
 import sys
@@ -118,7 +136,7 @@ BUDGET_T_AT = CAVE + 0x44c      # dword: transfer budget, percent of the mean va
 BUDGET_S_AT = CAVE + 0x450      # dword: salary budget, percent of the mean salary of the best 16
 HUNDRED_AT = CAVE + 0x454       # dword 100
 THOUSAND_AT = CAVE + 0x458      # dword 1000
-MARK_AT = CAVE + 0x45c          # 4 bytes "MLM4"
+MARK_AT = CAVE + 0x45c          # 4 bytes "MLM5"
 TALENT_TAB = CAVE + 0x480       # 64 bytes, by age 0-63: the rating above which a young player gets the
                                 # talent bonus (255: no bonus at this age)
 INCOME_N_CODE = CAVE + 0x460     # (0x4c0 to 0x4cb are not used)
@@ -151,6 +169,21 @@ LEAGUE_ROWS_TAB = CAVE + 0xbb0  # 12 rows of 24 words: prize by place in units o
 LEAGUE_ROWS, LEAGUE_ROW_WORDS, LEAGUE_UNIT = 12, 24, 100
 CAVE_SIZE = 0xdf0
 CAVE_LIMIT = 0x047b1000
+# a second, smaller piece of the same page, below the first: the price ceiling of the
+# computer clubs (only written when CEILING is on)
+CAVE_2 = 0x047b0130
+CAVE_2_SIZE = 0xcc
+CEILING_TAB = CAVE_2            # 10 dwords, by club level 0-9: the highest value a club of that level takes
+CEILING_TOP = CAVE_2 + 0x28     # 10 bytes, by club level: the highest rating it takes in the second, wide search
+CEILING_CODE = CAVE_2 + 0x32
+NO_CEILING = 0xffffffff         # in CEILING_TAB: this level takes any value
+NO_TOP = 0xff                   # in CEILING_TOP: this level takes any rating
+LEVELS = 10
+# the highest overall of the rating range of a club, by level 0 to 9 (fcn_0365d08d)
+WINDOW_TOP = (74, 75, 76, 77, 78, 79, 80, 83, 86, 99)
+# the club ranking places of each level, 9 down to 0 (fcn_036720d7 and fcn_03672359; the last has no end)
+LEVEL_PLACES = ((1, 10), (11, 20), (21, 50), (51, 80), (81, 120), (121, 170), (171, 220), (221, 260), (261, 300),
+                (301, None))
 
 FEE_SITE = 0x038ab8db
 FEE_SITE_OLD = bytes.fromhex('83f844760c8db8bcffffff69ff28230000')
@@ -186,6 +219,15 @@ INCOME_S_SITE, INCOME_S_SITE_OLD = 0x038ae025, bytes.fromhex('81c6983a0000')   #
 # mov eax, [ebp + 8]; push eax; call club_popularity
 INCOME_W_SITE, INCOME_W_SITE_OLD = 0x038adeaa, bytes.fromhex('8b450850e8a2a9fcff')
 CLUB_POPULARITY = 0x03878855
+# ai_candidates (fcn_0365f5c2): a player who passed every test is put on the list of candidates:
+# mov ecx, [ebp + 0x24]; push esi; call take
+CEILING_SITE, CEILING_SITE_OLD = 0x0365fb0d, bytes.fromhex('8b4d2456e8aa98ac00')
+AI_CANDIDATES, AI_PICK, AI_MAX_OVERALL = 0x0365f5c2, 0x03660c52, 0x0365d08d
+AI_NEXT_PLAYER = 0x0365fb28                     # where ai_candidates goes on when a player fails a test
+AI_TAKEN = 0x0365fb16                           # the instruction after the replaced ones
+AI_PICK_RETURNS = (0x03660d58, 0x03660db9)      # where ai_candidates returns to: its two calls in ai_pick_candidate
+TAKE = 0x041293c0                               # adds an id pair to a list (thiscall, one argument)
+RATING = 0x03853b42                             # (player record, -> position or 13, kind) -> rating in al
 # cup_prize: the amounts for a cup that has no row in the table, by stage (immediates of six mov edi)
 NATIONAL_SITES = ((0x038aa43a, 20000), (0x038aa446, 10000), (0x038aa452, 5000), (0x038aa45e, 1000),
                   (0x038aa46a, 500), (0x038aa476, 300))
@@ -422,6 +464,75 @@ l2: imul ecx, ecx, {LEAGUE_ROW_WORDS}
     imul eax, eax, {LEAGUE_UNIT}
     ret
 '''
+# The price ceiling. Entered by a call from ai_candidates (ebp = its frame) in the place of
+# `mov ecx, [ebp + 0x24]; push esi; call take`. The player record the function is looking
+# at is its local [ebp - 0x28]. The club level is not handed to ai_candidates; it is an
+# argument of its only caller, ai_pick_candidate ([its ebp + 0x1c] -> level), whose frame
+# is the saved ebp; the byte [its ebp + 0x1b] is 1 in the second, wide search (lowest
+# overall handed in as 0). If ai_candidates was not called from one of the two known
+# places, or the level is not 0 to 9, the player is taken as in the game. Otherwise:
+#   - the rating is fetched with the game's rating call, as the fee function does;
+#   - in the wide search a rating above CEILING_TOP[level] is refused;
+#   - the value is worked out by FEE_CODE (record in ebx, scratch dword at [ebp - 0xc])
+#     and a value above CEILING_TAB[level] is refused.
+# Refused: the return address is dropped and the game's "next player" follows.
+# Locals: [ebp - 4] ceiling, [ebp - 8] position 13, [ebp - 0xc] scratch of FEE_CODE,
+# [ebp - 0x10] wide search, [ebp - 0x14] highest rating.
+CEILING_SOURCE = f'''
+    push ebx
+    push edi
+    push ebp
+    mov ebp, esp
+    sub esp, 0x14
+    mov eax, dword ptr [ebp]
+    mov ebx, dword ptr [eax - 0x28]
+    mov ecx, dword ptr [eax + 4]
+    cmp ecx, {AI_PICK_RETURNS[0]}
+    je c1
+    cmp ecx, {AI_PICK_RETURNS[1]}
+    jne c3
+c1: mov eax, dword ptr [eax]
+    movzx ecx, byte ptr [eax + 0x1b]
+    mov dword ptr [ebp - 0x10], ecx
+    mov eax, dword ptr [eax + 0x1c]
+    mov eax, dword ptr [eax]
+    cmp eax, {LEVELS - 1}
+    ja c3
+    movzx ecx, byte ptr [eax + {CEILING_TOP}]
+    mov dword ptr [ebp - 0x14], ecx
+    mov eax, dword ptr [eax*4 + {CEILING_TAB}]
+    mov dword ptr [ebp - 4], eax
+    mov dword ptr [ebp - 8], 0xd
+    push 2
+    lea eax, [ebp - 8]
+    push eax
+    push ebx
+    call {RATING}
+    add esp, 12
+    movzx eax, al
+    cmp dword ptr [ebp - 0x10], 0
+    je c2
+    cmp eax, dword ptr [ebp - 0x14]
+    ja c4
+c2: call {FEE_CODE}
+    cmp edi, dword ptr [ebp - 4]
+    ja c4
+c3: mov esp, ebp
+    pop ebp
+    pop edi
+    pop ebx
+    pop eax
+    mov ecx, dword ptr [ebp + 0x24]
+    push esi
+    push eax
+    jmp {TAKE}
+c4: mov esp, ebp
+    pop ebp
+    pop edi
+    pop ebx
+    add esp, 4
+    jmp {AI_NEXT_PLAYER}
+'''
 # the assembled routines (python3 money_cave.py build checks them against the source above)
 FEE_BYTES = bytes.fromhex(
     '83f8637605b86300000089c78b048500027b048b4b1cc1e90783e13f0fb69180067b0429d77f0231ff0faf3d800d7b043b3d840d7b0476'
@@ -441,6 +552,11 @@ INCOME_M_BYTES = bytes.fromhex('69c088130000eb04')
 INCOME_SCALE_BYTES = bytes.fromhex('85c07e0e52f7258c0d7b04f73554067b045ac3')
 INCOME_S_BYTES = bytes.fromhex('81c6983a00005089f0e8deffffff89c658c3')
 LEAGUE_BYTES = bytes.fromhex('31c9eb0d0fb7144d900d7b0439fa7411413b0da80d7b0472eb8b0485c0077b04c36bc91801c10fb7044db00d7b046bc064c3')
+CEILING_BYTES = bytes.fromhex(
+    '53575589e583ec148b45008b58d88b480481f9580d6603740881f9b90d660375558b000fb6481b894df08b401c8b0083f80977420fb688'
+    '58017b04894dec8b048530017b048945fcc745f80d0000006a028d45f85053e885390aff83c40c0fb6c0837df00074053b45ec771ae8bd'
+    '0a00003b7dfc771089ec5d5f5b588b4d245650e9d89197ff89ec5d5f5b83c404e933f9eafe')
+assert CEILING_CODE + len(CEILING_BYTES) <= CAVE_2 + CAVE_2_SIZE <= CAVE
 ROUTINES = ((FEE_CODE, FEE_SOURCE, 'FEE_BYTES'), (SALARY_CODE, SALARY_SOURCE, 'SALARY_BYTES'),
             (BUDGET_T_CODE, BUDGET_T_SOURCE, 'BUDGET_T_BYTES'), (BUDGET_S_CODE, BUDGET_S_SOURCE, 'BUDGET_S_BYTES'),
             (PRIZE_CODE, PRIZE_SOURCE, 'PRIZE_BYTES'), (BONUS_R_CODE, BONUS_R_SOURCE, 'BONUS_R_BYTES'),
@@ -467,6 +583,7 @@ MAX_TALENT_STEP, MAX_TALENT_PERCENT = 50, 200
 MIN_INCOME, MAX_INCOME = 10, 1000
 MAX_INCOME_WAGES = 100                  # percent: the wage bill times this still fits the division
 MAX_LEAGUE_ROW = 650                    # millions: a place of a list by league is kept in 16 bits
+MIN_CEILING, MAX_CEILING = 0.01, 9999   # millions; 0 in the list: no ceiling for that group of clubs
 NO_TALENT = 255
 
 # the code the routines rely on: name, address, byte count (MLMoney.lua compares these
@@ -492,6 +609,16 @@ CONTEXT = (
     ('income', 0x038ade76, 141),            # season_income, the whole function
     ('rank income', 0x038a9e6b, 66),        # the whole function
     ('career money', 0x038adfb6, 144),      # club_money_setup: the amount by club level
+)
+
+
+# the same for the price ceiling; compared only when CEILING is on
+CONTEXT_CEILING = (
+    ('choose', AI_CANDIDATES, 1462),        # ai_candidates, the whole function
+    ('pick', AI_PICK, 373),                 # ai_pick_candidate up to the end of its two calls of ai_candidates
+    ('range', AI_MAX_OVERALL, 152),         # the highest overall of a club's rating range, by level (WINDOW_TOP)
+    ('rating', RATING, 9),                  # the rating call of the fee function
+    ('take', TAKE, 114),                    # the function that adds a player to the candidates, both its returns
 )
 
 
@@ -525,7 +652,8 @@ SITES = (('fee', FEE_SITE, FEE_SITE_OLD, FEE_SITE_NEW), ('salary', SALARY_SITE, 
          ('income 3', INCOME_S_SITE, INCOME_S_SITE_OLD, call(INCOME_S_SITE, INCOME_S_CODE) + b'\x90'),
          ('income 4', INCOME_W_SITE, INCOME_W_SITE_OLD, call(INCOME_W_SITE, WAGES_KEEP_CODE) + b'\x90' * 4),
          ) + tuple(('nat %d' % i, at, struct.pack('<I', old), struct.pack('<I', old))
-                   for i, (at, old) in enumerate(NATIONAL_SITES))
+                   for i, (at, old) in enumerate(NATIONAL_SITES)) + (
+         ('ceiling', CEILING_SITE, CEILING_SITE_OLD, call(CEILING_SITE, CEILING_CODE) + b'\x90' * 4),)
 assert all(len(old) == len(new) for _, _, old, new in SITES)
 
 
@@ -576,12 +704,16 @@ class Tables:
     talent_cap: millions; income: percent or None; league_by_id: list of (league, list of
     millions | percent of `league`) or None; cup_national: six amounts in millions or
     None; cup_tv: list of (competition, millions) or None; income_wages: percent of the
-    wage bill added to the yearly income, or None."""
+    wage bill added to the yearly income, or None; ceiling: 10 amounts in millions for the
+    club ranking places of LEVEL_PLACES (best clubs first; 0: no ceiling), or None;
+    ceiling_rating: with a ceiling, the second search of a club stays below the top of its
+    rating range."""
 
     def __init__(self, value, age, position, spread, fame, salary, salary_age, budget_transfer, budget_salary,
                  cup=None, league=None, league_2=None, prize_share=None, pay_gap=None, bonus=None,
                  young_years=None, talent=None, talent_step=0, talent_max=0, talent_cap=0, income=None,
-                 league_by_id=None, cup_national=None, cup_tv=None, income_wages=None):
+                 league_by_id=None, cup_national=None, cup_tv=None, income_wages=None, ceiling=None,
+                 ceiling_rating=True):
         self.value = [clamp(amount(m), 1, CAP) for m in curve(value, 0, 99, True)]
         self.age = [clamp(int(p + 0.5), 0, MAX_AGE_PERCENT) for p in curve(age, 0, 63, False)]
         self.position = [clamp(int(position[n] + 0.5), 0, MAX_POSITION_PERCENT) for n in POSITIONS] + [100] * 3
@@ -638,6 +770,11 @@ class Tables:
         assert len(self.league_rows) <= LEAGUE_ROWS
         self.national = None if not cup_national else [prize(m) for m in cup_national]
         assert self.national is None or len(self.national) == len(NATIONAL_SITES)
+        # by club level 0 to 9 (the list in the settings starts with the best clubs, level 9)
+        assert ceiling is None or len(ceiling) == LEVELS
+        self.ceiling = None if ceiling is None else [
+            clamp(amount(m), amount(MIN_CEILING), amount(MAX_CEILING)) if m else NO_CEILING for m in reversed(ceiling)]
+        self.ceiling_top = list(WINDOW_TOP) if ceiling_rating else [NO_TOP] * LEVELS
 
     def sites(self):
         """The places the module changes with these settings: (name, address, old, new)."""
@@ -648,7 +785,7 @@ class Tables:
               'cup 3': self.has_cup, 'league 1': self.has_league, 'league 2': self.has_league_2,
               'prize 1': share, 'prize 2': share, 'pay gap': self.has_gap, 'bonus 1': bonus, 'bonus 2': bonus,
               'years': self.young_years is not None, 'income 1': income or wages, 'income 2': income, 'income 3': income,
-              'income 4': wages}
+              'income 4': wages, 'ceiling': self.ceiling is not None}
         used = []
         for name, at, old, new in SITES:
             if name == 'years' and on[name]:
@@ -673,7 +810,7 @@ def image(t):
     d += struct.pack('<64H', *t.salary_age) + struct.pack('<16H', *t.position)
     assert len(d) == FAME_AT - CAVE
     d += struct.pack('<7I', t.fame, t.spread_low, t.spread_range, t.budget_transfer or 200, t.budget_salary or 200,
-                     100, 1000) + b'MLM4'
+                     100, 1000) + b'MLM5'
     pieces = [(at, globals()[name]) for at, _, name in ROUTINES]
     pieces += [(LEAGUE1_TAB, struct.pack('<23I', *t.league)), (LEAGUE2_TAB, struct.pack('<25I', *t.league_2)),
                (RANK_STEP_AT, struct.pack('<d', t.rank_step)),
@@ -691,23 +828,74 @@ def image(t):
     return d.ljust(CAVE_SIZE, b'\0')
 
 
+def image_2(t):
+    """The second piece of memory: the ceilings by club level and the routine."""
+    d = struct.pack('<%dI' % LEVELS, *t.ceiling) + bytes(t.ceiling_top)
+    assert CAVE_2 + len(d) == CEILING_CODE
+    d += CEILING_BYTES
+    assert len(d) <= CAVE_2_SIZE
+    return d.ljust(CAVE_2_SIZE, b'\0')
+
+
 def spread_hash(id_low, id_high):
     """The byte the fee routine makes from a player's id."""
     x = (id_low & 0xffff) ^ (id_high * HASH_A & 0xffffffff)
     return (x * HASH_B & 0xffffffff) >> 24
 
 
-def fee(t, rating, age, popularity, position=5, player=(0, 0), base=0, percent=0, keep=False):
-    """The transfer fee with MLMoney.lua in place (stored amount; the screen shows 100 times it).
-    position: 0 GK ... 12 CF (the edit file's order); player: the two parts of the player's id;
-    base, percent, keep: as in ../tools/money.py fee()."""
+def value(t, rating, age, popularity, position=5, player=(0, 0)):
+    """What the fee routine leaves in edi: the player's value before a handed-in figure,
+    the random change and the game's limit."""
     rating = min(rating, 99)
     x = t.value[rating] * t.age[age] // 100
     percent_more = min(max(0, rating - t.talent[age]) * t.talent_step, t.talent_max)
     x += min(x * percent_more // 100, t.talent_cap)
     x = x * t.position[position] // 100
     x = min(CAP, x * (t.spread_low + (spread_hash(*player) * t.spread_range >> 8)) // 1000)
-    x += x * (popularity * t.fame) // 100000
+    return x + x * (popularity * t.fame) // 100000
+
+
+def level_of_place(place):
+    """The club level 0 to 9 the game gives a place of its club ranking."""
+    for level, (first, last) in zip(range(LEVELS - 1, -1, -1), LEVEL_PLACES):
+        if last is None or place <= last:
+            return level
+
+
+def affordable(t, level, rating, age, popularity, position=5, player=(0, 0), wide=False, from_pick=True):
+    """Does a computer club of this level take the player as a candidate (after all the
+    game's own tests)? wide: the second search, among all players. Without the ceiling,
+    with a level outside 0 to 9, or when the choosing code was not entered from
+    ai_pick_candidate: always."""
+    if t is None or t.ceiling is None or not from_pick or not 0 <= level < LEVELS:
+        return True
+    if wide and rating > t.ceiling_top[level]:
+        return False
+    return value(t, rating, age, popularity, position, player) <= t.ceiling[level]
+
+
+def candidates(t, level, lists, lowest, highest, wide=False, passes=lambda p: True, most=3):
+    """The walk of ai_candidates over one set of lists: from the highest overall asked for
+    down to the lowest, each list in its order, the first `most` players who pass the
+    game's tests and the ceiling. lists: {overall: [player, ...]}, a player being a dict
+    with rating, age, popularity, position, id. As the game, the walk leaves out the list
+    of `lowest` itself."""
+    out = []
+    for overall in range(highest, lowest, -1):
+        for p in lists.get(overall, ()):
+            if passes(p) and affordable(t, level, p['rating'], p['age'], p['popularity'], p['position'], p['id'],
+                                        wide):
+                out.append(p)
+                if len(out) >= most:
+                    return out
+    return out
+
+
+def fee(t, rating, age, popularity, position=5, player=(0, 0), base=0, percent=0, keep=False):
+    """The transfer fee with MLMoney.lua in place (stored amount; the screen shows 100 times it).
+    position: 0 GK ... 12 CF (the edit file's order); player: the two parts of the player's id;
+    base, percent, keep: as in ../tools/money.py fee()."""
+    x = value(t, rating, age, popularity, position, player)
     if keep:
         x = base
     if percent:
@@ -867,17 +1055,19 @@ def budgets(t, fees, salaries, wage_bill):
 def build():
     import keystone
     ks = keystone.Ks(keystone.KS_ARCH_X86, keystone.KS_MODE_32)
-    return {name: bytes(ks.asm(source, at)[0]) for at, source, name in ROUTINES}
+    out = {name: bytes(ks.asm(source, at)[0]) for at, source, name in ROUTINES}
+    out['CEILING_BYTES'] = bytes(ks.asm(CEILING_SOURCE, CEILING_CODE)[0])
+    return out
 
 
-def context_lua(exe):
+def context_lua(exe, name='CONTEXT', pieces=None):
     """The CONTEXT list of MLMoney.lua, from the bytes of the exe file."""
     import os
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tools'))
     from layout import load, off
     d = load(exe)
-    lines = ['local CONTEXT = {']
-    for name, at, n in CONTEXT:
+    lines = ['local %s = {' % name]
+    for name, at, n in CONTEXT if pieces is None else pieces:
         h = d[off(at):off(at) + n].hex()
         parts = [h[i:i + 88] for i in range(0, len(h), 88)]
         lines.append('    { "%s", 0x%08x,' % (name, at))
@@ -900,7 +1090,10 @@ def lua_block(exe):
     for name, at, old, new in SITES:
         out += '    { "%s", 0x%08x, "%s", "%s" },\n' % (name, at, old.hex(), new.hex())
     return (out + '}\n\n-- The code and data those places and the routines rely on: name, address, bytes.\n'
-            + context_lua(exe) + '\n')
+            + context_lua(exe) + '\n\n-- The price ceiling: its routine (offset in the second piece of memory) and the code\n'
+            '-- it relies on, which is compared only when CEILING is on.\n'
+            'local CEILING_ROUTINE = { 0x%02x, %s }\n' % (CEILING_CODE - CAVE_2, quoted(CEILING_BYTES.hex(), 60))
+            + context_lua(exe, 'CEILING_CONTEXT', CONTEXT_CEILING) + '\n')
 
 
 if __name__ == '__main__':
@@ -912,7 +1105,9 @@ if __name__ == '__main__':
             assert code == globals()[name], '%s: the bytes kept in this file are not what the source assembles to: %s' % (name, code.hex())
         print('ok: the source assembles to the bytes kept in this file')
     print('memory   %08x - %08x' % (CAVE, CAVE + CAVE_SIZE - 1))
+    print('memory 2 %08x - %08x (the price ceiling)' % (CAVE_2, CAVE_2 + CAVE_2_SIZE - 1))
     for name, at, old, new in SITES:
         print('%-9s %08x: %s -> %s' % (name, at, old.hex(), new.hex()))
     for at, _, name in ROUTINES:
         print('%-15s %08x: %s' % (name, at, globals()[name].hex()))
+    print('%-15s %08x: %s' % ('CEILING_BYTES', CEILING_CODE, CEILING_BYTES.hex()))
