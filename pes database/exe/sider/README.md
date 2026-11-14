@@ -745,15 +745,16 @@ all the game keeps of it. The wage share added after the floor of 1,000 is seen 
 with a wage bill near the largest number, because the game's amount never reaches
 that floor.
 
-Versions 5 and 6 (`python3 planted_faults.py <exe> routine` and `files`): every one of
-the 2,504 bits of the ceiling routine of version 6 was flipped in turn. 2,497 flips
+The price ceiling (`python3 planted_faults.py <exe> routine` and `files`; run again
+after the ceiling moved to `MLTransfers.lua`, with the same counts for the routine):
+every one of the 2,504 bits of the ceiling routine was flipped in turn. 2,497 flips
 made the cases fail (version 5: 1,169 of 1,176). Six of the other seven turn the
 `push ebx` or `push edi` at its start into the push of another register, so a wrong
 value comes back in `ebx` or `edi`; the game loads both anew right after
 (`0x0365fb28`) or returns, so no result changes, and the routine restores them all the
 same. The seventh turns `sub esp, 0x1c` into `and esp, 0x1c`; the emulator has memory
 at address 0 and the test answers the rating call itself, so the routine still works
-there, while the real game would stop. Then 32
+there, while the real game would stop. Then 37
 faults in the files, each with a whole run of the test: in the Lua the ceilings or the
 ratings in reverse order, the place not written, the comparison of the transfer code or
 the test for empty memory left out, "no ceiling" written as 0, wrong limits, the rating
@@ -764,8 +765,10 @@ lowest list searched too, the ceilings in reverse; and for version 6, in the Lua
 need written without its 100, the two discounts swapped, a negative number let
 through, in `money_cave.py` need counted in only one of its two cases, a wrong divisor
 of the stretch, the club left out of the hash, the discount for only one of the two
-statuses, both discounts for a listed player without a contract. All 32 made the test
-fail.
+statuses, both discounts for a listed player without a contract; and for the two
+files, in `MLTransfers.lua` the mark of `MLMoney.lua` not looked at or looked for at a
+wrong address, the value routine not compared, a ceiling that is in already not seen,
+`WRITE = false` not obeyed. All 37 made the test fail.
 
 Not shown by the test: for the price ceiling, anything above the two searches of
 `ai_pick_candidate` (how the game calls it in a transfer window, how often the first
