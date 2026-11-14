@@ -56,6 +56,7 @@ CAVE_2 = ((mc.CAVE_2, mc.CAVE_2_SIZE),)
 READS_2 = tuple((at, n) for _, at, n in mc.CONTEXT_CEILING) + CAVE_2
 # ai_candidates: its two calls in ai_pick_candidate (the call, where it returns to), and what it asks
 CHOOSE_CALLS = ((0x03660d53, 0x03660d58), (0x03660db4, 0x03660db9))
+PICK_SEARCHED = 0x03660dce      # ai_pick_candidate: the first instruction after its two searches
 RECORD_BY_ID, PLAYER_CLUB, TODAY, FOREIGN_RULE, SQUAD_RULE = 0x03822663, 0x0382b087, 0x038ae451, 0x0388bce3, 0x0388f107
 ALL_SITES = tuple((at, len(old)) for _, at, old, _ in mc.SITES)
 INSTALLED = 'RESULT: installed. Changed: '
@@ -91,7 +92,8 @@ def settings(source):
                      numbers('LEAGUE'), numbers('LEAGUE_2'), number('PRIZE_TO_BUDGET'), number('PAY_GAP'),
                      number('BONUS'), number('YOUNG_YEARS'), knots('TALENT'), number('TALENT_STEP'),
                      number('TALENT_MAX'), number('TALENT_CAP'), number('INCOME'), by_id(), numbers('CUP_NATIONAL'),
-                     knots('CUP_TV'), number('INCOME_WAGES'), numbers('CEILING'), text('CEILING_RATING') == 'true')
+                     knots('CUP_TV'), number('INCOME_WAGES'), numbers('CEILING'), text('CEILING_RATING') == 'true',
+                     number('CEILING_STRETCH'), number('CEILING_NEED'), number('CEILING_LISTED'), number('CEILING_FREE'))
 
 
 def setting(source, name, new):
@@ -384,11 +386,15 @@ class Harness:
 
     def choose_cases(self, n, t):
         """The whole of ai_candidates (the game's code that lists up to three players a
-        computer club may sign), entered through its two calls in ai_pick_candidate and,
-        every eighth time, from somewhere else. Random lists of players by overall, club
-        levels 0 to 9 and six numbers that are no level, both searches, both sets of lists. The players it lists must be those
-        of money_cave.candidates. -> (cases in which the ceiling changed the list, players
-        refused by it)."""
+        computer club may sign). Of eight cases, four enter it through its two calls in
+        ai_pick_candidate with a made-up frame of that function (any range, club levels 0 to
+        9 and six numbers that are no level); three run ai_pick_candidate itself from its
+        first instruction to the end of its two searches, so that the level, the range and
+        the "second search" byte are where the game puts them; one calls it from somewhere
+        else. Random lists of players by overall in both sets, players with and without a
+        contract, listed, in a deal and on loan, slots that ask for a status band, any
+        buying club. The players listed must be those of money_cave.candidates.
+        -> (cases in which the ceiling changed the list, players refused by it)."""
         g, v, mu = self.g, self.v, self.g.mu
         answers = ((TODAY, lambda g, a: 0), (SQUAD_RULE, lambda g, a: 1), (FOREIGN_RULE, lambda g, a: 1),
                    (PLAYER_CLUB, lambda g, a: self.team), (RECORD_BY_ID, lambda g, a: self.by_id.get(a(0) & 0xffff, 0)))
@@ -396,57 +402,98 @@ class Harness:
             assert address not in g.replaced
             g.replace(address, fn)
         saved = dict(v)
-        v.update(overall=None, band=3, age=25)
+        v.update(overall=None, age=25)
         sel, top, low, pos, flag, age_low, age_high, band, level_at = self.cells
         frame, changed, refused = self.pick_frame, 0, 0
         for case in range(n):
-            level = random.choice(list(range(10)) * 4 + [10, 11, 0x100, 0x109, 0x80000003, 0xffffffff])
+            g.top = self.heap
+            how = ('frame', 'frame', 'pick', 'frame', 'pick', 'frame', 'pick', 'other')[case % 8]
+            level = random.choice(list(range(10)) * 4 + ([] if how == 'pick' else [10, 11, 0x100, 0x109, 0x80000003, 0xffffffff]))
             wide, which = random.randint(0, 1), random.randint(0, 1)
-            lowest, highest = (40, 99) if wide else (random.randint(40, 70), random.randint(71, 99))
+            lowest = 40 if wide else random.randint(40, 70)
+            highest = 99 if wide else mc.WINDOW_TOP[level] if how == 'pick' else random.randint(71, 99)
+            # the slot asks for a status band (the game: 6, for one slot of a top club on the last day of a
+            # window) or for none; v['band'] is the band of every player of this case
+            asked = 0 if wide and how == 'pick' else random.choice([0, 0, 6])
+            v['band'] = random.choice([3, 3, 6, 7])
+            kind = random.choice([0, 0, 1, 2, 3, 4])         # of the plan: 1 and 4 search the second set only
+            club = random.getrandbits(32) & ~0x3fff | random.randint(1, 0x3fff) ^ 0x66      # not the players' club
+            assert (club ^ 0x4066) & 0x3fff
             g.write(self.pool, b'\0' * 0x780)
             self.by_id.clear()
-            lists, records, at = {}, [], self.entries
+            lists, records, everyone, at = ({}, {}), [], [], self.entries
             for k in range(random.randint(1, 14)):
                 rec = self.squad[k]
                 o, age, position, ident = self.some_player()
                 ident = (ident[0] & 0xffff0000 | k + 1, ident[1])
                 x = random.randint(0, 4095)
                 self.player(rec, o, age, x, position, ident)
-                # status 0, 1 or 2 (with or without a club); one in eight is already in a deal
-                # and one in eight on loan: the game's own tests refuse those
+                # status 0, 1 or 2 (with or without a contract); one in four is listed by his club
+                # (mark 29, 30 or both); one in eight is already in a deal and one in eight on
+                # loan: the game's own tests refuse those
                 deal, loan = random.randint(0, 7) == 0, random.randint(0, 7) == 0
-                g.write(rec + 0xb4, struct.pack('<II', x << 11 | random.choice([0, 0, 1, 2]) | deal << 4
-                                                | random.getrandbits(9) << 23, loan << 28))
+                status, mark = random.choice([0, 0, 1, 2]), random.choice([0, 0, 0, 0, 0, 0, 1, 2, 3])
+                g.write(rec + 0xb4, struct.pack('<II', x << 11 | status | deal << 4 | random.getrandbits(9) << 23,
+                                                loan << 28 | mark << 29))
                 self.by_id[k + 1] = rec
-                lists.setdefault(random.randint(lowest - 1, highest), []).append(dict(
-                    rating=o, age=age, popularity=x, position=position, id=ident, passes=not deal and not loan))
+                player = dict(rating=o, age=age, popularity=x, position=position, id=ident, status=status,
+                              listed=mark != 0, fits=not deal and not loan)
+                lists[random.randint(0, 1) if how == 'pick' else which].setdefault(
+                    random.randint(max(40, lowest - 1), highest), []).append(player)     # the lists are those of 99 to 40
+                everyone.append(player)
                 records.append(rec)
-            for o in sorted(lists):
-                begin = at
-                for p in lists[o]:
-                    g.write(at, struct.pack('<II', *p['id']) + bytes(random.getrandbits(8) for _ in range(8)))
-                    at += 16
-                g.write(self.pool + (0x3c0 if which == 1 else 0) + (99 - o) * 16, struct.pack('<III', begin, at, at))
+            for i in (0, 1):
+                for o in sorted(lists[i]):
+                    begin = at
+                    for p in lists[i][o]:
+                        g.write(at, struct.pack('<II', *p['id']) + bytes(random.getrandbits(8) for _ in range(8)))
+                        at += 16
+                    g.write(self.pool + 0x3c0 * i + (99 - o) * 16, struct.pack('<III', begin, at, at))
+            assert at <= self.entries + 16 * 64
             g.write(self.found, struct.pack('<III', self.found_data, self.found_data, self.found_data + 64))
-            g.write(self.plan + 8, b'\0' * 0x110)
-            for cell, value in ((sel, which), (top, highest), (low, lowest), (pos, 13), (flag, wide), (age_low, 0),
-                                (age_high, 99), (band, 0), (level_at, level)):
+            g.write(self.plan, struct.pack('<II', club, kind) + b'\0' * 0x110)
+            for cell, value in ((sel, which), (top, highest), (low, 0 if wide and how == 'pick' else lowest), (pos, 13),
+                                (flag, wide), (age_low, 0), (age_high, 99), (band, asked), (level_at, level)):
                 g.write(cell, struct.pack('<I', value))
             g.write(frame + 0x1b, bytes([wide]))
             g.write(frame + 0x1c, struct.pack('<I', level_at))
             args = [sel, top, low, pos, self.plan, 0, flag, self.found, age_low, age_high, band]
             before = [g.read(rec, 0x100) for rec in records]
-            from_pick = case % 8 != 7
-            # every other time the ceiling of this level is put exactly at one player's value
-            # (he is taken), or 1 below it (he is not)
-            edge = t is not None and t.ceiling is not None and level < mc.LEVELS and case % 2 == 0
+            tables = None if how == 'other' else t
+            # every other time the ceiling of this level is put where one player is just
+            # within the club's limit for him (he is taken), or 1 below that (he is not)
+            edge = tables is not None and t.ceiling is not None and level < mc.LEVELS and case % 2 == 0
             if edge:
-                p = random.choice([p for group in lists.values() for p in group])
+                p = random.choice(everyone)
                 usual = t.ceiling[level]
-                t.ceiling[level] = max(0, mc.value(t, p['rating'], p['age'], p['popularity'], p['position'], p['id'])
-                                       - random.randint(0, 1))
+                price = mc.value(t, p['rating'], p['age'], p['popularity'], p['position'], p['id'])
+                price = (price * t.ceiling_free // 100 if p['status'] in (1, 2)
+                         else price * t.ceiling_listed // 100 if p['listed'] else price)
+                lo, hi = 0, 1 << 31
+                while lo < hi:                               # the lowest ceiling with which he is within the limit
+                    t.ceiling[level] = (lo + hi) // 2
+                    if mc.limit(t, level, p['id'], club, bool(wide or asked)) >= price:
+                        hi = t.ceiling[level]
+                    else:
+                        lo = t.ceiling[level] + 1
+                t.ceiling[level] = max(0, lo - random.randint(0, 1))
                 g.write(mc.CEILING_TAB + 4 * level, struct.pack('<I', t.ceiling[level]))
-            if from_pick:
+
+            def walk(tables, i, most=3):
+                """the first set (i = 1) has none of the game's tests of the status band"""
+                def fits(p):
+                    return p['fits'] and (i == 1 or v['band'] >= asked and not (
+                        p['status'] == 0 and asked == 0 and not p['listed'] and v['band'] > 5))
+                return [p['id'] for p in mc.candidates(tables, level, lists[i], lowest, highest, wide, fits, most,
+                                                       club, asked)]
+
+            def result(tables, most=3):
+                if how != 'pick':
+                    return walk(tables, which, most)
+                return (walk(tables, 1, most) if kind not in (1, 4) else []) or walk(tables, 0, most)
+            # the emulator keeps translated code together with the place it was told to stop at
+            mu.ctl_remove_cache(mc.AI_PICK, PICK_SEARCHED + 16)
+            if how == 'frame':
                 site, back = random.choice(CHOOSE_CALLS)
                 esp = frame - 0x60
                 mu.mem_write(esp - 0x1000, random.getrandbits(8 * 0x1000).to_bytes(0x1000, 'little'))   # what the stack held before
@@ -460,21 +507,35 @@ class Harness:
                 mu.emu_start(site, back)
                 assert mu.reg_read(UC_X86_REG_ESP) == esp + 0x2c and mu.reg_read(UC_X86_REG_EBP) == frame, 'stack'
                 assert all(mu.reg_read(REG[k]) == value for k, value in kept.items()), 'registers'
+                begin, end, room = struct.unpack('<III', g.read(self.found, 12))
+                assert begin == self.found_data and room == begin + 64
+            elif how == 'pick':
+                # (result, position, plan, ?, lowest overall, level, lowest age, highest age, band); this in ecx
+                esp = STACK + STACK_SIZE - 0x1000
+                mu.mem_write(esp - 0x1000, random.getrandbits(8 * 0x1000).to_bytes(0x1000, 'little'))
+                mu.mem_write(esp, struct.pack('<10I', RETURN, self.found_data, pos, self.plan, 0, low, level_at,
+                                              age_low, age_high, band))
+                for k in REG:
+                    mu.reg_write(REG[k], random.getrandbits(32))
+                mu.reg_write(REG['ecx'], self.pool)
+                mu.reg_write(UC_X86_REG_ESP, esp)
+                mu.reg_write(UC_X86_REG_EBP, random.getrandbits(32))
+                mu.emu_start(mc.AI_PICK, PICK_SEARCHED)
+                assert mu.reg_read(UC_X86_REG_EBP) == esp - 4, 'frame'
+                begin, end, room = struct.unpack('<III', g.read(esp - 4 - 0x3c, 12))
+                # what the routine reads through the saved ebp: the "second search" byte and the level
+                assert g.read(esp - 4 + 0x1b, 1)[0] == wide and struct.unpack('<I', g.read(esp - 4 + 0x1c, 4))[0] == level_at
             else:
                 g.call(mc.AI_CANDIDATES, args, ecx=self.pool)
-            begin, end, room = struct.unpack('<III', g.read(self.found, 12))
+                begin, end, room = struct.unpack('<III', g.read(self.found, 12))
             got = [struct.unpack('<II', g.read(a, 8)) for a in range(begin, end, 8)]
-
-            def walk(tables, **more):
-                return [p['id'] for p in mc.candidates(tables, level, lists, lowest, highest, wide,
-                                                       passes=lambda p: p['passes'], **more)]
-            want, free = walk(t if from_pick else None), walk(None)
-            assert got == want, (level, wide, which, lowest, highest, from_pick, got, want, lists)
-            assert begin == self.found_data and room == begin + 64 and len(got) <= 3
+            want, free = result(tables), result(None)
+            assert got == want, (how, level, wide, which, kind, asked, v['band'], lowest, highest, got, want, lists, club)
+            assert len(got) <= 3
             assert [g.read(rec, 0x100) for rec in records] == before, 'a player record was written to'
-            assert g.read(self.plan + 8, 0x110) == b'\0' * 0x110
+            assert g.read(self.plan, 0x118) == struct.pack('<II', club, kind) + b'\0' * 0x110
             changed += want != free
-            refused += len(walk(None, most=99)) - len(walk(t if from_pick else None, most=99))
+            refused += sum(len(walk(None, i, 99)) - len(walk(tables, i, 99)) for i in ((0, 1) if how == 'pick' else (which,)))
             if edge:
                 t.ceiling[level] = usual
                 g.write(mc.CEILING_TAB + 4 * level, struct.pack('<I', usual))
@@ -482,6 +543,7 @@ class Harness:
             del g.replaced[address]
         v.clear()
         v.update(saved)
+        g.top = self.heap
         return changed, refused
 
     def prize_cases(self, n, t):
@@ -704,8 +766,12 @@ def main(exe):
           'popularity - 670 x the club\'s number - 3,451,330 (whatever the wage bill), (403 - rank) x 5,000 and '
           '15,000 + 165,000 x club level; on 28 and on 30 June the yearly budget step gives the two grants of money_cave.june_grants '
           'for 2,000 cases each (to within 2); ai_candidates, the code that lists the players a computer club may '
-          'sign, run whole through its two calls in ai_pick_candidate, lists the first three players of the '
-          'lists from the highest overall down who pass its tests, whatever their value' % (cups, leagues))
+          'sign, run whole through its two calls in ai_pick_candidate and, for three cases in eight, with '
+          'ai_pick_candidate itself run from its first instruction to the end of its two searches, lists the '
+          'first three players of the lists from the highest overall down who pass its tests (in a deal, on '
+          'loan, the status band a slot asks for), whatever their value; ai_pick_candidate searches the first '
+          'set of lists and then the second, a plan of kind 1 or 4 the second only, in the rating range of the '
+          'club level, or from 99 down to 41 when the lowest overall handed in is 0' % (cups, leagues))
 
     # 1. the module as it is
     assert mc.lua_block(exe) in source, 'ROUTINES, SITES or CONTEXT of MLMoney.lua are not what money_cave.py makes'
@@ -746,8 +812,11 @@ def main(exe):
           'registers and stack; the two bonus routines leave every other register as it was; the contract '
           'limit for every age; the three amounts of yearly income for %d cases each, with wage bills from 0 to '
           'the largest number; ai_candidates run whole for %d random sets of lists (club levels 0 to 9 and six '
-          'numbers that are no level, both searches, both sets of lists, players in a deal and on loan among '
-          'them, the ceiling put exactly at a player\'s value and 1 below it): it lists the players of '
+          'numbers that are no level, both searches, both sets of lists, any buying club, slots that ask for a '
+          'status band, players without a contract, listed, in a deal and on loan among them, the ceiling put '
+          'where one player is just within the club\'s limit for him and 1 below that; three cases in eight '
+          'with ai_pick_candidate itself run up to the end of its two searches, so that level, range and the '
+          'mark of the second search are where the game puts them): it lists the players of '
           'money_cave.candidates, passes over the others and goes on, leaves stack, registers, player records '
           'and plan as the game does, and entered from anywhere else it lists as the game' % (
               n, n, cups, leagues, n // 5, max(160, n // 4)))
@@ -829,6 +898,29 @@ def main(exe):
         assert lines[-2].startswith('  second search: no player rated above' if rating == 'true' else '  second search: from rating 99')
         assert h.choose_cases(500, t)[0] > 0
     assert t.ceiling == [100] * 10
+    # the four numbers of the limit: the hard ceiling of version 5, each part alone, all at their limits
+    for stretch, need, listed, free in ((0, 0, 100, 100), (50, 0, 100, 100), (0, 30, 100, 100), (0, 0, 70, 100),
+                                        (0, 0, 100, 50), (300, 300, 0, 0), (17.4, 299.6, 99, 1)):
+        text = only(CEILING=None)
+        for name, new in (('CEILING_STRETCH', stretch), ('CEILING_NEED', need), ('CEILING_LISTED', listed), ('CEILING_FREE', free)):
+            text = setting(text, name, str(new))
+        t, lines = install(text, 'values, price ceiling of the computer clubs')
+        assert (t.ceiling_stretch, t.ceiling_need, t.ceiling_listed, t.ceiling_free) == tuple(
+            int(x + 0.5) for x in (stretch, need, listed, free))
+        assert lines[-3].startswith('  above the ceiling: the chance falls to none at %d percent above it; a club in need '
+                                    'counts its ceiling %d percent higher; a listed player counts at %d percent of his '
+                                    'value, a player without a contract at %d percent' % (
+                                        t.ceiling_stretch, t.ceiling_need, t.ceiling_listed, t.ceiling_free)), lines[-3]
+        if (stretch, need) == (0, 0):
+            assert all(mc.limit(t, level, (random.getrandbits(32), random.getrandbits(32)), random.getrandbits(32),
+                                random.randint(0, 1)) == t.ceiling[level] for level in range(10) for _ in range(50))
+        assert h.choose_cases(400, t)[0] > 0
+    t, _ = install(only(CEILING=None), 'values, price ceiling of the computer clubs')
+    assert (t.ceiling_stretch, t.ceiling_need, t.ceiling_listed, t.ceiling_free) == (50, 30, 70, 50)
+    # 200 millions, a club in need, every step of the hash: from 260 millions to just under 390
+    reach = sorted({mc.limit(t, 9, (i, 0), 0, True) for i in range(4000)})
+    assert len(reach) == 256 and reach[0] == 2600000 and reach[-1] == 2600000 + 2600000 * (255 * 50) // 25600
+    assert mc.affordable(t, 0, 60, 27, 0, club=5) and not mc.affordable(t, 0, 99, 27, 0, club=5)
     t = settings(setting(source, 'CEILING', '{ 9999, 0.01, 0, 0.5, 1, 2, 3, 9999, 0.01, 0.02 }'))
     assert t.ceiling == [200, 100, 99990000, 30000, 20000, 10000, 5000, mc.NO_CEILING, 100, 99990000]
     both = setting(setting(source, 'BUDGET_SALARY', '2.5'), 'BUDGET_TRANSFER', '0.1')
@@ -874,6 +966,7 @@ def main(exe):
                       ('TALENT', '{ { 0, 0 }, { 63, 0 } }'), ('TALENT_STEP', '50'), ('TALENT_MAX', '200'), ('TALENT_CAP', '999'),
                       ('CUP_TV', '{ { 2, 2000 }, { 3, 0 } }'), ('CUP_NATIONAL', '{ 2000, 0.001, 2000, 0.001, 1234.567, 2000 }'),
                       ('CEILING', '{ 9999, 0.01, 0, 0.5, 1, 2, 3, 9999, 0.01, 0.02 }'),
+                      ('CEILING_STRETCH', '300'), ('CEILING_NEED', '300'),
                       ('LEAGUE_BY_ID', '{\n    %s,\n}' % ', '.join(
                           '{ %d, %s }' % (i, '{ %s }' % ', '.join(['650', '0'] * 11) if i % 2 else '1000') for i in range(17, 29)))):
         limits = setting(limits, name, new)
@@ -890,7 +983,9 @@ def main(exe):
           'salary age switched off the value is VALUE x AGE plus popularity; PAY_GAP = %s give the club '
           'factor of money_cave.py at every place of the ranking; with every setting at its limit the code '
           'and money_cave.py still agree; the ceiling without the rating rule, with groups without a ceiling, '
-          'with none at all (the rating rule alone) and with the lowest amount everywhere' % (len(alone), ', '.join(gaps)))
+          'with none at all (the rating rule alone) and with the lowest amount everywhere; the hard ceiling of '
+          'version 5 (CEILING_STRETCH = 0, CEILING_NEED = 0, CEILING_LISTED = CEILING_FREE = 100), each of the '
+          'four alone, and all four at their limits' % (len(alone), ', '.join(gaps)))
 
     # 4. cases in which nothing may be written
     def refused(name, source, prepare, last, sticky=True, may_write_cave=False):
@@ -942,7 +1037,7 @@ def main(exe):
     for name, at, old, _ in mc.SITES:                        # every changed place lies inside a checked piece
         pieces = mc.CONTEXT_CEILING if name == 'ceiling' else mc.CONTEXT
         assert any(a <= at and at + len(old) <= a + n for _, a, n in pieces), hex(at)
-    assert mc.CAVE_2 + mc.CAVE_2_SIZE <= mc.CAVE and mc.CAVE + mc.CAVE_SIZE <= mc.CAVE_LIMIT
+    assert mc.CAVE + mc.CAVE_SIZE <= mc.CAVE_LIMIT <= mc.CAVE_2 and mc.CAVE_2 + mc.CAVE_2_SIZE <= mc.CAVE_2_LIMIT
     for where in (0, mc.CAVE_SIZE // 2, mc.CAVE_SIZE - 1):
         lines = refused('memory in use', source, lambda: poke(g, mc.CAVE + where, b'\x01'), 'RESULT: nothing written. This game')
         assert any(l.endswith('NOT EMPTY') for l in lines) and not any(l.endswith('DIFFERENT') for l in lines), lines
@@ -993,7 +1088,11 @@ def main(exe):
            ('CEILING: entry 3 is not 0 or', setting(source, 'CEILING', '{ 200, 100, 0.001, 28, 18, 12, 8, 6, 4.5, 3 }')),
            ('CEILING: entry 1 is not 0 or', setting(source, 'CEILING', '{ 10000, 100, 50, 28, 18, 12, 8, 6, 4.5, 3 }')),
            ('CEILING: entry 10 is not 0 or', setting(source, 'CEILING', '{ 200, 100, 50, 28, 18, 12, 8, 6, 4.5, -3 }')),
-           ('CEILING_RATING is not', setting(source, 'CEILING_RATING', '5')))
+           ('CEILING_RATING is not', setting(source, 'CEILING_RATING', '5')),
+           ('CEILING_STRETCH is not a number from 0 to 300', setting(source, 'CEILING_STRETCH', '301')),
+           ('CEILING_NEED is not a number from 0 to 300', setting(source, 'CEILING_NEED', '-1')),
+           ('CEILING_LISTED is not a number from 0 to 100', setting(source, 'CEILING_LISTED', '100.5')),
+           ('CEILING_FREE is not a number from 0 to 100', setting(source, 'CEILING_FREE', 'true')))
     for name, text in bad:
         assert text != source, name
         refused('bad settings', text, lambda: None, 'RESULT: nothing written. Settings: ' + name)

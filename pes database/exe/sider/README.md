@@ -7,7 +7,7 @@ enabled in `sider.ini`). They work on the running game; `PES2017.exe` is not edi
 |---|---|
 | `MLCheck.lua` | **read-only test.** Reads the overall window of computer clubs by level (section 9.4 of `../MASTER_LEAGUE.md`) and four numbers of the transfer fee formula (section 6.2) from the running game and writes them to `sider.log`. It writes nothing to the game |
 | `test_module.py <PES2017.exe>` | runs `MLCheck.lua` outside the game against the bytes of the exe file (needs `pip install lupa`) |
-| `MLMoney.lua` | **changes the game.** Player values by rating, age, talent, position and popularity, salaries, the transfer budget of a new career, the yearly income of the club, cup and league prizes, from tables at the top of the file. Checks the game's code first and writes nothing if it differs. Version 2 ran in the game; versions 3 and 4 have run in the emulator only |
+| `MLMoney.lua` | **changes the game.** Player values by rating, age, talent, position and popularity, salaries, the transfer budget of a new career, the yearly income of the club, cup and league prizes, from tables at the top of the file. Checks the game's code first and writes nothing if it differs. Version 2 ran in the game and version 5 was played by hand (no log); versions 3, 4 and 6 have run in the emulator only |
 | `money_cave.py` | what `MLMoney.lua` writes (13 small routines, with their source) and the same arithmetic as Python |
 | `test_money.py <PES2017.exe>` | runs `MLMoney.lua` on the exe in the emulator, then runs the game's salary, fee, budget, prize and income code with the changes in and compares it with `money_cave.py` (needs `pip install lupa unicorn`) |
 
@@ -73,7 +73,7 @@ What else the same `sider.log` shows:
   for events this Sider does not know: `key_down`, `overlay_on`, `set_teams`,
   `gamepad_input`).
 
-## `MLMoney.lua`, version 5: values, salaries, budgets, income, prize money, and what a computer club can afford
+## `MLMoney.lua`, version 6: values, salaries, budgets, income, prize money, and what a computer club can afford
 
 ### What the game does without it
 
@@ -168,7 +168,7 @@ New in version 4, each with its own switch:
 - **Television money of the big cups** (`CUP_TV`): an amount per competition that is
   added to every amount of `CUP` for it.
 
-New in version 5:
+New in version 5, changed in version 6:
 
 - **Price ceiling of the computer clubs** (`CEILING`, `CEILING_RATING`). This is the
   first part of the module that changes the transfers between computer clubs.
@@ -187,10 +187,9 @@ New in version 5:
 
   *The module.* One more test at the point where a player has passed all the others:
   his value (the value this module computes, with his own factor and popularity,
-  before the game's random change) must not be above the ceiling of the club's group.
-  A player above it is passed over and the search goes on with the next one, so the
-  club ends up with the best players it can afford, and never with nobody because of
-  the ceiling alone as long as cheaper players are in the lists.
+  before the game's random change) is compared with the ceiling of the club's group.
+  A player the club cannot reach is passed over and the search goes on with the next
+  one, so the three players it notes are the best three it can afford.
   With `CEILING_RATING` the second search also stops at the top of the club's own
   rating range: it looks further down, not further up.
 
@@ -198,8 +197,30 @@ New in version 5:
   ceiling is the same for a club every time, and a club that sold a player for 100
   million can spend no more than before. Your own club is not touched: your players
   are not in these lists (offers for them go another way), and what you can buy is a
-  matter of your budget. Players without a club are in the same lists and get the
-  same test.
+  matter of your budget.
+
+  *Version 6: the ceiling gives way.* Version 5 refused every player above the
+  ceiling. Played by hand it gave fewer transfers than the game alone. Between two
+  computer clubs the game has no offer and no price, so a club cannot "bid less" or
+  "bid more"; what the module can decide is how far above its ceiling a club still
+  reaches. Four settings:
+
+  - `CEILING_STRETCH` (50): above the ceiling the chance falls evenly, to none at 50
+    percent above it. A player 10 percent above is within reach of four clubs in five
+    of the group, 25 percent above of every second one. No dice: which club reaches
+    how far for which player comes from the player's id and the club's id, so the
+    same club gives the same answer every day and two clubs of one group differ.
+  - `CEILING_NEED` (30): a club in need counts its ceiling 30 percent higher. In need
+    is a club in its second search (it found nobody for the position) and a club that
+    asks for a player of a certain standing, which is how the game's plan marks the
+    key player a club wants on the last day of a window. The stretch comes on top:
+    1.3 x 1.5, so never beyond 1.95 times the ceiling.
+  - `CEILING_LISTED` (70): of a player his club has listed for sale, 70 percent of
+    the value count.
+  - `CEILING_FREE` (50): of a player without a contract, 50 percent. No fee is due
+    for him; what is left stands for his wages.
+
+  With 0, 0, 100, 100 the module chooses exactly as version 5 did.
 
 The **yearly budget step** of 28 and 30 June is not changed, and needs no change: its
 two grants are fractions of the wage bill and of the fees of the ten most valuable
@@ -241,6 +262,10 @@ mode `0x28`, the growth of players, the rest of the way computer clubs choose pl
 | `YOUNG_YEARS` | 5 (the game: 3); `false` leaves the game's code |
 | `WRITE` | `true`; `false` = check and report only |
 | `CEILING` (ranking places 1-10, 11-20, 21-50, 51-80, 81-120, 121-170, 171-220, 221-260, 261-300, others) | 200, 100, 50, 28, 18, 12, 8, 6, 4.5, 3: the highest value a computer club of that group signs; 0 in a place = no ceiling for the group; `false` = computer clubs choose as in the game |
+| `CEILING_STRETCH` (0 to 300) | 50: a club reaches a player up to 50 percent above its ceiling, the further above the less often; 0 = nothing above the ceiling, as in version 5 |
+| `CEILING_NEED` (0 to 300) | 30: the ceiling of a club in need (second search, or a slot that asks for a player of a certain standing) counts 30 percent higher; 0 = need changes nothing |
+| `CEILING_LISTED` (0 to 100) | 70: percent of the value that counts for a player listed for sale; 100 = he counts like any other |
+| `CEILING_FREE` (0 to 100) | 50: the same for a player without a contract |
 | `CEILING_RATING` | `true`: in its second search a computer club takes nobody rated above the top of its own rating range; `false`: from 99 down, as in the game. Used only with `CEILING` |
 
 Where the prize defaults come from. Cups: the fixed payments per stage of 2025/26
@@ -336,7 +361,7 @@ places the game uses. `python3 ceiling_survey.py <exe> <edit file>` prints what 
 mean for the squads of the edit file, with the default settings and `SPREAD` off, in
 millions:
 
-| places | rating range | `CEILING` | middle club: most valuable player | third most valuable | players in the range who cost more | mean age at the top of the range: all / affordable |
+| places | rating range | `CEILING` | middle club: most valuable player | third most valuable | players in the range above the ceiling | mean age at the top of the range: all / under the ceiling |
 |---|---|---|---|---|---|---|
 | 1-10 | 83-99 | 200 | 158.3 | 93.3 | 1.0 % | 27.8 / 28.5 |
 | 11-20 | 76-86 | 100 | 59.4 | 40.2 | 0.6 % | 27.9 / 28.5 |
@@ -349,16 +374,38 @@ millions:
 | 261-300 | 51-75 | 4.5 | 4.7 | 2.4 | 7.5 % | 27.8 / 31.4 |
 | others | 47-74 | 3 | 2.2 | 1.4 | 11.4 % | 27.9 / 32.1 |
 
+A club looks from the top of its range down, so what counts is the top. The same
+survey for the three highest rating points of each range (players with a contract who
+are not listed):
+
+| places | above the ceiling: passed over by version 5 | version 6, passed over in the usual search | version 6, club in need | version 6, out of reach of every club of the group |
+|---|---|---|---|---|
+| 1-10 | 10.0 % | 5.4 % | 0.6 % | 0.0 % |
+| 11-20 | 8.2 % | 4.7 % | 0.7 % | 0.0 % |
+| 21-50 | 6.8 % | 3.4 % | 1.1 % | 0.0 % |
+| 51-80 | 9.6 % | 4.2 % | 1.6 % | 0.4 % |
+| 81-120 | 19.1 % | 9.5 % | 2.8 % | 0.6 % |
+| 121-170 | 37.1 % | 20.2 % | 7.8 % | 2.7 % |
+| 171-220 | 48.1 % | 30.6 % | 13.2 % | 4.2 % |
+| 221-260 | 53.7 % | 35.1 % | 15.8 % | 5.4 % |
+| 261-300 | 57.9 % | 41.2 % | 19.8 % | 8.1 % |
+| others | 63.5 % | 50.4 % | 30.7 % | 15.9 % |
+
+"Passed over" in the two middle columns is the mean over the clubs of the group: each
+club reaches a different part of the players above the ceiling.
+
 Two things in this table are guessed, because the edit file does not hold them: the
 club ranking (the clubs are ranked by the mean rating of their best eleven; the game
 has its own table) and each player's popularity (which moves a value by a few
 percent).
 
 So a ceiling is about what the middle club of a group has in its most valuable
-player, with more room at the top. Inside the usual rating range it turns away few
-players, most of them at the small clubs: the young ones at the top of the range, so
-the best players a small club can still sign are a few years older (last column). Its
-main work is in the second search, where the range is gone. A stricter set (15, 8,
+player, with more room at the top. Over the whole rating range it turns away few
+players. At the top of the range, where the search begins, version 5 turned away more
+than half at the small clubs: the young ones, so the best players a small club could
+still sign were a few years older (last column of the first table). Version 6 leaves
+about a third of that for a club in need. In the second search the range is gone and
+the ceiling, with `CEILING_RATING`, is what keeps a small club from the best players. A stricter set (15, 8,
 4.5, 2.5, 1.5, 1 for the six lower groups) turned away 42 percent of the range at the
 smallest clubs and left them players of 35 at its top; it was dropped. If you change
 `VALUE` much, change `CEILING` with it. `0` in a place of the list means no ceiling
@@ -366,19 +413,25 @@ for that group.
 
 ### Install
 
-1. Copy `MLMoney.lua` into the `modules` folder next to `sider.exe`, over version 2.
+1. Copy `MLMoney.lua` into the `modules` folder next to `sider.exe`, over the older
+   version.
 2. `sider.ini` needs the line `lua.module = "MLMoney.lua"` (once).
 3. Start the game. `sider.log` must show twenty-five `check:` lines "as expected" (the
    last five are `choose`, `pick`, `range`, `rating`, `take`: the transfer code of the
    computer clubs), the lines "free memory ... empty" and "free memory 2 ... empty",
-   twenty-two `written:` lines "ok" (the last one `ceiling`), the tables, the ceilings,
-   and `RESULT: installed. Changed: values, salaries, transfer budget, cup prizes,
+   twenty-two `written:` lines "ok" (the last one `ceiling`), the tables, the ceilings
+   with the line "above the ceiling: the chance falls to none at 50 percent above it;
+   a club in need counts its ceiling 30 percent higher; a listed player counts at 70
+   percent of his value, a player without a contract at 50 percent", and `RESULT: installed. Changed: values, salaries, transfer budget, cup prizes,
    league prizes, prizes into the transfer budget, pay gap, salary bonuses, contract
    years, yearly income, national cup prizes, price ceiling of the computer clubs.`
 
-If one of the five new `check:` lines says `DIFFERENT`, or "free memory 2" says
-`NOT EMPTY`, nothing at all is written. Set `CEILING = false` to get the rest of the
-module as in version 4, and send the log.
+If one of the five `check:` lines of the transfer code says `DIFFERENT`, or "free
+memory 2" says `NOT EMPTY`, nothing at all is written. Set `CEILING = false` to get
+the rest of the module as in version 4, and send the log. "Free memory 2" is a new
+place in version 6 (`0x047d3c40`): the file of the game holds zeros there, but whether
+the running game leaves it alone has not been seen yet, which is why this line of the
+log matters.
 
 To undo: remove the line from `sider.ini`. No file of the game is changed.
 
@@ -442,9 +495,14 @@ Nothing of the parts added since version 2 has run in the game. In the order of 
    the ranking must not sign a player valued above 3,000,000, one of the places 51 to
    80 none above 28,000,000. The value on a screen can differ from the one the test
    uses by the game's random change of up to 20 percent, so a signing a little above
-   a ceiling is no fault. If the windows pass with far fewer signings than without
-   the module, send that too: how often the game finds nobody in the first search is
-   not known, and neither is whether a club is left short of players by the ceiling.
+   a ceiling is no fault, and with version 6 a signing up to 1.5 times the ceiling
+   (1.95 times for a club in need) is as intended.
+9. The number of signings. Version 5 gave fewer than the game alone, by a test played
+   by hand. Count the signings of computer clubs in one window with version 6 and, if
+   you can, in the same window of the same save with `CEILING = false`. If version 6
+   is still clearly lower, set `CEILING_RATING = false` and count once more: that
+   tells whether the price or the rating limit of the second search holds the clubs
+   back. Why version 5 lost transfers was not found out; see "Not shown by the test".
 
 ### How it works
 
@@ -472,12 +530,14 @@ filled (`money_cave.py` has the layout and the source of the 14 routines):
 | `0x038aa43a`, `...446`, `...452`, `...45e`, `...46a`, `...476`, 4 bytes each, `cup_prize` | the six amounts for a cup without a row: 20000, 10000, 5000, 1000, 500, 300 (the numbers in six `mov edi`) | the six amounts of `CUP_NATIONAL` | `CUP_NATIONAL` |
 | `0x047b0200`, 3,568 bytes | zero | the tables (value, salary, two by age, position, talent), the cup table, two league lists, 12 lists by league, the single numbers, 13 routines of 226, 53, 26, 22, 53, 24, 21, 31, 8, 19, 18, 50 and 13 bytes | always |
 | `0x0365fb0d`, 9 bytes, `ai_candidates` | `mov ecx, [ebp + 0x24]; push esi; call 0x041293c0`: the player who passed every test is added to the list of candidates | call to the ceiling routine, which goes on to that function or to the game's "next player" at `0x0365fb28` | `CEILING` |
-| `0x047b0130`, 204 bytes | zero | ten ceilings, ten highest ratings for the second search, the ceiling routine of 147 bytes | `CEILING` |
+| `0x047d3c40`, 384 bytes | zero | ten ceilings, ten highest ratings for the second search, the four numbers of the stretch, the ceiling routine of 313 bytes | `CEILING` |
 
 **The ceiling routine.** `ai_candidates` is not handed the club's level. Its only
 caller, `ai_pick_candidate`, has it as an argument, so the routine reads it from that
 function's stack frame (the saved `ebp`), and the byte there that says "second
-search". It does so only if `ai_candidates` is about to return to one of its two calls
+search". The buying club is the first number of the plan record and the standing the
+slot asks for is behind the last argument, both among `ai_candidates`' own arguments
+(`[ebp + 0x18]`, `[ebp + 0x30]`). It does so only if `ai_candidates` is about to return to one of its two calls
 in `ai_pick_candidate` (`0x03660d58`, `0x03660db9`; a scan of the exe found no other
 call) and the level is 0 to 9. In every other case the player is taken as in the game:
 when something is not as expected the routine changes nothing. The rating is fetched
@@ -485,10 +545,28 @@ with the same call the fee function uses, the value with the module's own value
 routine. A refused player leaves the routine by a jump to the place the game's own
 failed tests jump to. `ebx`, `edi`, `esi` and `ebp` come back as they were.
 
+The limit, in whole numbers (each division drops the remainder):
+
+```
+limit = ceiling of the level
+in need (second search, or the slot asks for a standing):  limit = limit * (100 + CEILING_NEED) / 100
+h     = ((player id, 16 bits) ^ (player id, 32 bits) * 0x01000193 ^ club id * 0x9e3779b1) * 0x85ebca6b >> 24      0 to 255
+limit = limit + limit * (h * CEILING_STRETCH) / 25600
+price = value * CEILING_FREE / 100      status 1 or 2 (+0xb4, bits 0-3)
+        value * CEILING_LISTED / 100    else, with bit 29 or 30 of +0xb8
+        value                           else
+refused if price > limit
+```
+
+The rating limit of the second search comes before this and is not moved by it.
+
 The memory is the end of the code section `.trace`: its content ends at `0x047b005d` and
-its last page runs to `0x047b0fff`. The second piece lies below the first in the same
-page; the file holds zeros from `0x047b005e` on, and a scan found no call, jump or
-stored address into `0x047b0124`-`0x047b01fe`. The section is readable, writable and executable in
+its last page runs to `0x047b0fff`; the file holds zeros from `0x047b005e` on. That page
+is full (version 5 had its ceiling routine below the tables, at `0x047b0130`; version 6
+leaves that piece unused). The second piece is the end of the next section, `.xcode`:
+its content ends at `0x047d3a42`, the file holds zeros up to `0x047d3dff`, the next
+section begins at `0x047d4000`, and a scan found no call, jump or stored address into
+`0x047d3000`-`0x047d3fff`. Both sections are readable, writable and executable in
 the exe's header, so the routines can run there whatever Sider does with the page
 protection. No call or jump of the exe goes into that range. For the changed places a
 scan of the exe found no call or jump into the inside of any of them; for the three
@@ -526,16 +604,16 @@ bytes is made by `python3 money_cave.py lua <exe>`; the test fails if the two di
 
 ```
 python3 test_money.py ~/pes-work/game/PES2017.exe
-ok 0: without the module the emulated game gives the amounts of ../tools/money.py (salary with role, age band and award bonuses at every place of the club ranking; fee); its budget function adds twice the mean of the 16 highest fees and the wage bill plus twice the mean of the 16 highest salaries; cup_prize and league_prize give the game's lists (2626 and 6720 cases); a prize goes to the balance only; the contract limit is 3 years up to age 23; the three amounts of yearly income are 25 x popularity - 670 x the club's number - 3,451,330 (whatever the wage bill), (403 - rank) x 5,000 and 15,000 + 165,000 x club level; on 28 and on 30 June the yearly budget step gives the two grants of money_cave.june_grants for 2,000 cases each (to within 2); ai_candidates, the code that lists the players a computer club may sign, run whole through its two calls in ai_pick_candidate, lists the first three players of the lists from the highest overall down who pass its tests, whatever their value
+ok 0: without the module the emulated game gives the amounts of ../tools/money.py (salary with role, age band and award bonuses at every place of the club ranking; fee); its budget function adds twice the mean of the 16 highest fees and the wage bill plus twice the mean of the 16 highest salaries; cup_prize and league_prize give the game's lists (2626 and 6720 cases); a prize goes to the balance only; the contract limit is 3 years up to age 23; the three amounts of yearly income are 25 x popularity - 670 x the club's number - 3,451,330 (whatever the wage bill), (403 - rank) x 5,000 and 15,000 + 165,000 x club level; on 28 and on 30 June the yearly budget step gives the two grants of money_cave.june_grants for 2,000 cases each (to within 2); ai_candidates, the code that lists the players a computer club may sign, run whole through its two calls in ai_pick_candidate and, for three cases in eight, with ai_pick_candidate itself run from its first instruction to the end of its two searches, lists the first three players of the lists from the highest overall down who pass its tests (in a deal, on loan, the status band a slot asks for), whatever their value; ai_pick_candidate searches the first set of lists and then the second, a plan of kind 1 or 4 the second only, in the rating range of the club level, or from 99 down to 41 when the lowest overall handed in is 0
 ok 1: the module passes its checks, writes only its memory and the places it reports, and what it wrote is what money_cave.py builds from the same settings
-ok 2: with the changes in, the game's code gives the amounts of money_cave.py: salary and fee for 3000 + 3000 random players (ratings 40 to 255, ages 0 to 63, every position, with and without awards and the random change) and for every place of the club ranking; the budgets of 150 squads of 0 to 40 players; cup_prize for 2626 cases (competitions 0 to 100, stages 0 to 12, two game modes; mode 0x28 keeps its own table); league_prize for 11648 cases (every list, place and half); the two places that pay a prize, in Master League and four other modes: balance, transfer budget, account line, registers and stack; the two bonus routines leave every other register as it was; the contract limit for every age; the three amounts of yearly income for 600 cases each, with wage bills from 0 to the largest number; ai_candidates run whole for 750 random sets of lists (club levels 0 to 9 and six numbers that are no level, both searches, both sets of lists, players in a deal and on loan among them, the ceiling put exactly at a player's value and 1 below it): it lists the players of money_cave.candidates, passes over the others and goes on, leaves stack, registers, player records and plan as the game does, and entered from anywhere else it lists as the game
-ok 3: with every optional part switched off only the fee place is written and salary, prizes and contract limit are the game's own; each of the 17 optional parts switched on alone changes its own places and nothing else; BUDGET_SALARY changes the salary budget; with spread, position and salary age switched off the value is VALUE x AGE plus popularity; PAY_GAP = 1, 1.5, 2, 2.75, 7.3, 10 give the club factor of money_cave.py at every place of the ranking; with every setting at its limit the code and money_cave.py still agree; the ceiling without the rating rule, with groups without a ceiling, with none at all (the rating rule alone) and with the lowest amount everywhere
-ok 4: WRITE = false, one changed byte at 75 places of the checked code and data, memory not empty, 63 kinds of faulty settings: nothing is written; a write that does not stick, to either piece of memory: the code is not touched; with CEILING = false the module does not look at the transfer code or the second piece of memory and installs the rest whatever is there
+ok 2: with the changes in, the game's code gives the amounts of money_cave.py: salary and fee for 3000 + 3000 random players (ratings 40 to 255, ages 0 to 63, every position, with and without awards and the random change) and for every place of the club ranking; the budgets of 150 squads of 0 to 40 players; cup_prize for 2626 cases (competitions 0 to 100, stages 0 to 12, two game modes; mode 0x28 keeps its own table); league_prize for 11648 cases (every list, place and half); the two places that pay a prize, in Master League and four other modes: balance, transfer budget, account line, registers and stack; the two bonus routines leave every other register as it was; the contract limit for every age; the three amounts of yearly income for 600 cases each, with wage bills from 0 to the largest number; ai_candidates run whole for 750 random sets of lists (club levels 0 to 9 and six numbers that are no level, both searches, both sets of lists, any buying club, slots that ask for a status band, players without a contract, listed, in a deal and on loan among them, the ceiling put where one player is just within the club's limit for him and 1 below that; three cases in eight with ai_pick_candidate itself run up to the end of its two searches, so that level, range and the mark of the second search are where the game puts them): it lists the players of money_cave.candidates, passes over the others and goes on, leaves stack, registers, player records and plan as the game does, and entered from anywhere else it lists as the game
+ok 3: with every optional part switched off only the fee place is written and salary, prizes and contract limit are the game's own; each of the 17 optional parts switched on alone changes its own places and nothing else; BUDGET_SALARY changes the salary budget; with spread, position and salary age switched off the value is VALUE x AGE plus popularity; PAY_GAP = 1, 1.5, 2, 2.75, 7.3, 10 give the club factor of money_cave.py at every place of the ranking; with every setting at its limit the code and money_cave.py still agree; the ceiling without the rating rule, with groups without a ceiling, with none at all (the rating rule alone) and with the lowest amount everywhere; the hard ceiling of version 5 (CEILING_STRETCH = 0, CEILING_NEED = 0, CEILING_LISTED = CEILING_FREE = 100), each of the four alone, and all four at their limits
+ok 4: WRITE = false, one changed byte at 75 places of the checked code and data, memory not empty, 67 kinds of faulty settings: nothing is written; a write that does not stick, to either piece of memory: the code is not touched; with CEILING = false the module does not look at the transfer code or the second piece of memory and installs the rest whatever is there
 ok 5: Bruno Fernandes as the user saw him without a module (rating 89, salary 7,259,700, value 36,743,200): the game's formula gives exactly that value from that salary with popularity 955, and with no other rating from 60 to 99
       as the user saw him with version 2 and SPREAD = 0 in a new career (age 32, value 52,973,200): the module's formula gives exactly that for an AMF of rating 89 with popularity 910, and with no other popularity
 ```
 
-About 100 seconds. The prize, budget, salary and income code of the game runs as machine
+About 110 seconds. The prize, budget, salary and income code of the game runs as machine
 code in the emulator, with the module's changes in it. For the two places that pay a
 prize the piece of `prize_step` around each call is run on its own, with a made-up
 stack frame; `prize_step` as a whole (the walk over the competitions of the club) was
@@ -546,21 +624,27 @@ step, and for the piece of `club_money_setup` that makes the starting amount.
 `season_income` hands the club to `club_popularity` and gives back `ebx`, `esi` and
 `edi` as it got them.
 
-The price ceiling: `ai_candidates` runs as a whole function, started at each of its two
-call instructions in `ai_pick_candidate` with a made-up frame of that function (level,
-"second search" byte) and made-up lists of 1 to 14 players. Five things it asks are
+The price ceiling: `ai_candidates` runs as a whole function with made-up lists of 1 to
+14 players. Of eight cases, four start it at one of its two call instructions in
+`ai_pick_candidate` with a made-up frame of that function (level, "second search"
+byte); three run `ai_pick_candidate` itself from its first instruction to the end of
+its two searches (`0x03660dce`), so that the level, the range, the search byte and the
+order of the two sets are the game's; one calls it from somewhere else. The players
+have a contract or none, a quarter are listed, the slot asks for a standing or for
+none, the buying club is any number. Five things it asks are
 answered by the test: the record of a player, his club, the date, and the two tests
 taken to be the foreign-player and squad rules (always "yes"); the rating is a number
 kept in the made-up record. Everything else is the game's code, with the changed place
 and the routine in it. The list it returns is compared with `money_cave.candidates`:
 without the module (the first three who pass, whatever they cost), with it, with the
-ceiling of the level put exactly at one player's value and 1 below it, with players the
-game's own tests refuse mixed in, with a number that is no level, and entered from
-somewhere else (then it must list as the game does). After each run the stack pointer,
-`ebp`, `ebx`, `esi`, `edi`, the player records and the plan record must be as the game
-leaves them. `ai_pick_candidate`, `ai_fill_slots` and the steps above them were not
-run: the test puts the level and the search byte where the disassembly of
-`ai_pick_candidate` says they are.
+ceiling of the level put where one player is exactly at the club's limit for him and 1
+below it, with players the game's own tests refuse mixed in, with a number that is no
+level, and entered from somewhere else (then it must list as the game does). After
+each run the stack pointer, `ebp`, `ebx`, `esi`, `edi`, the player records and the
+plan record must be as the game leaves them. The four numbers of version 6 are also
+set to 0, 0, 100, 100 (the list must be version 5's), each alone, and to their
+limits. The second half of `ai_pick_candidate` (which of the three is taken),
+`ai_fill_slots` and the steps above them were not run.
 
 The test was tried against planted faults. Version 2: ten in the routines and the
 changed places (wrong shift for the position, wrong mask for the age, the id read with
@@ -606,26 +690,45 @@ all the game keeps of it. The wage share added after the floor of 1,000 is seen 
 with a wage bill near the largest number, because the game's amount never reaches
 that floor.
 
-Version 5 (`python3 planted_faults.py <exe> routine` and `files`): every one of the
-1,176 bits of the ceiling routine was flipped in turn. 1,169 flips made the cases fail.
-Six of the other seven put a wrong value back into `ebx` or `edi` on the way out; the
-game loads both anew right after (`0x0365fb28`) or returns, so no result changes, and
-the routine restores them all the same. The seventh turns `sub esp, 0x14` into
-`and esp, 0x14`; the emulator has memory at address 0 and the test answers the rating
-call itself, so the routine still works there, while the real game would stop. Then 23
+Versions 5 and 6 (`python3 planted_faults.py <exe> routine` and `files`): every one of
+the 2,504 bits of the ceiling routine of version 6 was flipped in turn. 2,497 flips
+made the cases fail (version 5: 1,169 of 1,176). Six of the other seven turn the
+`push ebx` or `push edi` at its start into the push of another register, so a wrong
+value comes back in `ebx` or `edi`; the game loads both anew right after
+(`0x0365fb28`) or returns, so no result changes, and the routine restores them all the
+same. The seventh turns `sub esp, 0x1c` into `and esp, 0x1c`; the emulator has memory
+at address 0 and the test answers the rating call itself, so the routine still works
+there, while the real game would stop. Then 32
 faults in the files, each with a whole run of the test: in the Lua the ceilings or the
 ratings in reverse order, the place not written, the comparison of the transfer code or
 the test for empty memory left out, "no ceiling" written as 0, wrong limits, the rating
 rule always on, the second piece of memory not written or not read back, a wrong size
 or address of it, a faulty setting let through; in `money_cave.py` a value equal to the
 ceiling or a rating equal to the top refused, the rating rule in both searches, the
-lowest list searched too, the ceilings in reverse. All 23 made the test fail.
+lowest list searched too, the ceilings in reverse; and for version 6, in the Lua the
+need written without its 100, the two discounts swapped, a negative number let
+through, in `money_cave.py` need counted in only one of its two cases, a wrong divisor
+of the stretch, the club left out of the hash, the discount for only one of the two
+statuses, both discounts for a listed player without a contract. All 32 made the test
+fail.
 
-Not shown by the test: for the price ceiling, anything above `ai_candidates` (how the
-game calls it in a transfer window, how often the first search finds nobody, whether
-squads stay full over seasons), and that the club level the routine reads is the one
-the club's rating range was made from in a running game (read in the disassembly,
-not run). Sider's `memory.write` on the real game, the memory being empty
+Not shown by the test: for the price ceiling, anything above the two searches of
+`ai_pick_candidate` (how the game calls it in a transfer window, how often the first
+search finds nobody, whether squads stay full over seasons), and that the club level
+the routine reads is the one the club's rating range was made from in a running game
+(read in the disassembly, not run). That the status 1 and 2 of `CEILING_FREE` are the
+players without a contract is taken from how the game closes their deals
+(`MASTER_LEAGUE.md` 9.7), not seen in a game. **Why version 5 gave fewer transfers is
+not known**, so it is not known either how much of them version 6 brings back. What
+the code says (`MASTER_LEAGUE.md` 9.6): the game notes only the first three players
+who pass and then takes one of them only if his club lets him go; if none of the three
+can go, the position stays open and, unless the slot asks for a standing, the club
+searches a second time. Without the module that second search starts at rating 99 and
+finds other players. With `CEILING_RATING` it starts at the top of the club's own
+range again, so it can meet the same three and fail again; version 6 changes that
+only as far as the need raise lets dearer players in ahead of them. How often this
+happens was not measured. The setting to try if signings stay low is therefore
+`CEILING_RATING = false`. Sider's `memory.write` on the real game, the memory being empty
 in the running game (the module checks it), that the game's cup table and code are in
 the running game as in the exe file (the module checks it), which competition each
 number of the cup table is, which league number the game hands to `league_prize` for
@@ -673,8 +776,10 @@ Read from the DLL's code and strings, not run:
   the salary part to 0 in the function's own stack frame.)
 - Free memory for code and tables: `0x047b0200`-`0x047b0fff`, the end of `.trace`
   (3,584 bytes; `MLMoney.lua` uses the first 3,568), and below it `0x047b0124`-
-  `0x047b01fe` (`MLMoney.lua` uses `0x047b0130`-`0x047b01fb` for the price ceiling).
-  Both are full now. A module must see zeros there before it writes.
+  `0x047b01fe` (used by version 5 only; free again). The end of `.xcode`,
+  `0x047d3a43`-`0x047d3dff`: `MLMoney.lua` uses `0x047d3c40`-`0x047d3dbc` for the price
+  ceiling; about 500 bytes below it are free. A module must see zeros there before it
+  writes.
 - A routine that is called from inside a game function can read the arguments of that
   function's caller through the saved `ebp`, if it first checks the return address.
   The ceiling routine does this to get the club level without changing a call.

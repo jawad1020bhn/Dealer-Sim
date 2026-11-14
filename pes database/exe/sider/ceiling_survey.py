@@ -11,7 +11,12 @@ SPREAD off. Two things are guessed, because the edit file does not hold them:
     game gives by club level (0 to 300). With FAME = 10 that moves a value by 0 to 8 percent.
 Printed per group: the ceiling, the value of the most valuable and of the third most
 valuable player of the middle club, and for all club players inside the group's rating
-range the share above the ceiling and the mean age of those at the top of the range.
+range the share above the ceiling. Then for the top three rating points of the range,
+where a club looks first: the share above the ceiling (all of them passed over with
+CEILING_STRETCH = 0), the share a club of the group passes over on average with the
+settings of MLMoney.lua, in its usual search and when it is in need (players with a
+contract who are not listed), the share no club of the group reaches even in need, and
+the mean age of all and of those under the ceiling.
 """
 import os
 import statistics
@@ -67,8 +72,14 @@ def main(exe, edit, ceilings=None):
         popularity = CLUB_PART[level_of[p['club']]] + 10 * (max(p['o'], 50) - 50)
         p['value'] = mc.value(t, p['o'], p['age'], popularity, p['position']) / 10000.0       # millions on the screen
     print('%d players in %d clubs' % (len(everyone), len(ranked)))
-    print('places    range  ceiling | middle club: best, third | in the range, above the ceiling | '
-          'top 3 points of the range: mean age of all, of the affordable')
+    def passed_over(level, need, some):
+        """per player: the share of the 256 steps of the club-and-player hash at which he is refused"""
+        reach = sorted({mc.limit(t, level, (h, 0), 0, need) for h in range(4000)})   # every step turns up among these ids
+        assert len(reach) in (1, 256)
+        return [sum(p['value'] * 10000 > x for x in reach) / len(reach) for p in some]
+    print('places    range  ceiling | middle club: best, third | in the range, above the ceiling | top 3 points of '
+          'the range: above the ceiling, passed over in the usual search, in need, by every club | mean age of all, '
+          'of those under the ceiling')
     for (first, last), level, ceiling in zip(mc.LEVEL_PLACES, range(9, -1, -1), ceilings):
         group = ranked[first - 1:last]
         best = [sorted((p['value'] for p in clubs[c]), reverse=True) for c in group]
@@ -77,11 +88,15 @@ def main(exe, edit, ceilings=None):
         dear = [p for p in inside if p['value'] > ceiling]
         top = [p for p in inside if p['o'] >= min(high, 91) - 2]
         cheap = [p for p in top if p['value'] <= ceiling]
-        print('%3d-%-4s %2d-%2d  %7.1f | %6.1f %6.1f | %5d %5d (%4.1f %%) | %.1f %.1f' % (
+        t.ceiling[level] = int(ceiling * 10000) if ceiling != float('inf') else mc.NO_CEILING
+        usual, need = ([0.0] * len(top),) * 2 if t.ceiling[level] == mc.NO_CEILING else (
+            passed_over(level, False, top), passed_over(level, True, top))
+        print('%3d-%-4s %2d-%2d  %7.1f | %6.1f %6.1f | %5d %5d (%4.1f %%) | %4.1f %% %4.1f %% %4.1f %% %4.1f %% | %.1f %.1f' % (
             first, last or len(ranked), low, high, ceiling, statistics.median(b[0] for b in best),
             statistics.median(b[2] for b in best if len(b) > 2), len(inside), len(dear),
-            100.0 * len(dear) / len(inside), statistics.mean(p['age'] for p in top),
-            statistics.mean(p['age'] for p in cheap) if cheap else 0))
+            100.0 * len(dear) / len(inside), 100.0 * (len(top) - len(cheap)) / len(top), 100 * statistics.mean(usual),
+            100 * statistics.mean(need), 100.0 * sum(x == 1 for x in need) / len(top),
+            statistics.mean(p['age'] for p in top), statistics.mean(p['age'] for p in cheap) if cheap else 0))
 
 
 if __name__ == '__main__':

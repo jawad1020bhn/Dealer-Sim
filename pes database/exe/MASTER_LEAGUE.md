@@ -678,10 +678,10 @@ fields of the getter were mapped by running it on records with one bit set.
 
 ### 6.6 A Sider module that changes values, salaries, budgets and prize money
 
-Version 5 of the module adds a price ceiling to the transfers of the computer clubs;
-that part is described in 9.10.
+Version 5 of the module adds a price ceiling to the transfers of the computer clubs
+and version 6 lets it give way; that part is described in 9.10.
 
-`sider/MLMoney.lua` (version 5) replaces the rating part of the fee by `VALUE[rating] x
+`sider/MLMoney.lua` (version 6) replaces the rating part of the fee by `VALUE[rating] x
 AGE[age] x POSITION[registered position] x (the player's own fixed factor) x (1 +
 popularity bonus)`, the rating part of the salary by `SALARY[rating] x SALARY_AGE[age]`,
 and the 2 of the two budget sums of 6.4 by settings. Version 3 adds: other amounts in
@@ -1073,9 +1073,18 @@ players of status 1 or 2 are offered before the rest.
 `ai_fill_slots` (`fcn_03661b15`) goes through the slots of a club while squad +
 open slots (states 1, 9, 10) is below **32** (`fcn_03889502`). For an empty slot
 with a position it asks `ai_pick_candidate` (`fcn_03660c52`) with the window of 9.4
-for the club's level; if nobody is found and no age limit was set, it asks again
-with the window 0 to 99. A found player is written into the slot with state 1 and
-"buy".
+for the club's level; **if nobody is found and the slot asks for no status band**
+(the low half of the slot word `+0xc` is 0), it asks again with the lowest overall 0
+(the search then goes from 99 down to 41), ages 0 to 99 and no band. A slot that asks
+for a band and finds nobody stays empty: there is no second search for it. A found
+player is written into the slot with state 1 and "buy". (Corrected: an earlier text
+said "no age limit was set"; the test at the second call is on the band.)
+
+What asks for a band, from the plan function (`fcn_036602e5`, read, not run): a slot
+of kind 1 gets band 6 on the last day of a window (31 January, 31 August), once per
+club; a slot of another kind on that day becomes kind 1 with band 6 if the record's
+`+0x114` is above 7 and a random test passes. Kind 2 sets the highest age 20, kind 3
+sets 23. For the search a kind other than 0 is 4 with a chance of 50 in 100.
 
 `ai_candidates` (`fcn_0365f5c2`) walks the lists from the highest allowed overall
 down and takes **the first three** players who pass: not on loan, not of the two
@@ -1105,15 +1114,28 @@ Three details, from the disassembly:
   search.
 - No test reads a fee, a salary or a budget.
 
-`ai_pick_candidate` sorts the up to three candidates and prefers, in this order:
+`ai_pick_candidate` puts the up to three candidates into a random order
+(`fcn_0364d22e`, a shuffle with `rand`) and takes, in this order:
 
 1. a player with mark 29 or 30;
 2. a player with status 2;
-3. a player with a mark who has been at his club for more than 364 days and is not
-   the user's (`fcn_0388cf3d`);
+3. a player with a mark for whom `fcn_0388cf3d` is true (never reached: 1 takes every
+   marked player);
 4. a player with status 1;
-5. any other whose club has more than 23 counted players or who has no club, under
-   further tests of level and age.
+5. any other who has no club or whose club still has more than 23 counted players
+   (the pool's count at `+0x7ac`, lowered with every player chosen), if
+   - the list came from set B, or
+   - the buying club is of level 9 and the slot asks for a band, or
+   - the slot is of kind 1 and the buying club of level 8 or 9, or
+   - the slot is of kind 4 and the player's band is below the buying club's level, or
+   - the player's band is below 7 and the level of his club is below 8
+     (`fcn_0365d775`: the level of his club; 0 without a club; 1 for status 2, 5 for
+     status 1).
+
+**If none of the three passes, nobody is taken** (the "no player" id of `0x24feb04`),
+even when the lists hold more players further down: `ai_candidates` stopped at three.
+So an ordinary player of a club of the first 20 (level 8 or 9) leaves on this way only
+if he is listed, or to a slot of kind 1 or 4. Read in the decompiled code, not run.
 
 The chosen player gets bit 5 of `+0xb4` ("in a deal", `fcn_0365d1cd`) and his club's
 count goes down by one.
@@ -1194,8 +1216,8 @@ part):
 ### 9.9 What this means in play
 
 - A computer club has no account that was found (9.7). It shops by **level**, not by money: a level-9 club looks at overall
-  83 to 99, a level-0 club at 47 to 74 (9.4). `sider/MLMoney.lua` (version 5) adds a
-  highest value per level (9.10).
+  83 to 99, a level-0 club at 47 to 74 (9.4). `sider/MLMoney.lua` (version 6) adds a
+  highest value per level, which gives way for a club in need (9.10).
 - It takes **the best three that fit** and prefers listed players and players
   without a club among them (9.6).
 - A player leaves a computer club on this way only if that club counts more than 23
@@ -1204,12 +1226,13 @@ part):
 - Deals are chosen at the start of the season and on the day after each window, and
   close when the next window is open (9.2, 9.7). Squads end between 23 and 32.
 
-### 9.10 A price ceiling by a module (`sider/MLMoney.lua`, version 5)
+### 9.10 A price ceiling by a module (`sider/MLMoney.lua`, versions 5 and 6)
 
 The module adds one test to `ai_candidates`, at `0x0365fb0d`, where a player who
 passed everything is added to the list (`mov ecx, [ebp + 0x24]; push esi; call
 0x041293c0`; only the jump at `0x0365fb02` leads there). The nine bytes become a call
-to a routine in unused memory (`0x047b0162`), which
+to a routine in unused memory (version 6: `0x047d3c84`, at the end of section
+`.xcode`; version 5: `0x047b0162`), which
 
 1. takes the player record from the function's local `[ebp - 0x28]` (written at
    `0x0365f6e3`, read again at `0x0365fa51`);
@@ -1222,7 +1245,8 @@ to a routine in unused memory (`0x047b0162`), which
 3. fetches the rating as the fee function does (`0x03853b42(record, &13, 2)`) and the
    value from the module's value routine;
 4. in the second search refuses a rating above the top of the level's window (9.4);
-5. refuses a value above the ceiling of the level;
+5. refuses a value above the ceiling of the level (version 5), or above the club's
+   limit for this player (version 6, below);
 6. goes on to `0x041293c0` (taken) or drops its return address and jumps to
    `0x0365fb28`, where the game's own failed tests go (refused).
 
@@ -1235,6 +1259,37 @@ reads them rests on the disassembly of `ai_pick_candidate` (`0x03660c83`-`0x0366
 `0x03660d27`, `0x03660d88`) and on `ai_max_overall` reading the same argument at
 `0x03660c88`. Not known: how often the first search finds nobody, and what the
 ceiling does to squad sizes over seasons.
+
+**Version 6.** Version 5, played by hand, gave fewer transfers than the game alone.
+The cause was not found. Step 5 now compares a price with a limit, both made in the
+routine (whole numbers, each division drops the remainder):
+
+```
+limit = ceiling of the level
+in need:  limit = limit * (100 + CEILING_NEED) / 100
+h     = ((player id, 16 bits) ^ (player id, 32 bits) * 0x01000193 ^ club id * 0x9e3779b1) * 0x85ebca6b >> 24
+limit = limit + limit * (h * CEILING_STRETCH) / 25600
+price = value * CEILING_FREE / 100      status 1 or 2
+        value * CEILING_LISTED / 100    else, with mark 29 or 30
+        value                           else
+refused if price > limit
+```
+
+"In need" is the second search (the byte of step 2) or a slot that asks for a status
+band (`[[ebp + 0x30]]` of `ai_candidates`, its last argument). The buying club is the
+first number of the plan record (`[[ebp + 0x18]]`). `h` is 0 to 255 and fixed for a
+player and a club, so the answer does not change from day to day and differs between
+two clubs of one level. Defaults: stretch 50, need 30, listed 70, free 50; with 0, 0,
+100, 100 the routine decides as version 5. Step 4 is not moved by any of this.
+**Run in the emulator**: `ai_candidates` whole and `ai_pick_candidate` from its first
+instruction to the end of its two searches (`0x03660dce`), against
+`money_cave.candidates`. **Not run**: the choice among the three (9.6) and everything
+above.
+
+One thing the reading of 9.6 says about the lost transfers, not measured: when none
+of the three candidates can leave his club, the game's second search starts at 99 and
+meets other players; with step 4 it starts at the top of the club's own window again
+and can meet the same three. `CEILING_RATING = false` switches step 4 off.
 
 The module books no money. A computer club still has no account (9.7).
 

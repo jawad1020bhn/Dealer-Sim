@@ -101,22 +101,46 @@ three players a computer club may sign for a position: it walks lists of players
 overall from the top of the club's rating range down and adds every player who passes
 its tests with `mov ecx, [ebp + 0x24]; push esi; call 0x041293c0` at 0x0365fb0d. None of
 the tests reads a price. Those nine bytes become a call to CEILING_CODE, which works out
-the player's value (the game's rating call, then FEE_CODE) and compares it with
-CEILING_TAB[club level]; in the club's second search, among all players, it first compares
-the rating with CEILING_TOP[club level]. Above either, it drops its return address and
-jumps to 0x0365fb28, where the game's own failed tests go: the next player. The level and
-the "second search" byte are arguments and locals of ai_pick_candidate (fcn_03660c52),
-the only caller; the routine reads them through the saved ebp, and only if ai_candidates
-will return to one of its two calls there. Otherwise, and with a level above 9, the player
-is added as in the game. candidates() below is the walk with and without the ceiling;
-test_money.py runs the whole of ai_candidates against it.
+the player's value (the game's rating call, then FEE_CODE) and compares it with a limit
+made from CEILING_TAB[club level]; in the club's second search, among all players, it
+first compares the rating with CEILING_TOP[club level]. Above either, it drops its return
+address and jumps to 0x0365fb28, where the game's own failed tests go: the next player.
+The level and the "second search" byte are arguments and locals of ai_pick_candidate
+(fcn_03660c52), the only caller; the routine reads them through the saved ebp, and only
+if ai_candidates will return to one of its two calls there. Otherwise, and with a level
+above 9, the player is added as in the game.
+
+The limit (version 6; all divisions drop the remainder):
+
+    limit = CEILING_TAB[level]
+    limit = limit * (100 + NEED) / 100           if the club is in need: the second search,
+                                                 or a slot that asks for a status band
+    limit = limit + limit * (h * STRETCH) / 25600
+    price = value * FREE / 100                   player of status 1 or 2 (signed without a transfer)
+          = value * LISTED / 100                 else, player with mark 29 or 30 (listed by his club)
+          = value                                else
+    refused if price > limit
+
+h is one byte made from the player's id and the id of the buying club, so one club goes
+further for a player than another, and the same club decides the same way about the same
+player: h = ((word at +0x2c) ^ (dword at +0x30) * 0x01000193 ^ club id * 0x9e3779b1)
+* 0x85ebca6b >> 24. The band asked for is ai_candidates' last argument ([ebp + 0x30] ->
+number), the buying club the first dword of the plan record ([ebp + 0x18]). With STRETCH
+= 0, NEED = 0, LISTED = FREE = 100 this is the plain ceiling of version 5. limit() and
+candidates() below are the same in Python; test_money.py runs the whole of ai_candidates,
+and ai_pick_candidate up to the end of its two calls, against them.
 
 The memory used is the end of the section .trace: the section's content ends at
 0x047b005d, its declared size at 0x047b0123, and its last page runs to 0x047b0fff. The
 section is readable, writable and executable. No call or jump of the exe goes there.
-The ceiling's tables and routine are in a second piece of the same page, below the first
-and after the declared size (CAVE_2); the file holds zeros there and no call, jump or
-stored address of the exe points into 0x047b0124-0x047b01fe.
+The ceiling's tables and routine are in a second piece (CAVE_2): the end of the last
+page of the section .xcode, which follows .trace in memory. That section's content ends at
+0x047d3a42, its declared size at 0x047d3c22, the file's bytes for it at 0x047d3dff and its
+last page at 0x047d3fff; it is readable, writable and executable too. The file holds zeros
+from 0x047d3a43 on, and no call, jump or stored address of the unencrypted sections points
+into 0x047d3a43-0x047d3fff. (Version 5 kept the ceiling at 0x047b0130-0x047b01fb, below
+the first piece; the larger routine of version 6 does not fit there, and that range is
+unused again.)
 """
 import struct
 import sys
@@ -136,7 +160,7 @@ BUDGET_T_AT = CAVE + 0x44c      # dword: transfer budget, percent of the mean va
 BUDGET_S_AT = CAVE + 0x450      # dword: salary budget, percent of the mean salary of the best 16
 HUNDRED_AT = CAVE + 0x454       # dword 100
 THOUSAND_AT = CAVE + 0x458      # dword 1000
-MARK_AT = CAVE + 0x45c          # 4 bytes "MLM5"
+MARK_AT = CAVE + 0x45c          # 4 bytes "MLM6"
 TALENT_TAB = CAVE + 0x480       # 64 bytes, by age 0-63: the rating above which a young player gets the
                                 # talent bonus (255: no bonus at this age)
 INCOME_N_CODE = CAVE + 0x460     # (0x4c0 to 0x4cb are not used)
@@ -169,13 +193,18 @@ LEAGUE_ROWS_TAB = CAVE + 0xbb0  # 12 rows of 24 words: prize by place in units o
 LEAGUE_ROWS, LEAGUE_ROW_WORDS, LEAGUE_UNIT = 12, 24, 100
 CAVE_SIZE = 0xdf0
 CAVE_LIMIT = 0x047b1000
-# a second, smaller piece of the same page, below the first: the price ceiling of the
+# a second piece, the unused end of the next section (.xcode): the price ceiling of the
 # computer clubs (only written when CEILING is on)
-CAVE_2 = 0x047b0130
-CAVE_2_SIZE = 0xcc
-CEILING_TAB = CAVE_2            # 10 dwords, by club level 0-9: the highest value a club of that level takes
+CAVE_2 = 0x047d3c40
+CAVE_2_SIZE = 0x180
+CAVE_2_LIMIT = 0x047d4000
+CEILING_TAB = CAVE_2            # 10 dwords, by club level 0-9: the value a club of that level takes for sure
 CEILING_TOP = CAVE_2 + 0x28     # 10 bytes, by club level: the highest rating it takes in the second, wide search
-CEILING_CODE = CAVE_2 + 0x32
+STRETCH_AT = CAVE_2 + 0x34      # dword: percent above the ceiling at which the chance to take a player reaches none
+NEED_AT = CAVE_2 + 0x38         # dword: 100 + the percent by which need raises the ceiling
+LISTED_AT = CAVE_2 + 0x3c       # dword: percent of his value that counts for a player listed by his club
+FREE_AT = CAVE_2 + 0x40         # dword: the same for a player signed without a transfer (status 1 or 2)
+CEILING_CODE = CAVE_2 + 0x44
 NO_CEILING = 0xffffffff         # in CEILING_TAB: this level takes any value
 NO_TOP = 0xff                   # in CEILING_TOP: this level takes any rating
 LEVELS = 10
@@ -270,6 +299,7 @@ GAME_LEAGUE = {
 
 POSITIONS = ('GK', 'CB', 'LB', 'RB', 'DMF', 'CMF', 'LMF', 'RMF', 'AMF', 'LWF', 'RWF', 'SS', 'CF')
 HASH_A, HASH_B = 0x01000193, 0x9e3779b1
+HASH_C = 0x85ebca6b             # the last step of the hash of the ceiling (player and buying club)
 
 FEE_SOURCE = f'''
     cmp eax, 99
@@ -466,24 +496,31 @@ l2: imul ecx, ecx, {LEAGUE_ROW_WORDS}
 '''
 # The price ceiling. Entered by a call from ai_candidates (ebp = its frame) in the place of
 # `mov ecx, [ebp + 0x24]; push esi; call take`. The player record the function is looking
-# at is its local [ebp - 0x28]. The club level is not handed to ai_candidates; it is an
-# argument of its only caller, ai_pick_candidate ([its ebp + 0x1c] -> level), whose frame
-# is the saved ebp; the byte [its ebp + 0x1b] is 1 in the second, wide search (lowest
+# at is its local [ebp - 0x28], the plan record of the buying club its argument
+# [ebp + 0x18] (club id in the first dword), the status band the slot asks for its last
+# argument ([ebp + 0x30] -> number). The club level is not handed to ai_candidates; it is
+# an argument of its only caller, ai_pick_candidate ([its ebp + 0x1c] -> level), whose
+# frame is the saved ebp; the byte [its ebp + 0x1b] is 1 in the second, wide search (lowest
 # overall handed in as 0). If ai_candidates was not called from one of the two known
 # places, or the level is not 0 to 9, the player is taken as in the game. Otherwise:
 #   - the rating is fetched with the game's rating call, as the fee function does;
 #   - in the wide search a rating above CEILING_TOP[level] is refused;
-#   - the value is worked out by FEE_CODE (record in ebx, scratch dword at [ebp - 0xc])
-#     and a value above CEILING_TAB[level] is refused.
+#   - a level without a ceiling takes the player;
+#   - the limit is the ceiling, raised by NEED in the wide search and for a slot that asks
+#     for a band, and then by up to STRETCH percent by the hash of player and club;
+#   - the value is worked out by FEE_CODE (record in ebx, scratch dword at [ebp - 0xc]),
+#     counted at FREE percent for status 1 or 2 and else at LISTED percent with mark 29 or
+#     30, and refused if it is above the limit.
 # Refused: the return address is dropped and the game's "next player" follows.
-# Locals: [ebp - 4] ceiling, [ebp - 8] position 13, [ebp - 0xc] scratch of FEE_CODE,
-# [ebp - 0x10] wide search, [ebp - 0x14] highest rating.
+# Locals: [ebp - 4] limit, [ebp - 8] position 13, [ebp - 0xc] scratch of FEE_CODE,
+# [ebp - 0x10] wide search, [ebp - 0x14] highest rating, [ebp - 0x18] buying club,
+# [ebp - 0x1c] need.
 CEILING_SOURCE = f'''
     push ebx
     push edi
     push ebp
     mov ebp, esp
-    sub esp, 0x14
+    sub esp, 0x1c
     mov eax, dword ptr [ebp]
     mov ebx, dword ptr [eax - 0x28]
     mov ecx, dword ptr [eax + 4]
@@ -491,9 +528,16 @@ CEILING_SOURCE = f'''
     je c1
     cmp ecx, {AI_PICK_RETURNS[1]}
     jne c3
-c1: mov eax, dword ptr [eax]
+c1: mov ecx, dword ptr [eax + 0x18]
+    mov ecx, dword ptr [ecx]
+    mov dword ptr [ebp - 0x18], ecx
+    mov edx, dword ptr [eax + 0x30]
+    mov edx, dword ptr [edx]
+    mov eax, dword ptr [eax]
     movzx ecx, byte ptr [eax + 0x1b]
     mov dword ptr [ebp - 0x10], ecx
+    or edx, ecx
+    mov dword ptr [ebp - 0x1c], edx
     mov eax, dword ptr [eax + 0x1c]
     mov eax, dword ptr [eax]
     cmp eax, {LEVELS - 1}
@@ -514,8 +558,42 @@ c1: mov eax, dword ptr [eax]
     je c2
     cmp eax, dword ptr [ebp - 0x14]
     ja c4
-c2: call {FEE_CODE}
-    cmp edi, dword ptr [ebp - 4]
+c2: cmp dword ptr [ebp - 4], -1
+    je c3
+    call {FEE_CODE}
+    cmp dword ptr [ebp - 0x1c], 0
+    je c5
+    mov eax, dword ptr [ebp - 4]
+    mul dword ptr [{NEED_AT}]
+    div dword ptr [{HUNDRED_AT}]
+    mov dword ptr [ebp - 4], eax
+c5: movzx ecx, word ptr [ebx + 0x2c]
+    imul edx, dword ptr [ebx + 0x30], {HASH_A}
+    xor ecx, edx
+    imul edx, dword ptr [ebp - 0x18], {HASH_B}
+    xor ecx, edx
+    imul ecx, ecx, {HASH_C}
+    shr ecx, 24
+    imul ecx, dword ptr [{STRETCH_AT}]
+    mov eax, dword ptr [ebp - 4]
+    mul ecx
+    mov ecx, 25600
+    div ecx
+    add dword ptr [ebp - 4], eax
+    mov ecx, dword ptr [ebx + 0xb4]
+    and ecx, 0xf
+    dec ecx
+    cmp ecx, 1
+    mov ecx, {FREE_AT}
+    jbe c6
+    test dword ptr [ebx + 0xb8], 0x60000000
+    jz c7
+    mov ecx, {LISTED_AT}
+c6: mov eax, edi
+    mul dword ptr [ecx]
+    div dword ptr [{HUNDRED_AT}]
+    mov edi, eax
+c7: cmp edi, dword ptr [ebp - 4]
     ja c4
 c3: mov esp, ebp
     pop ebp
@@ -553,10 +631,13 @@ INCOME_SCALE_BYTES = bytes.fromhex('85c07e0e52f7258c0d7b04f73554067b045ac3')
 INCOME_S_BYTES = bytes.fromhex('81c6983a00005089f0e8deffffff89c658c3')
 LEAGUE_BYTES = bytes.fromhex('31c9eb0d0fb7144d900d7b0439fa7411413b0da80d7b0472eb8b0485c0077b04c36bc91801c10fb7044db00d7b046bc064c3')
 CEILING_BYTES = bytes.fromhex(
-    '53575589e583ec148b45008b58d88b480481f9580d6603740881f9b90d660375558b000fb6481b894df08b401c8b0083f80977420fb688'
-    '58017b04894dec8b048530017b048945fcc745f80d0000006a028d45f85053e885390aff83c40c0fb6c0837df00074053b45ec771ae8bd'
-    '0a00003b7dfc771089ec5d5f5b588b4d245650e9d89197ff89ec5d5f5b83c404e933f9eafe')
-assert CEILING_CODE + len(CEILING_BYTES) <= CAVE_2 + CAVE_2_SIZE <= CAVE
+    '53575589e583ec1c8b45008b58d88b480481f9580d6603740c81f9b90d66030f85f70000008b48188b09894de88b50308b128b000fb648'
+    '1b894df009ca8955e48b401c8b0083f8090f87ce0000000fb688683c7d04894dec8b0485403c7d048945fcc745f80d0000006a028d45f8'
+    '5053e849fe07ff83c40c0fb6c0837df00074093b45ec0f87a2000000837dfcff0f8488000000e873cffdff837de40074128b45fcf72578'
+    '3c7d04f73554067b048945fc0fb74b2c6953309301000131d16955e8b179379e31d169c96bcaeb85c1e9180faf0d743c7d048b45fcf7e1'
+    'b900640000f7f10145fc8b8bb400000083e10f4983f901b9803c7d047611f783b8000000000000607411b97c3c7d0489f8f721f7355406'
+    '7b0489c73b7dfc771089ec5d5f5b588b4d245650e9105695ff89ec5d5f5b83c404e96bbde8fe')
+assert CEILING_CODE + len(CEILING_BYTES) <= CAVE_2 + CAVE_2_SIZE <= CAVE_2_LIMIT
 ROUTINES = ((FEE_CODE, FEE_SOURCE, 'FEE_BYTES'), (SALARY_CODE, SALARY_SOURCE, 'SALARY_BYTES'),
             (BUDGET_T_CODE, BUDGET_T_SOURCE, 'BUDGET_T_BYTES'), (BUDGET_S_CODE, BUDGET_S_SOURCE, 'BUDGET_S_BYTES'),
             (PRIZE_CODE, PRIZE_SOURCE, 'PRIZE_BYTES'), (BONUS_R_CODE, BONUS_R_SOURCE, 'BONUS_R_BYTES'),
@@ -584,6 +665,7 @@ MIN_INCOME, MAX_INCOME = 10, 1000
 MAX_INCOME_WAGES = 100                  # percent: the wage bill times this still fits the division
 MAX_LEAGUE_ROW = 650                    # millions: a place of a list by league is kept in 16 bits
 MIN_CEILING, MAX_CEILING = 0.01, 9999   # millions; 0 in the list: no ceiling for that group of clubs
+MAX_STRETCH, MAX_NEED = 300, 300        # percent: the largest ceiling times both still fits 32 bits
 NO_TALENT = 255
 
 # the code the routines rely on: name, address, byte count (MLMoney.lua compares these
@@ -707,13 +789,16 @@ class Tables:
     wage bill added to the yearly income, or None; ceiling: 10 amounts in millions for the
     club ranking places of LEVEL_PLACES (best clubs first; 0: no ceiling), or None;
     ceiling_rating: with a ceiling, the second search of a club stays below the top of its
-    rating range."""
+    rating range; ceiling_stretch: percent above its ceiling at which a club's chance to
+    take a player has fallen to none; ceiling_need: percent by which need raises the
+    ceiling; ceiling_listed, ceiling_free: percent of his value that counts for a listed
+    player and for one signed without a transfer."""
 
     def __init__(self, value, age, position, spread, fame, salary, salary_age, budget_transfer, budget_salary,
                  cup=None, league=None, league_2=None, prize_share=None, pay_gap=None, bonus=None,
                  young_years=None, talent=None, talent_step=0, talent_max=0, talent_cap=0, income=None,
                  league_by_id=None, cup_national=None, cup_tv=None, income_wages=None, ceiling=None,
-                 ceiling_rating=True):
+                 ceiling_rating=True, ceiling_stretch=0, ceiling_need=0, ceiling_listed=100, ceiling_free=100):
         self.value = [clamp(amount(m), 1, CAP) for m in curve(value, 0, 99, True)]
         self.age = [clamp(int(p + 0.5), 0, MAX_AGE_PERCENT) for p in curve(age, 0, 63, False)]
         self.position = [clamp(int(position[n] + 0.5), 0, MAX_POSITION_PERCENT) for n in POSITIONS] + [100] * 3
@@ -775,6 +860,10 @@ class Tables:
         self.ceiling = None if ceiling is None else [
             clamp(amount(m), amount(MIN_CEILING), amount(MAX_CEILING)) if m else NO_CEILING for m in reversed(ceiling)]
         self.ceiling_top = list(WINDOW_TOP) if ceiling_rating else [NO_TOP] * LEVELS
+        self.ceiling_stretch = clamp(int(ceiling_stretch + 0.5), 0, MAX_STRETCH)
+        self.ceiling_need = clamp(int(ceiling_need + 0.5), 0, MAX_NEED)
+        self.ceiling_listed = clamp(int(ceiling_listed + 0.5), 0, 100)
+        self.ceiling_free = clamp(int(ceiling_free + 0.5), 0, 100)
 
     def sites(self):
         """The places the module changes with these settings: (name, address, old, new)."""
@@ -810,7 +899,7 @@ def image(t):
     d += struct.pack('<64H', *t.salary_age) + struct.pack('<16H', *t.position)
     assert len(d) == FAME_AT - CAVE
     d += struct.pack('<7I', t.fame, t.spread_low, t.spread_range, t.budget_transfer or 200, t.budget_salary or 200,
-                     100, 1000) + b'MLM5'
+                     100, 1000) + b'MLM6'
     pieces = [(at, globals()[name]) for at, _, name in ROUTINES]
     pieces += [(LEAGUE1_TAB, struct.pack('<23I', *t.league)), (LEAGUE2_TAB, struct.pack('<25I', *t.league_2)),
                (RANK_STEP_AT, struct.pack('<d', t.rank_step)),
@@ -829,8 +918,11 @@ def image(t):
 
 
 def image_2(t):
-    """The second piece of memory: the ceilings by club level and the routine."""
+    """The second piece of memory: the ceilings by club level, the four numbers of the
+    limit and the routine."""
     d = struct.pack('<%dI' % LEVELS, *t.ceiling) + bytes(t.ceiling_top)
+    d = d.ljust(STRETCH_AT - CAVE_2, b'\0') + struct.pack('<4I', t.ceiling_stretch, 100 + t.ceiling_need,
+                                                           t.ceiling_listed, t.ceiling_free)
     assert CAVE_2 + len(d) == CEILING_CODE
     d += CEILING_BYTES
     assert len(d) <= CAVE_2_SIZE
@@ -862,29 +954,53 @@ def level_of_place(place):
             return level
 
 
-def affordable(t, level, rating, age, popularity, position=5, player=(0, 0), wide=False, from_pick=True):
+def stretch_hash(player, club):
+    """The byte the ceiling routine makes from a player's id and the buying club's id."""
+    x = (player[0] & 0xffff) ^ (player[1] * HASH_A & 0xffffffff) ^ (club * HASH_B & 0xffffffff)
+    return (x * HASH_C & 0xffffffff) >> 24
+
+
+def limit(t, level, player=(0, 0), club=0, need=False):
+    """The most a computer club of this level counts as affordable for this player.
+    need: its second search, or a slot that asks for a status band."""
+    x = t.ceiling[level]
+    if need:
+        x = x * (100 + t.ceiling_need) // 100
+    return x + x * (stretch_hash(player, club) * t.ceiling_stretch) // 25600
+
+
+def affordable(t, level, rating, age, popularity, position=5, player=(0, 0), wide=False, from_pick=True,
+               club=0, band=0, status=0, listed=False):
     """Does a computer club of this level take the player as a candidate (after all the
-    game's own tests)? wide: the second search, among all players. Without the ceiling,
-    with a level outside 0 to 9, or when the choosing code was not entered from
-    ai_pick_candidate: always."""
+    game's own tests)? wide: the second search, among all players; club: the buying club's
+    id; band: the status band the slot asks for; status: of the player (+0xb4, bits 0-3);
+    listed: he carries mark 29 or 30. Without the ceiling, with a level outside 0 to 9, or
+    when the choosing code was not entered from ai_pick_candidate: always."""
     if t is None or t.ceiling is None or not from_pick or not 0 <= level < LEVELS:
         return True
     if wide and rating > t.ceiling_top[level]:
         return False
-    return value(t, rating, age, popularity, position, player) <= t.ceiling[level]
+    if t.ceiling[level] == NO_CEILING:
+        return True
+    price = value(t, rating, age, popularity, position, player)
+    if status in (1, 2):
+        price = price * t.ceiling_free // 100
+    elif listed:
+        price = price * t.ceiling_listed // 100
+    return price <= limit(t, level, player, club, bool(wide or band))
 
 
-def candidates(t, level, lists, lowest, highest, wide=False, passes=lambda p: True, most=3):
+def candidates(t, level, lists, lowest, highest, wide=False, passes=lambda p: True, most=3, club=0, band=0):
     """The walk of ai_candidates over one set of lists: from the highest overall asked for
     down to the lowest, each list in its order, the first `most` players who pass the
     game's tests and the ceiling. lists: {overall: [player, ...]}, a player being a dict
-    with rating, age, popularity, position, id. As the game, the walk leaves out the list
-    of `lowest` itself."""
+    with rating, age, popularity, position, id and, if not 0, status and listed. As the
+    game, the walk leaves out the list of `lowest` itself."""
     out = []
     for overall in range(highest, lowest, -1):
         for p in lists.get(overall, ()):
             if passes(p) and affordable(t, level, p['rating'], p['age'], p['popularity'], p['position'], p['id'],
-                                        wide):
+                                        wide, True, club, band, p.get('status', 0), p.get('listed', False)):
                 out.append(p)
                 if len(out) >= most:
                     return out
