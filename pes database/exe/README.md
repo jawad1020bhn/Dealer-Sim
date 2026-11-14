@@ -9,7 +9,7 @@ Every function that could be found is decompiled to C with machine names
 (`fcn_038e77af`). Three parts are understood so far and written up in **`NOTES.md`**:
 the save file, how the edit data is loaded, and the overall rating. What was found
 about Master League (year plan, league fixtures, salary, transfer fee, negotiations,
-transfers of the computer clubs) is in **`MASTER_LEAGUE.md`**. The 127 functions
+transfers of the computer clubs) is in **`MASTER_LEAGUE.md`**. The 133 functions
 behind them have working names in `names.tsv`.
 
 ## Look something up
@@ -65,9 +65,15 @@ They need `pip install unicorn capstone` and the exe (`rea-setup.sh` puts it in
 ## Sider modules
 
 `sider/` holds Lua modules for the Sider of this game and how to install them
-(`sider/README.md`). So far one: `MLCheck.lua`, a read-only test that writes the level
-table of the computer clubs and the fee numbers of the running game to `sider.log`.
-`sider/test_module.py <exe>` runs it outside the game against the exe file.
+(`sider/README.md`):
+
+- `MLCheck.lua`, a read-only test that writes the level table of the computer clubs and
+  the fee numbers of the running game to `sider.log` (6 of 6 on the user's game).
+  `sider/test_module.py <exe>` runs it outside the game against the exe file.
+- `MLMoney.lua`, which changes the running game: player values by rating, age and
+  popularity, salaries by rating, from tables in the file. `sider/test_money.py <exe>`
+  runs the game's salary and fee code with its changes in the emulator. Not yet run in
+  the game.
 
 ## What the file looks like
 
@@ -142,7 +148,7 @@ read back from the exe; the import slots match the file.
 
 ## Not done
 
-- 127 functions are named (`names.tsv`); the rest is not understood. Of Master League
+- 133 functions are named (`names.tsv`); the rest is not understood. Of Master League
   five pieces are proven and many rules are only located (`MASTER_LEAGUE.md`, section 14). Of the edit data, the
   player, team and manager fields are mapped; five blocks are not read (`NOTES.md`).
 - Virtual calls are not resolved, so `calls.tsv.xz` misses every call through a vtable.

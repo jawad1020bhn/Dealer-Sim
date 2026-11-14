@@ -126,3 +126,9 @@ address	name	topic	note
 0x03888145	ai_may_be_bought	master league	(player) -> may enter the pool: status, not on loan, not in a deal, club keeps more than 16; read
 0x0385a08a	window_open	master league	(&season) -> taken to be: a transfer window is open today; the C lacks the returns
 0x0366365b	user_deal_step	master league	day end, window days: 70 deal records at +0xd06438, 11 states; read up to line 230
+0x0385a329	popularity_start	master league	(player id, &rating, &band) -> starting value of the 12-bit number at player +0xb4 bit 11: club part + max(band part, 10 * (rating - 50)); read
+0x038adf0c	club_money_setup	master league	(club, &with budgets): balance, start money and season income of the user's club when the career is made; read
+0x038ad9c4	budgets_from_squad	master league	(club): transfer budget = 2 x mean of the 16 highest fees, salary budget = wage bill + 2 x mean of the 16 highest salaries; read
+0x038ade76	season_income	master league	(club) -> 25 * max(150000, club_popularity) - 670 * min(400, field) - 3451330; read
+0x03878855	club_popularity	master league	(club) -> 10,000 to 140,000 by club level + 2 x sum of the 16 highest popularity numbers of the squad; read
+0x038a9e6b	season_income_by_rank	master league	(club) -> (403 - club rank) * 5000, at least 1000; read

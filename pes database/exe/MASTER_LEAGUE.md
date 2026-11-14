@@ -19,10 +19,13 @@ located. Each section says which of these four levels applies:
 | **inferred** | the purpose is concluded from what the code touches, when it runs and who calls it; the name may be wrong |
 | **located** | the function is found and listed, its body is not read |
 
-Nothing here was seen in the running game. The exe cannot run in the work environment,
-and no Master League save file is in the repository, so no number below has been
-compared with a real career. Function names are working names of mine
-(`names.tsv`); the exe has no symbols. Field meanings marked "?" are not established.
+Almost nothing here was seen in the running game. The exe cannot run in the work
+environment and no Master League save file is in the repository. Two things come from
+the user's game: the read-only Sider module `sider/MLCheck.lua` found the code of
+sections 6.2 and 9.4 at the same addresses (6 of 6), and the screen numbers of one player
+of a running career fit the fee formula to the last digit (section 6). Function names
+are working names of mine (`names.tsv`); the exe has no symbols. Field meanings marked
+"?" are not established.
 
 Contents: [1 Proven](#1-what-is-proven) · [2 Frame](#2-the-frame-mode-data-records-random-numbers) ·
 [3 Day](#3-how-a-day-is-processed) · [4 Year plan](#4-the-year-plan-calendar) ·
@@ -484,7 +487,16 @@ competition data when the career is created (`process::ModeDataCreationThread`).
 
 Amounts are whole numbers; the largest is **99,999,900** (`0x5f5e09c`).
 `money_text` (`fcn_03869870`) prints a 64-bit amount with thousands separators and no
-scaling. Whether the screens add a unit or a factor is not checked.
+scaling.
+
+**The screens show 100 times the stored amount.** Not found in the code; taken from one
+player of the user's career (Manchester United, Bruno Fernandes, rating 89): the screens
+show a salary of 7,259,700 and a value of 36,743,200. With the salary 72,597 the fee
+formula of 6.2 gives 367,432 for `x` = 955, and for no other rating from 60 to 99 is
+there an `x` that gives it (`sider/test_money.py`, ok 5). So the value on the screen is
+the fee of 6.2 without the random change, times 100. All four amounts the user read
+(the two above, a transfer budget of 48,013,700 and a salary budget of 12,373,500) end
+in 00. One player; the formula has no age term, and a player of 31 or 32 showed none.
 
 ### 6.1 Salary: `salary` = `fcn_038ac66e(player, club, …)`
 
@@ -493,7 +505,7 @@ Level: **proven** (check 7) for the formula below; the award and title bonuses a
 
 ```
 o  = overall rating of the player (best position, with condition)
-x  = the 12-bit number of the player record (+0xb4, bits 11-22)
+x  = the 12-bit number of the player record (+0xb4, bits 11-22): popularity, see 6.5
 
 A  = 30*o - 500
 B  = 300*max(0, o-65) + 500*max(0, o-75) + 700*max(0, o-85)
@@ -566,12 +578,75 @@ figure. 8 callers, among them the money step and the closing of the accounts.
 
 ### 6.4 Club money
 
-Level: **located**. `fcn_03640d19` (money step, events 3, 23, 25, 49),
-`fcn_03649f1f` (616 lines, event 24), `fcn_038adf0c`, `fcn_038ad9c4`,
-`process::ProcessCmnFinanceReportCheck` (`fcn_035e69ce`, event 25),
-`fcn_03878855` and about twenty small functions at `0x038aa000`-`0x038ab400` that
-add and read account lines. Income, prize money, sponsors and the budget rule are
-**not read**.
+Level: **read** for the four functions below (C and disassembly, not run; the names of
+the amounts are inferred); the rest **located**: `fcn_03640d19` (money step, events 3,
+23, 25, 49; 1,280 lines), `fcn_03649f1f` (616 lines, event 24),
+`process::ProcessCmnFinanceReportCheck` (`fcn_035e69ce`, event 25) and about twenty
+small functions at `0x038aa000`-`0x038ab400` that add and read account lines. The
+account of the user's club is at mode data `+0xdddfc4`. Prize money and what the
+screens call each amount are **not read**.
+
+- `club_money_setup` (`fcn_038adf0c(club, &with budgets)`), one caller chain, from
+  `fcn_035f445b` in Master League (taken to be the set-up of a new career): balance
+  (`+0xdddfe4`) = `M + N/2 + wage bill`, with
+  `M = (15,000 + 165,000 * level) * (1 + p/100)`, `p` a random whole number from -10
+  to +10, `level` the club's level 0 to 9 (byte `+0xe` of its record in the table at
+  `+0xcc84cc`), and `N = season_income`. `M` is also stored at `+0xdddfec`, `N` at
+  `+0xdddff0`.
+- `season_income` (`fcn_038ade76(club)`) =
+  `25 * max(150,000, V) - 670 * min(400, club field +4) - 3,451,330`, or 1,000 if that
+  is below 1. `V = club_popularity` (`fcn_03878855`): 10,000 to 140,000 by the club's
+  level (10, 15, 20, 25, 35, 50, 65, 80, 110, 140 thousand) plus twice the sum of the
+  16 highest `x` of the squad.
+- `budgets_from_squad` (`fcn_038ad9c4(club)`), called by the set-up and in event 24 at
+  what is taken to be a change of club: the fee of 6.2 (no random change) is computed
+  for every player of the squad. **Transfer budget** (`+0xdddfc4`) += 2 x (sum of the
+  16 highest fees / 16); **salary budget** (`+0xdddfdc`) += wage bill + 2 x (sum of the
+  16 highest salaries / 16). So both budgets follow the values and salaries of the
+  squad: a change of the fee or salary formula scales them in a new career.
+- First day of a season (money step, event 3): `+0xdddfec` =
+  `(403 - club rank) * 5,000`, at least 1,000, changed by -10 to +10 percent; `+0xdddff0`
+  = `season_income`, changed the same way; three amounts of another record are added to
+  the balance. For the first club of the ranking the first figure is about 2,000,000
+  (200 million on the screen).
+
+The user's two budget figures (480,137 and 123,735 stored) are odd numbers, so they are
+not the fresh results of `budgets_from_squad`; they are of the size it gives (twice
+the mean fee, twice the mean salary of the best 16).
+
+### 6.5 Popularity: the number `x`
+
+Level: **read** (disassembly); the name is **inferred**.
+
+`x` (player record `+0xb4`, bits 11-22) is kept between 0 and 3,000. It enters the
+salary (6.1), the fee (6.2) and the club's popularity (6.4). It is set by
+`popularity_start` (`fcn_0385a329`), which has three callers: `fcn_0366dc05`, a loop
+over all players called from `fcn_035f445b` (taken to be the set-up of a new career: it
+also sets the club's popularity and calls `club_money_setup`); `fcn_035f7c46`, which
+also sets the band and the salary of one player; and `fcn_035e2b9d`.
+
+```
+x = club part + max(band part, 10 * (max(o, 50) - 50))
+band part = (0, 110, 210, 310, 410, 510, 610, 810)[band]        band: section 6.1
+club part = (0, 20, 40, 60, 80, 100, 150, 200, 250, 300)[k]
+    k = the club's level 0 to 9 for status 0; 2 for status 2 and 6; 5 for status 1; else 0
+```
+
+During the career `fcn_0385944c(player, change)` adds to it (11 callers at
+`0x0366dce3`-`0x0366f31e`, not read) and `fcn_035e241f` sets it. Bruno Fernandes had
+955 in the user's career.
+
+Age: the player record holds it in 6 bits at `+0x1c`, bits 7-12 (field `0x2b` of the
+getter `fcn_038278b0`; the next field is the 5-bit playing style, as in the edit file,
+where age is the only 6-bit field). The code tests it against 36, 37 and 45.
+
+### 6.6 A Sider module that changes values and salaries
+
+`sider/MLMoney.lua` replaces the rating part of the fee by `VALUE[rating] x AGE[age] x
+(1 + popularity bonus)` and the rating part of the salary by a table. What it writes and
+why is in `sider/money_cave.py`; `sider/test_money.py` runs the game's salary and fee
+code with the changes in the emulator and compares 6,000 random players with the Python
+of `money_cave.py`. Not yet run in the game.
 
 ## 7 Negotiations of the user's club
 
@@ -983,8 +1058,9 @@ career only where the mode reads the database again; where that happens is not f
   on its days; the rest of `user_deal_step`, `fcn_036e2557`, `fcn_036e067a`
   (section 9).
 - Growth, team spirit, youth, retirement, new players, contracts (section 12).
-- Club income, prize money, sponsors, budget (section 6.4).
-- The meaning of `x` (player `+0xb4`, bits 11-22), of field `0x2e`, of the fee
+- Prize money, the yearly accounts and what the screens call each amount (section
+  6.4); where the screens multiply amounts by 100.
+- What moves `x` during a career (section 6.5); the meaning of field `0x2e`, of the fee
   formula's `kind`, of the 13 deal states and of `day_state`.
 - The other twelve cases of the negotiation step, and the lost fraction arithmetic in
   the one that was read.
