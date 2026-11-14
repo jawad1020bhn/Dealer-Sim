@@ -51,7 +51,7 @@ address	name	topic	note
 0x04067af3	overall_rating	rating	(39 values, position) -> rating
 0x04067a53	overall_blend	rating	
 0x0383899a	player_rating_now	rating	rating with the condition arrow
-0x038278b0	player_value	rating	one ability of a database player
+0x038278b0	player_value	rating	(this = player record, field 0-0x61, &out): one field of a player; 0x00 registered position, 0x2b age
 0x038e6c48	stack_cookie_check	runtime	
 0x038e6e2b	memset_thunk	runtime	
 0x038e6d6f	memcpy_thunk	runtime	
@@ -90,7 +90,7 @@ address	name	topic	note
 0x03659b50	negotiation_step	master league	walks the 70 deal records at mode data + 0xd06438; switch on 13 states; case 2 read
 0x0389b3f8	willingness_a	master league	score 0..100 used by negotiation_step; not read
 0x0389bd94	willingness_b	master league	score 0..100 used by negotiation_step; not read
-0x0388a1be	deal_years	master league	number stored in bits 8-11 of the deal record; not read
+0x0388a1be	deal_years	master league	(&player, club, &flag) -> years of a contract, 1 to 5, from a 7-bit number of the player and the age; read (MASTER_LEAGUE.md 7.1)
 0x03652198	scout_step	master league	day end: rand(1000) < 30 / slots in use -> scout_search; read
 0x0364f2ca	scout_search	master league	1,381 lines; not read
 0x036602e5	club_squad_plan	master league	event 30: marks surplus players of up to 5 clubs per call, fills the plan record; read
@@ -126,3 +126,17 @@ address	name	topic	note
 0x03888145	ai_may_be_bought	master league	(player) -> may enter the pool: status, not on loan, not in a deal, club keeps more than 16; read
 0x0385a08a	window_open	master league	(&season) -> taken to be: a transfer window is open today; the C lacks the returns
 0x0366365b	user_deal_step	master league	day end, window days: 70 deal records at +0xd06438, 11 states; read up to line 230
+0x0385a329	popularity_start	master league	(player id, &rating, &band) -> starting value of the 12-bit number at player +0xb4 bit 11: club part + max(band part, 10 * (rating - 50)); read
+0x038adf0c	club_money_setup	master league	(club, &with budgets): balance, start money and season income of the user's club when the career is made; read
+0x038ad9c4	budgets_from_squad	master league	(club): transfer budget = 2 x mean of the 16 highest fees, salary budget = wage bill + 2 x mean of the 16 highest salaries; read
+0x038ade76	season_income	master league	(club) -> 25 * max(150000, club_popularity) - 670 * min(400, field) - 3451330; read
+0x03878855	club_popularity	master league	(club) -> 10,000 to 140,000 by club level + 2 x sum of the 16 highest popularity numbers of the squad; read
+0x038a9e6b	season_income_by_rank	master league	(club) -> (403 - club rank) * 5000, at least 1000; read
+0x03640686	prize_step	master league	day end: pays league and cup prize money of the user's club into the balance (+0xdddfe4) and a competition line; read
+0x038aa307	cup_prize	master league	(&competition, &stage, &club) -> amount from the table at 0x0216b178 (73 rows of competition, stage, amount); run in the emulator
+0x038a9ebb	league_prize	master league	(&club, &place, &half) -> amount by final place, four lists built on the stack; run in the emulator
+0x038a9115	cup_stage	master league	(competition, club) -> 0 winner .. 10, 11 still in, 12 not taking part; read
+0x038aadb7	balance_add	master league	(&amount): adds to the balance of the user's club (+0xdddfe4); read
+0x038aac87	transfer_budget_add	master league	(&amount): adds to +0xdddfc4; read
+0x038aacf7	salary_budget_add	master league	(&amount): adds to +0xdddfdc; read
+0x038acf42	top_fees_sum	master league	(&club, &count): taken to be the sum of the count highest fees of the squad; read with gaps
