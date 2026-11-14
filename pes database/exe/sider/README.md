@@ -41,6 +41,32 @@ What the result means:
 - **No `MLCheck` line at all**: look for `MLCheck.lua` in `sider.log`. Sider writes
   there why it skipped the module (file not found, error in `init`).
 
+## Result in the game (14 November 2026)
+
+`MLCheck.lua` ran on the user's PC under Sider 3.6.0: **6 of 6 as expected**, with the
+same nine lines as above. So the running game holds the analysed code at the analysed
+addresses, and a Sider module reads it without trouble.
+
+What else the same `sider.log` shows:
+
+- `luajit.ext.enabled = 0`: modules have no `ffi`, `bit` or `require`. Modules here must
+  not need them.
+- Sider itself uses `0x026503E0` (`_tid_addr1`), the pointer `MASTER_LEAGUE.md` calls the
+  mode object, and `0x04062701`, the competition id table function. Two addresses of the
+  notes confirmed from another side.
+- Sider changes code at 31 places of the running game (hooks and small patches). None of
+  them lies in one of the 127 functions named in `../names.tsv`, so the salary, fee,
+  fixture and computer-club code runs as analysed. A later module must check this again
+  for every place it writes to.
+- Sider's gameplay settings point at the constants `0x01F0F2A8` and `0x01F0F2C0`, the
+  neighbours of the shared 2.2 at `0x01f0f2b8`. One more reason not to change that
+  constant in place.
+- Three other modules of that install are not active, for reasons of their own:
+  `Script_Stadiums.lua` (file `map_teams.txt` missing), `PlayerDump.lua` (calls
+  `memory.search_process`, which this Sider does not have) and `GrowthBridge.lua` (asks
+  for events this Sider does not know: `key_down`, `overlay_on`, `set_teams`,
+  `gamepad_input`).
+
 ## What was looked at in `sider.dll`
 
 Read from the DLL's code and strings, not run:
