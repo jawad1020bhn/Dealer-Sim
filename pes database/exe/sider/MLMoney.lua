@@ -1,4 +1,4 @@
--- MLMoney.lua, version 5: real-world player values, salaries, budgets, income and prize
+-- MLMoney.lua, version 6: real-world player values, salaries, budgets, income and prize
 -- money in the PES 2017 Master League, and a price ceiling for the transfers of the
 -- computer clubs (Sider Lua module). Made for PES2017.exe sha256
 -- 44b0caaa...; MLCheck.lua must have said "6 of 6 as expected" on your game before you use
@@ -23,8 +23,9 @@
 --     outside the first 250 (the game: 2 times);
 --   * the role, age and award bonuses of the salary are multiplied by BONUS percent;
 --   * a player of 23 or younger can sign for YOUNG_YEARS years (the game: 3);
---   * a computer club no longer signs a player whose value is above what a club of its
---     place in the club ranking pays at most (CEILING; the game looks at the rating only).
+--   * a computer club looks at the price: up to the ceiling of its place in the club
+--     ranking it signs as before, above it less and less often, and far above it never
+--     (CEILING and the four settings after it; the game looks at the rating only).
 -- Each of these has its own setting below and can be switched off there. Amounts are
 -- what the screens show.
 --
@@ -250,34 +251,66 @@ local YOUNG_YEARS = 5
 -- chooses the players it signs by rating, age and position, never by price, and when it
 -- finds nobody for a position in the rating range of its size it looks again among all
 -- players, from the best down.
--- With this setting a computer club passes over every player whose value (the value this
--- module computes, before the game's random change) is above the club's ceiling, and
--- takes the best players below it instead. The ceiling goes by the club's place in the
--- game's club ranking, in the ten groups the game itself uses for the rating range:
--- millions for the clubs at place
+-- With this setting a computer club compares a player's value (the value this module
+-- computes, before the game's random change) with the ceiling of its place in the
+-- game's club ranking. Up to the ceiling it takes the player as the game does. Above it,
+-- see CEILING_STRETCH and the settings after it. A player it passes over is skipped and
+-- the next best is looked at. The ceilings, in the ten groups the game itself uses for
+-- the rating range: millions for the clubs at place
 --     1-10, 11-20, 21-50, 51-80, 81-120, 121-170, 171-220, 221-260, 261-300, all others.
 -- 0.01 to 9999 each, or 0 for a group without a ceiling. false: computer clubs choose as
 -- in the game.
 -- Your own club is not touched: what you can buy is a matter of your budget, and offers
 -- for your players go another way. No money is booked by this setting; a computer club
--- still has no account.
+-- still has no account, and between two computer clubs the game has no offer and no
+-- price: the setting decides only whether the player is within reach.
 -- These numbers: about the value of the most valuable player of the middle club of each
 -- group in the squads this module was set against, with more room for the first twenty
 -- clubs (README.md has the table; ceiling_survey.py prints it for your edit file).
 -- If you change VALUE much, change these with it.
 local CEILING = { 200, 100, 50, 28, 18, 12, 8, 6, 4.5, 3 }
 
+-- How far a club goes above its ceiling, in percent of the ceiling. At the ceiling a
+-- player is sure to be within reach; from there the chance falls evenly and is gone at
+-- this much above it. With 50: a player 10 percent above the ceiling is within reach of
+-- 4 clubs in 5 of that group, 25 percent above of every second club, 50 percent above of
+-- none. Which club goes how far for which player is fixed by the two of them (no dice
+-- are thrown), so the same club answers the same way while the player's value stays.
+-- 0 to 300. 0: the hard ceiling of version 5.
+local CEILING_STRETCH = 50
+
+-- Need. The ceiling of a club is this many percent higher
+--   * in its second search, when it found nobody for the position in its own rating
+--     range (it then looks at the dearer players of that range again before it goes
+--     further down), and
+--   * when it looks for a key player, which the ten or twenty best clubs do for one
+--     position on the last day of a window.
+-- CEILING_STRETCH comes on top: with 30 and 50 a club in need never goes beyond 1.95
+-- times its ceiling. 0 to 300. 0: need changes nothing.
+local CEILING_NEED = 30
+
+-- A seller who wants to sell. For a player his club has put on its list of players to
+-- let go, this many percent of his value count against the ceiling. 0 to 100; 100: he
+-- counts like any other.
+local CEILING_LISTED = 70
+
+-- The same for a player the game signs without a transfer (as far as the code was read:
+-- the players without a contract). No fee is due for him, so less of his value counts.
+-- 0 to 100; 100: he counts like any other.
+local CEILING_FREE = 50
+
 -- The second search. A computer club looks for a player in a rating range that goes by
 -- its place in the ranking (the smallest clubs 47 to 74, the ten best 83 to 99). When it
 -- finds nobody for a position there, the game lets it look again among all players,
 -- from rating 99 down. It leaves out the stars of other clubs who are not for sale, but
 -- not the players without a club and not those who have outgrown their club: a small
--- club can come away with one of the best of them. true: in that second search a club takes nobody rated above the top of its own
+-- club can come away with one of the best of them.
+-- true: in that second search a club takes nobody rated above the top of its own
 -- range (74, 75, 76, 77, 78, 79, 80, 83, 86 from the smallest clubs up; the ten best
 -- clubs have no limit), so it looks further down, not further up. Without this, the
 -- ceiling alone still lets a small club sign a great player of 38 whose value has fallen
 -- below it. false: the second search goes from 99 down as in the game.
--- Used only while CEILING is on.
+-- CEILING_STRETCH and CEILING_NEED do not move this limit. Used only while CEILING is on.
 local CEILING_RATING = true
 
 -- ========================= end of settings =========================
@@ -297,8 +330,9 @@ local LEAGUE_IDS_AT = 0xb90        -- the leagues of LEAGUE_BY_ID
 local LEAGUE_COUNT_AT = 0xba8      -- how many there are, then INCOME_WAGES
 local LEAGUE_ROWS_AT = 0xbb0       -- their lists
 local LEAGUE_ROWS = 12
-local CAVE_2 = 0x047b0130       -- a second unused piece of the same page: the price ceilings and their routine
-local CAVE_2_SIZE = 0xcc
+local CAVE_2 = 0x047d3c40       -- a second unused piece, the end of the next section: the price ceilings and their routine
+local CAVE_2_SIZE = 0x180
+local CEILING_NUMBERS_AT = 0x34  -- offset of CEILING_STRETCH, 100 + CEILING_NEED, CEILING_LISTED, CEILING_FREE there
 -- the highest rating of the range a computer club searches first, smallest clubs first (the game's numbers)
 local RANGE_TOP = { 74, 75, 76, 77, 78, 79, 80, 83, 86, 99 }
 -- the routines: offset in that memory, machine code (source: money_cave.py)
@@ -355,7 +389,7 @@ local SITES = {
     { "nat 3", 0x038aa45e, "e8030000", "e8030000" },
     { "nat 4", 0x038aa46a, "f4010000", "f4010000" },
     { "nat 5", 0x038aa476, "2c010000", "2c010000" },
-    { "ceiling", 0x0365fb0d, "8b4d2456e8aa98ac00", "e85006150190909090" },
+    { "ceiling", 0x0365fb0d, "8b4d2456e8aa98ac00", "e87241170190909090" },
 }
 
 -- The code and data those places and the routines rely on: name, address, bytes.
@@ -511,10 +545,14 @@ local CONTEXT = {
 
 -- The price ceiling: its routine (offset in the second piece of memory) and the code
 -- it relies on, which is compared only when CEILING is on.
-local CEILING_ROUTINE = { 0x32, "53575589e583ec148b45008b58d88b480481f9580d6603740881f9b90d66"
-      .. "0375558b000fb6481b894df08b401c8b0083f80977420fb68858017b04894dec8b048530017b048945fcc745"
-      .. "f80d0000006a028d45f85053e885390aff83c40c0fb6c0837df00074053b45ec771ae8bd0a00003b7dfc7710"
-      .. "89ec5d5f5b588b4d245650e9d89197ff89ec5d5f5b83c404e933f9eafe" }
+local CEILING_ROUTINE = { 0x44, "53575589e583ec1c8b45008b58d88b480481f9580d6603740c81f9b90d66"
+      .. "030f85f70000008b48188b09894de88b50308b128b000fb6481b894df009ca8955e48b401c8b0083f8090f87"
+      .. "ce0000000fb688683c7d04894dec8b0485403c7d048945fcc745f80d0000006a028d45f85053e849fe07ff83"
+      .. "c40c0fb6c0837df00074093b45ec0f87a2000000837dfcff0f8488000000e873cffdff837de40074128b45fc"
+      .. "f725783c7d04f73554067b048945fc0fb74b2c6953309301000131d16955e8b179379e31d169c96bcaeb85c1"
+      .. "e9180faf0d743c7d048b45fcf7e1b900640000f7f10145fc8b8bb400000083e10f4983f901b9803c7d047611"
+      .. "f783b8000000000000607411b97c3c7d0489f8f721f73554067b0489c73b7dfc771089ec5d5f5b588b4d2456"
+      .. "50e9105695ff89ec5d5f5b83c404e96bbde8fe" }
 local CEILING_CONTEXT = {
     { "choose", 0x0365f5c2,
       "5589e583ec64535689cb31f657899df4ffffff89b5fcffffffe805cb1b008b40308d8ddcffffff518985f8ff"
@@ -791,6 +829,12 @@ end
 local function ceiling_fault()
     if CEILING == false then return nil end
     if type(CEILING_RATING) ~= "boolean" then return "CEILING_RATING is not true or false" end
+    for _, c in ipairs({ { CEILING_STRETCH, "CEILING_STRETCH", 300 }, { CEILING_NEED, "CEILING_NEED", 300 },
+                         { CEILING_LISTED, "CEILING_LISTED", 100 }, { CEILING_FREE, "CEILING_FREE", 100 } }) do
+        if type(c[1]) ~= "number" or c[1] < 0 or c[1] > c[3] then
+            return c[2] .. " is not a number from 0 to " .. c[3]
+        end
+    end
     if type(CEILING) ~= "table" or #CEILING ~= 10 then
         return "CEILING is not a list of 10 numbers or false"
     end
@@ -881,7 +925,8 @@ function ceiling.values()
 end
 
 -- the second piece of memory: the ceilings, the highest rating of the second search by
--- club level (255: none), the routine. nil: the module file is damaged
+-- club level (255: none), the four numbers of the limit, the routine. nil: the module
+-- file is damaged
 function ceiling.image()
     local parts = {}
     for _, v in ipairs(ceiling.values()) do parts[#parts + 1] = u32(v) end
@@ -889,6 +934,9 @@ function ceiling.image()
         parts[#parts + 1] = string.char(CEILING_RATING and RANGE_TOP[level + 1] or 255)
     end
     local image = table.concat(parts)
+    image = image .. string.rep("\0", CEILING_NUMBERS_AT - #image) .. u32(math.floor(CEILING_STRETCH + 0.5))
+        .. u32(100 + math.floor(CEILING_NEED + 0.5)) .. u32(math.floor(CEILING_LISTED + 0.5))
+        .. u32(math.floor(CEILING_FREE + 0.5))
     if #image ~= CEILING_ROUTINE[1] or CEILING_ROUTINE[1] + #CEILING_ROUTINE[2] / 2 > CAVE_2_SIZE then
         return nil
     end
@@ -917,7 +965,7 @@ function ceiling.write(image)
 end
 
 function ceiling.report()
-    log("price ceiling of the computer clubs: the highest value on the screen a club signs, by its "
+    log("price ceiling of the computer clubs: the value on the screen up to which a club signs for sure, by its "
         .. "place in the club ranking:")
     local groups = { "1-10", "11-20", "21-50", "51-80", "81-120", "121-170", "171-220", "221-260", "261-300",
                      "others" }
@@ -932,12 +980,16 @@ function ceiling.report()
             line = " "
         end
     end
+    log(string.format("  above the ceiling: the chance falls to none at %d percent above it; a club in need "
+        .. "counts its ceiling %d percent higher; a listed player counts at %d percent of his value, a player "
+        .. "without a contract at %d percent", math.floor(CEILING_STRETCH + 0.5), math.floor(CEILING_NEED + 0.5),
+        math.floor(CEILING_LISTED + 0.5), math.floor(CEILING_FREE + 0.5)))
     log(CEILING_RATING and "  second search: no player rated above the top of the club's own rating range"
         or "  second search: from rating 99 down, as in the game")
 end
 
 function m.init(ctx)
-    log("MLMoney 5: player values, salaries, budgets, income, prize money and the price ceiling of the "
+    log("MLMoney 6: player values, salaries, budgets, income, prize money and the price ceiling of the "
         .. "computer clubs from the tables in MLMoney.lua")
 
     local fault = settings_fault()
@@ -1038,7 +1090,7 @@ function m.init(ctx)
     -- popularity percent, lowest spread factor and width of the spread in thousandths,
     -- the two budget factors in percent, 100, 1000, a mark
     image = image .. u32(fame) .. u32(1000 - 10 * spread) .. u32(20 * spread) .. u32(budget_t)
-        .. u32(budget_s) .. u32(100) .. u32(1000) .. "MLM5"
+        .. u32(budget_s) .. u32(100) .. u32(1000) .. "MLM6"
     -- then the routines and the newer tables, each at its offset
     local pieces = {}
     for _, r in ipairs(ROUTINES) do pieces[#pieces + 1] = { r[1], unhex(r[2]) } end

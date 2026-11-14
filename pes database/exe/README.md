@@ -71,7 +71,7 @@ They need `pip install unicorn capstone` and the exe (`rea-setup.sh` puts it in
 - `MLCheck.lua`, a read-only test that writes the level table of the computer clubs and
   the fee numbers of the running game to `sider.log` (6 of 6 on the user's game).
   `sider/test_module.py <exe>` runs it outside the game against the exe file.
-- `MLMoney.lua` (version 5), which changes the running game: player values by rating,
+- `MLMoney.lua` (version 6), which changes the running game: player values by rating,
   age, talent, position and popularity with a fixed spread per player, salaries by
   rating and age, the transfer budget of a new career, a yearly income that follows
   the wage bill, the prize money of cups and leagues (with lists by league and for

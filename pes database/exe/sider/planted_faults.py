@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Does test_money.py notice faults? Planted faults for the price ceiling (version 5).
+"""Does test_money.py notice faults? Planted faults for the price ceiling (version 6).
 
     python3 planted_faults.py <PES2017.exe> routine      about 1 minute
-    python3 planted_faults.py <PES2017.exe> files        about 20 minutes on two processors
+    python3 planted_faults.py <PES2017.exe> files        about 15 minutes on two processors
 
 routine: every bit of the ceiling routine is flipped in turn in the emulator's memory,
 after the module is in, and the cases of Harness.choose_cases are run. Printed: the
@@ -41,17 +41,34 @@ FAULTS = (
     ('MLMoney.lua', 'if type(CEILING_RATING) ~= "boolean" then', 'if false then'),
     ('MLMoney.lua', 'local RANGE_TOP = { 74, 75, 76, 77, 78, 79, 80, 83, 86, 99 }',
      'local RANGE_TOP = { 74, 75, 76, 77, 78, 79, 80, 83, 85, 99 }'),
-    ('MLMoney.lua', 'local CAVE_2_SIZE = 0xcc', 'local CAVE_2_SIZE = 0xc8'),
-    ('MLMoney.lua', 'local CAVE_2 = 0x047b0130', 'local CAVE_2 = 0x047b0128'),
+    ('MLMoney.lua', 'local CAVE_2_SIZE = 0x180', 'local CAVE_2_SIZE = 0x17c'),
+    ('MLMoney.lua', 'local CAVE_2 = 0x047d3c40', 'local CAVE_2 = 0x047d3c38'),
     # the model: a rating equal to the top refused, the rating rule in both searches, a value
     # equal to the ceiling refused, the lowest list searched too, the order of the ceilings,
     # the place counted as written when it is off
     ('money_cave.py', 'if wide and rating > t.ceiling_top[level]:', 'if wide and rating >= t.ceiling_top[level]:'),
     ('money_cave.py', 'if wide and rating > t.ceiling_top[level]:', 'if rating > t.ceiling_top[level]:'),
-    ('money_cave.py', 'player) <= t.ceiling[level]', 'player) < t.ceiling[level]'),
+    ('money_cave.py', 'return price <= limit(', 'return price < limit('),
     ('money_cave.py', 'for overall in range(highest, lowest, -1):', 'for overall in range(highest, lowest - 1, -1):'),
     ('money_cave.py', 'if m else NO_CEILING for m in reversed(ceiling)]', 'if m else NO_CEILING for m in ceiling]'),
     ('money_cave.py', "'ceiling': self.ceiling is not None}", "'ceiling': True}"),
+    # version 6, the limit. In the module: need written without its 100, the two discounts
+    # swapped, a negative number let through
+    ('MLMoney.lua', 'u32(100 + math.floor(CEILING_NEED + 0.5))', 'u32(math.floor(CEILING_NEED + 0.5))'),
+    ('MLMoney.lua', '.. u32(math.floor(CEILING_LISTED + 0.5))\n        .. u32(math.floor(CEILING_FREE + 0.5))',
+     '.. u32(math.floor(CEILING_FREE + 0.5))\n        .. u32(math.floor(CEILING_LISTED + 0.5))'),
+    ('MLMoney.lua', 'c[1] < 0 or c[1] > c[3] then', 'c[1] > c[3] then'),
+    # in the model: need only in the second search, only for a slot with a band; a wrong
+    # divisor of the stretch; the club left out of the hash; the discount for status 2
+    # only; both discounts for a listed player without a contract
+    ('money_cave.py', 'club, bool(wide or band))', 'club, bool(wide))'),
+    ('money_cave.py', 'club, bool(wide or band))', 'club, bool(band))'),
+    ('money_cave.py', '* t.ceiling_stretch) // 25600', '* t.ceiling_stretch) // 25500'),
+    ('money_cave.py', '^ (club * HASH_B & 0xffffffff)', '^ (0 * HASH_B & 0xffffffff)'),
+    ('money_cave.py', '    if status in (1, 2):\n        price = price * t.ceiling_free // 100\n    elif listed:',
+     '    if status in (2,):\n        price = price * t.ceiling_free // 100\n    elif listed:'),
+    ('money_cave.py', '        price = price * t.ceiling_free // 100\n    elif listed:',
+     '        price = price * t.ceiling_free // 100\n    if listed:'),
 )
 
 
