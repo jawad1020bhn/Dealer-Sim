@@ -57,6 +57,7 @@ They need `pip install unicorn capstone` and the exe (`rea-setup.sh` puts it in
 | `x86dis.py <exe> <address> <bytes>` | disassembly, for code the C output lacks |
 | `check_findings.py <exe> <save>` | self-check of `NOTES.md` and `MASTER_LEAGUE.md`: eleven checks that run the game's code against the Python (one and a half minutes) |
 | `money.py` | Master League salary and transfer fee in Python (checks 7, 8) |
+| `prize.py <exe> [check]` | prize money of every cup stage and league place; `check` runs the game's cup function on all pairs |
 | `yearplan.py <exe> [july\|january]` | the Master League year: which event falls on which day (check 9) |
 | `fixtures.py <teams>` | the rounds of a home-and-away league as the game pairs them (check 10) |
 | `clubai.py` | overall window of the players a computer club looks for, by club level (check 11) |

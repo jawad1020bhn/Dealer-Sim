@@ -584,8 +584,8 @@ not run). The names of the amounts are inferred. The rest **located**: `fcn_0364
 23, 25, 49; 1,280 lines), `fcn_03649f1f` (616 lines, event 24),
 `process::ProcessCmnFinanceReportCheck` (`fcn_035e69ce`, event 25) and about twenty
 small functions at `0x038aa000`-`0x038ab400` that add and read account lines. The
-account of the user's club is at mode data `+0xdddfc4`. Prize money and what the
-screens call each amount are **not read**.
+account of the user's club is at mode data `+0xdddfc4`. Prize money and the yearly
+budget step are in 6.7; what the screens call each amount is **not read**.
 
 - `club_money_setup` (`fcn_038adf0c(club, &with budgets)`), one caller chain, from
   `fcn_035f445b` in Master League (taken to be the set-up of a new career): balance
@@ -673,6 +673,92 @@ of the two budget sums of 6.4 by settings. What it writes and why is in
 with the changes in the emulator and compares random players and squads with the Python
 of `money_cave.py`, also with every setting at its limit. Not yet run in the game.
 
+### 6.7 Prize money and the yearly budget step
+
+Level: the cup table and `cup_prize` **run in the emulator** (`tools/prize.py <exe>
+check`: 330 pairs, none differs); `league_prize` **run in the emulator** for every
+place (`tools/prize.py <exe>` prints all lists); the rest of this section **read**
+(disassembly, not run). Stage names and the names of the competitions 2 to 8 are
+**inferred**. Nothing here was seen in a game.
+
+**Who pays.** `prize_step` (`fcn_03640686`, in the day end, section 3) walks the
+competitions of the user's club. For a league, on the day the club's place is final,
+it calls `league_prize`; for a cup, when `cup_stage` (`fcn_038a9115`) says the club is
+out or has won, it calls `cup_prize`. The amount goes to two places: the **balance**
+(`+0xdddfe4`, through `fcn_038aadb7`; calls at `0x03640ac5` for leagues and
+`0x03640b78` for cups) and one of ten 24-byte competition lines at `+0xdde000`
+(competition, stage or place, amount, a "paid" byte at `+0x14`). Neither budget is
+touched.
+
+**Cups.** `cup_prize` (`fcn_038aa307(&competition, &stage, &club)`) searches a table
+of 12-byte rows (competition, stage, amount) at `0x0216b178`, 73 rows, plain data:
+
+| competition | amounts by stage (stored; the screens show 100 times as much) |
+|---|---|
+| 2 Champions League, 5 Libertadores, 8, 48 | winner 80,000; runner-up 40,000; semi-final 30,000; quarter-final 20,000; stage 7 10,000; stage 9 5,000 |
+| 3 Europa League | 30,000; 20,000; 15,000; 10,000; stage 5 5,000; stage 7 3,000; stage 9 1,000 |
+| 6, 91 | 30,000; 20,000; 15,000; 10,000; stage 7 5,000; stage 9 3,000; stage 10 1,000 |
+| 4, 7 (super cups of the continents) | winner 35,000; loser 10,000 |
+| 1 (Club World Cup) | 40,000; 20,000; 10,000; 5,000 for stages 0 to 3 |
+| 73 to 79, 82, 83, 84 (national super cups) | winner 5,000; loser 3,000 |
+
+A cup that is not in the table (the national cups) gets, by stage 0 to 6: 20,000,
+10,000, 5,000, 5,000, 1,000, 500, 300 (switch at `0x038aa42b`). Competitions 45, 46,
+47, 54, 55, 70, 71, 72, leagues, and stage 11 get nothing. Game mode `0x28` uses a
+second table (`0x0216b4e8`, 26 rows). Stages as `cup_stage` gives them: 0 winner, 1
+runner-up, 2 third, 3 and 4 the semi-final and quarter-final, 5 and 6 the rounds
+before (6 only with more than 32 clubs), 7 the first knock-out round, 8 and 9 the
+group stage (9 = not gone on), 10 a league part, 11 still in, 12 not taking part.
+So a Champions League win is 8 million on the screen and a group stage exit half a
+million.
+
+**Leagues.** `league_prize` (`fcn_038a9ebb(&club, &place, &half)`) writes four lists
+to its stack (immediates in the code, not data) and picks one: competition 60, 61,
+or by the two top bits of the league record's `+0x218` (2 or 3 = the short list,
+taken to be a second division). First list, place 1 to 22: 150,000, 130,000,
+100,000, 80,000, 60,000, 50,000, 45,000, 40,000, 35,000, 30,000, 27,000, 24,000,
+21,000, 18,000, 15,000, 12,000, 9,000, 7,000, 5,000, 3,000, 3,000, 3,000. Second
+list, place 1 to 24: 20,000 down to 250. Leagues played in two halves (ids `0x3458`,
+`0x27d8` and the next number) pay half per half. The amount is in `eax` at
+`0x038aa2e4`, before the halving: one place where a factor could be put.
+
+**What the budgets get each year** (money step `fcn_03640d19`). The balance and the
+prize lines are *not* turned into budget. The step adds to both budgets twice, on
+28 June (event 49) and on 30 June (event 23), from the squad and a grade:
+
+```
+S = wage bill * g * k                         added to the salary budget (+0xdddfdc)
+T = (sum of the 10 highest fees of the squad) * (old salary budget + S) / old salary budget / 5 * k
+                                              added to the transfer budget (+0xdddfc4)
+k = 0.6 on 28 June, 0.4 on 30 June
+g = 0.1 + 0.007 * rank       grade 1          rank = place of the club in the mode's
+    0.07 + 0.00215 * rank    grade 2          ranking, kept within 1 to 200 (3 to 200
+    0                        grades 3, 4      on 28 June)
+    0.05                     grade 5
+    0.02                     grade 6
+```
+
+On 30 June the grade comes from the year's result (the three incomes, the account
+lines with the prize money and the transfers, less the costs; stored at `+0xdddfe8`)
+against the figure of the year before: 15 percent more or better = grade 1, 5 percent
+= 2, down to minus 5 percent = 5, below = 6. On 28 June it comes from a comparison
+of two rankings (`fcn_0387cab5`, `fcn_03138333`) and a draw; that part is not read.
+On 30 June both amounts are raised by 5 percent for each player with team role 18
+(at most 4) and by one more term, and two sums are taken off `T`; those are read as
+code but not followed to their data. The sum of the 10 highest fees is
+`fcn_038acf42(club, 10)`, read from a decompile with gaps.
+
+What follows:
+
+- Prize money counts only through the 30 June grade. Winning the Champions League
+  does not put its 8 million into the transfer budget.
+- The yearly transfer money follows the fees of the squad, so a module that raises
+  the fees (6.6) raises it in the same proportion; the yearly salary money follows
+  the wage bill.
+- The factors `0.4`, `0.6`, `5.0` and the grade numbers are shared constants (12 to
+  667 references each), except `0.007` and `0.00215` (2 each, this function only).
+  A change has to give the instruction its own constant, not change the shared one.
+
 ## 7 Negotiations of the user's club
 
 Level: **read** in part; arithmetic on fractions is lost in the C at several places,
@@ -740,6 +826,23 @@ The screens: `menu::MenuModeMLNegociationMenu`, `…List`, `…Detail`, `…Adju
 `fcn_0388d7fb` (633 lines) and `fcn_03898af6` (720 lines; uses salary, fee and
 `complete_transfer`). `complete_transfer` (`fcn_0389840a`, 11 callers) →
 `fcn_038913b5` (745 lines). Not read.
+
+### 7.1 Years of a contract: `deal_years` = `fcn_0388a1be(&player, club, &flag)`
+
+Level: **read** (disassembly of the first part; not run). 12 call sites.
+
+```
+n     = 7 bits of the player record at +0xb4, bit 23 (0 to 127; meaning ?)
+years = 1 if age >= 35, else 1, 2, 3, 4, 5 for n below 30, 50, 70, 90, and above
+years = years - 1 + (age + word at mode data +0xc2cbb0) mod 3
+years = at most the limit by age (fcn_03887f5d): 1 from 35, 2 from 32, 3 below 24, else 5
+years = at least 1; at most 2 from age 32
+```
+
+If the flag byte is 0, more follows (for game mode 13 the years are cut so that the
+contract ends within 5 years of a date in the record; in some months 1 year becomes
+2); that part is read from the decompile only. The limit of 3 years below age 24 is
+one immediate in `fcn_03887f5d` (16 call sites).
 
 ## 8 Scouts
 
@@ -954,7 +1057,7 @@ part):
 - **Fee, salary and years** come from the user's deal record if one exists for the
   player (`+0x28`, `+0x2c`, `+0x14` bits 8-11). Otherwise fee = `transfer_fee`
   (section 6.2, with its random change), salary = `salary` for the new club
-  (section 6.1), years = `fcn_0388a1be` (not read), at least 1.
+  (section 6.1), years = `fcn_0388a1be` (section 7.1), at least 1.
 - The player's years at the club (`+0xb4` bits 6-10) and his marks are cleared and
   the day is stored at `+0xdc`.
 - By the kind of move (four cases): 1 transfer: out of the old squad
@@ -1083,8 +1186,9 @@ career only where the mode reads the database again; where that happens is not f
   on its days; the rest of `user_deal_step`, `fcn_036e2557`, `fcn_036e067a`
   (section 9).
 - Growth, team spirit, youth, retirement, new players, contracts (section 12).
-- Prize money, the yearly accounts and what the screens call each amount (section
-  6.4); where the screens multiply amounts by 100.
+- What the screens call each amount of the account (sections 6.4, 6.7); the grade of
+  28 June and the two sums taken off the yearly transfer money (6.7); `fcn_03649f1f`
+  (event 24); where the screens multiply amounts by 100.
 - What moves `x` during a career (section 6.5); the meaning of field `0x2e`, of the fee
   formula's `kind`, of the 13 deal states and of `day_state`.
 - The other twelve cases of the negotiation step, and the lost fraction arithmetic in
