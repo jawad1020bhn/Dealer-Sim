@@ -678,7 +678,10 @@ fields of the getter were mapped by running it on records with one bit set.
 
 ### 6.6 A Sider module that changes values, salaries, budgets and prize money
 
-`sider/MLMoney.lua` (version 4) replaces the rating part of the fee by `VALUE[rating] x
+Version 5 of the module adds a price ceiling to the transfers of the computer clubs;
+that part is described in 9.10.
+
+`sider/MLMoney.lua` (version 5) replaces the rating part of the fee by `VALUE[rating] x
 AGE[age] x POSITION[registered position] x (the player's own fixed factor) x (1 +
 popularity bonus)`, the rating part of the salary by `SALARY[rating] x SALARY_AGE[age]`,
 and the 2 of the two budget sums of 6.4 by settings. Version 3 adds: other amounts in
@@ -1083,6 +1086,25 @@ position, or a position he can play), not already in a slot, and the two tests
 taken to be the foreign-player rules; not read through) and `fcn_0388f107`. Set B
 is searched first, then set A; clubs of kind 1 or 4 search only set A.
 
+Three details, from the disassembly:
+
+- The walk goes from the list of the highest overall down to the list **one above
+  the lowest**; the list of the lowest overall itself is not searched (loop from
+  `99 - highest` while below `99 - lowest`, `0x0365f643` and `0x0365fb69`). A level-0
+  club so looks at 74 down to 48, and the second search at 99 down to 41. **Run in the
+  emulator**: the whole function, entered through its two calls in
+  `ai_pick_candidate`, with made-up lists (`sider/test_money.py`).
+- In set A only (`0x0365f89e`-`0x0365f8ef`), with the status band of the player from
+  `fcn_0385400e`: the band must not be below the number the slot asks for; if the
+  slot asks for 7 or more, a player with a club must show 2 or more in `fcn_0364c9f7`
+  (taken to be his years at the club); and **if the slot asks for nothing (0), a player with a
+  club who has band 6 or more is left out unless he carries mark 29 or 30**. The
+  second search always asks for 0, so it does not take the stars of other clubs from
+  set A. Set B has none of these tests: players without a club, and players more
+  than 3 points above their club's window, can be taken by any club in the second
+  search.
+- No test reads a fee, a salary or a budget.
+
 `ai_pick_candidate` sorts the up to three candidates and prefers, in this order:
 
 1. a player with mark 29 or 30;
@@ -1172,7 +1194,8 @@ part):
 ### 9.9 What this means in play
 
 - A computer club has no account that was found (9.7). It shops by **level**, not by money: a level-9 club looks at overall
-  83 to 99, a level-0 club at 47 to 74 (9.4).
+  83 to 99, a level-0 club at 47 to 74 (9.4). `sider/MLMoney.lua` (version 5) adds a
+  highest value per level (9.10).
 - It takes **the best three that fit** and prefers listed players and players
   without a club among them (9.6).
 - A player leaves a computer club on this way only if that club counts more than 23
@@ -1180,6 +1203,40 @@ part):
   at first (9.5).
 - Deals are chosen at the start of the season and on the day after each window, and
   close when the next window is open (9.2, 9.7). Squads end between 23 and 32.
+
+### 9.10 A price ceiling by a module (`sider/MLMoney.lua`, version 5)
+
+The module adds one test to `ai_candidates`, at `0x0365fb0d`, where a player who
+passed everything is added to the list (`mov ecx, [ebp + 0x24]; push esi; call
+0x041293c0`; only the jump at `0x0365fb02` leads there). The nine bytes become a call
+to a routine in unused memory (`0x047b0162`), which
+
+1. takes the player record from the function's local `[ebp - 0x28]` (written at
+   `0x0365f6e3`, read again at `0x0365fa51`);
+2. looks at the return address of `ai_candidates`. Only if it is `0x03660d58` or
+   `0x03660db9` (its two calls in `ai_pick_candidate`; no other call was found) it
+   reads from that function's frame the club level (`[[ebp + 0x1c]]`, the number
+   `ai_fill_slots` took from the club's ranking record, byte `+0xe`) and the byte
+   `[ebp + 0x1b]`, which `ai_pick_candidate` sets to 1 when the lowest overall handed
+   in is 0: the second search;
+3. fetches the rating as the fee function does (`0x03853b42(record, &13, 2)`) and the
+   value from the module's value routine;
+4. in the second search refuses a rating above the top of the level's window (9.4);
+5. refuses a value above the ceiling of the level;
+6. goes on to `0x041293c0` (taken) or drops its return address and jumps to
+   `0x0365fb28`, where the game's own failed tests go (refused).
+
+With a level outside 0 to 9 or another return address the player is taken as in the
+game. Settings: `CEILING` (ten amounts by ranking group) and `CEILING_RATING` (step
+4). **Run in the emulator**: `ai_candidates` whole, with and without the change,
+against `money_cave.candidates`. **Not run**: `ai_pick_candidate`, `ai_fill_slots`
+and everything above them, so that the level and the search byte are where step 2
+reads them rests on the disassembly of `ai_pick_candidate` (`0x03660c83`-`0x03660caa`,
+`0x03660d27`, `0x03660d88`) and on `ai_max_overall` reading the same argument at
+`0x03660c88`. Not known: how often the first search finds nobody, and what the
+ceiling does to squad sizes over seasons.
+
+The module books no money. A computer club still has no account (9.7).
 
 ## 10 Team strength
 
