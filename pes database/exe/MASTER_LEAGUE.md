@@ -604,6 +604,16 @@ screens call each amount are **not read**.
   16 highest fees / 16); **salary budget** (`+0xdddfdc`) += wage bill + 2 x (sum of the
   16 highest salaries / 16). So both budgets follow the values and salaries of the
   squad: a change of the fee or salary formula scales them in a new career.
+  The two factors are in the code, not in data: `add esi, esi` at `0x038adc47` for the
+  transfer budget and `lea esi, [ecx + eax*2]` at `0x038add08` for the salary budget
+  (`ecx` = wage bill). A sum of 0 counts as 10,000; each amount added is kept within
+  -99,999,999 to 99,999,999. Worked from the squads of the edit file in this
+  repository, with every club taken at ranking place 10 and club part 300 (rough for
+  the salary budget), on the screen's scale: Manchester United about 39 million
+  transfer budget and 71 million salary budget with the game's formulas; with the
+  default tables of `sider/MLMoney.lua` about 75 and 171 million; Real Madrid about 52
+  / 154 million transfer budget, Burnley about 19 / 14 million. Not compared with a
+  new career in the game.
 - First day of a season (money step, event 3): `+0xdddfec` =
   `(403 - club rank) * 5,000`, at least 1,000, changed by -10 to +10 percent; `+0xdddff0`
   = `season_income`, changed the same way; three amounts of another record are added to
