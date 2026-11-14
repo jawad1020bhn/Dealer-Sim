@@ -528,9 +528,11 @@ salary = trunc((R + X + B + A) * f) + T + awards        limited to 1 … 99,999,
   7; when that is 6 or 7 the band is counted from the rating against the steps 50,
   55, 60, 70, 80, 85, 88. Read; the exact count is not settled. In the proof the band
   was a free input from 0 to 7.
-- `awards` (read, not run; skipped for status 6): +10,000, +5,000, +5,000, +5,000 if
-  the player holds one of four awards (`fcn_0318c209(0 … 3)`), and +2,000 for each
-  entry of his in the lists of finished competitions (`fcn_035e5fa7`).
+- `awards` (skipped for status 6): +10,000, +5,000, +5,000, +5,000 if the player holds
+  one of four awards (`fcn_0318c209(0 … 3)` gives the holder's record, the ids are
+  compared by `fcn_02bddabe`); this part **runs in the emulator** in
+  `sider/test_money.py` with made-up holders. And +2,000 for each entry of his in the
+  lists of finished competitions (`fcn_035e5fa7`): read, not run.
 - Clubs whose league number (`fcn_03879e04`) is 60, 61 or 62, and in mode number 40
   players with status 3 (or status 2 and a certain mark) who have an entry number at
   `+0xbc`, use another formula, `fcn_038ab5ea`:
@@ -663,23 +665,34 @@ the game's with `fcn_0383890b`); the player's id, a word at `+0x2c` and a dword 
 in a list of ids the code compares the word and the dword the same way). The 98
 fields of the getter were mapped by running it on records with one bit set.
 
-### 6.6 A Sider module that changes values, salaries and budgets
+### 6.6 A Sider module that changes values, salaries, budgets and prize money
 
-`sider/MLMoney.lua` replaces the rating part of the fee by `VALUE[rating] x AGE[age] x
-POSITION[registered position] x (the player's own fixed factor) x (1 + popularity
-bonus)`, the rating part of the salary by `SALARY[rating] x SALARY_AGE[age]`, and the 2
-of the two budget sums of 6.4 by settings. What it writes and why is in
-`sider/money_cave.py`. `sider/test_money.py` runs the game's salary, fee and budget code
-with the changes in the emulator and compares random players and squads with the Python
-of `money_cave.py`, also with every setting at its limit. Not yet run in the game.
+`sider/MLMoney.lua` (version 3) replaces the rating part of the fee by `VALUE[rating] x
+AGE[age] x POSITION[registered position] x (the player's own fixed factor) x (1 +
+popularity bonus)`, the rating part of the salary by `SALARY[rating] x SALARY_AGE[age]`,
+and the 2 of the two budget sums of 6.4 by settings. Version 3 adds: other amounts in
+the cup table and in the two main league lists of 6.7, a share of every prize for the
+transfer budget, a setting for the 0.004 of the club factor of 6.1, a factor on the
+role, band and award bonuses of 6.1, and the contract limit of 7.3. What it writes and
+why is in `sider/money_cave.py`. `sider/test_money.py` runs the game's salary, fee,
+budget, prize and contract-limit code with the changes in the emulator and compares it
+with the Python of `money_cave.py`, also with every setting at its limit.
+
+Seen in the game (version 2, the user's PC, a new career with Manchester United,
+`SPREAD = 0`): Bruno Fernandes, rating 89, AMF, age 32, value 52,973,200, which is the
+module's formula at popularity 910 exactly; transfer budget 106,925,700. This also
+confirms that `+0xdddfc4` is the transfer budget of the screen. The parts added in
+version 3 have not run in the game.
 
 ### 6.7 Prize money and the yearly budget step
 
 Level: the cup table and `cup_prize` **run in the emulator** (`tools/prize.py <exe>
-check`: 330 pairs, none differs); `league_prize` **run in the emulator** for every
-place (`tools/prize.py <exe>` prints all lists); the rest of this section **read**
-(disassembly, not run). Stage names and the names of the competitions 2 to 8 are
-**inferred**. Nothing here was seen in a game.
+check`: 330 pairs, none differs; `sider/test_money.py`: competitions 0 to 100, stages
+0 to 12); `league_prize` **run in the emulator** for every list, place and half;
+`balance_add`, `transfer_budget_add` and the two pieces of `prize_step` that pay a
+prize **run in the emulator** on a made-up stack frame (`sider/test_money.py`); the
+rest of this section **read** (disassembly, not run). Stage names and the names of the
+competitions 2 to 8 are **inferred**. Nothing here was seen in a game.
 
 **Who pays.** `prize_step` (`fcn_03640686`, in the day end, section 3) walks the
 competitions of the user's club. For a league, on the day the club's place is final,
@@ -718,9 +731,14 @@ or by the two top bits of the league record's `+0x218` (2 or 3 = the short list,
 taken to be a second division). First list, place 1 to 22: 150,000, 130,000,
 100,000, 80,000, 60,000, 50,000, 45,000, 40,000, 35,000, 30,000, 27,000, 24,000,
 21,000, 18,000, 15,000, 12,000, 9,000, 7,000, 5,000, 3,000, 3,000, 3,000. Second
-list, place 1 to 24: 20,000 down to 250. Leagues played in two halves (ids `0x3458`,
-`0x27d8` and the next number) pay half per half. The amount is in `eax` at
-`0x038aa2e4`, before the halving: one place where a factor could be put.
+list, place 1 to 24: 20,000 down to 250. The third argument is the half: 0 = a whole
+season, the full amount; 1 = first half, paid only to the leagues `0x3458` and
+`0x27d8`; 2 = second half, only to `0x3459` and `0x27d9`; a half pays half the amount,
+any other league gets nothing for a half. The amount is in `eax` at `0x038aa2e4`,
+before the halving. `sider/MLMoney.lua` replaces the two instructions that read the
+first and the second list (`0x038aa2dd`, `0x038aa2c6`), the three address operands of
+the cup table in `cup_prize`, and the two calls of `balance_add` in `prize_step`
+(6.6).
 
 **What the budgets get each year** (money step `fcn_03640d19`). The balance and the
 prize lines are *not* turned into budget. The step adds to both budgets twice, on
@@ -827,7 +845,7 @@ The screens: `menu::MenuModeMLNegociationMenu`, `…List`, `…Detail`, `…Adju
 `complete_transfer`). `complete_transfer` (`fcn_0389840a`, 11 callers) →
 `fcn_038913b5` (745 lines). Not read.
 
-### 7.1 Years of a contract: `deal_years` = `fcn_0388a1be(&player, club, &flag)`
+### 7.3 Years of a contract: `deal_years` = `fcn_0388a1be(&player, club, &flag)`
 
 Level: **read** (disassembly of the first part; not run). 12 call sites.
 
@@ -842,7 +860,9 @@ years = at least 1; at most 2 from age 32
 If the flag byte is 0, more follows (for game mode 13 the years are cut so that the
 contract ends within 5 years of a date in the record; in some months 1 year becomes
 2); that part is read from the decompile only. The limit of 3 years below age 24 is
-one immediate in `fcn_03887f5d` (16 call sites).
+one immediate in `years_limit` (`fcn_03887f5d(&player)`, 16 call sites, **run in the
+emulator** for every age): `mov eax, 3` at `0x03887fc1`. `sider/MLMoney.lua` changes
+that number (6.6).
 
 ## 8 Scouts
 
@@ -1057,7 +1077,7 @@ part):
 - **Fee, salary and years** come from the user's deal record if one exists for the
   player (`+0x28`, `+0x2c`, `+0x14` bits 8-11). Otherwise fee = `transfer_fee`
   (section 6.2, with its random change), salary = `salary` for the new club
-  (section 6.1), years = `fcn_0388a1be` (section 7.1), at least 1.
+  (section 6.1), years = `fcn_0388a1be` (section 7.3), at least 1.
 - The player's years at the club (`+0xb4` bits 6-10) and his marks are cleared and
   the day is stored at `+0xdc`.
 - By the kind of move (four cases): 1 transfer: out of the old squad

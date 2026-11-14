@@ -3,8 +3,10 @@
     python3 money_cave.py            print the layout and the code bytes
     python3 money_cave.py build      assemble the code again (needs: pip install keystone-engine)
                                      and compare it with the bytes kept in this file
-    python3 money_cave.py context <PES2017.exe>
-                                     print the CONTEXT list of MLMoney.lua from the exe file
+    python3 money_cave.py lua <PES2017.exe>
+                                     print the part of MLMoney.lua that is made from this file and
+                                     the exe: ROUTINES, SITES and CONTEXT (test_money.py checks that
+                                     MLMoney.lua holds exactly this text)
 
 MLMoney.lua changes up to fifteen places of PES2017.exe (sha256 44b0caaa...) and fills a
 piece of unused memory with seven small routines and their tables.
@@ -602,9 +604,25 @@ def context_lua(exe):
     return '\n'.join(lines)
 
 
+def lua_block(exe):
+    """The lines of MLMoney.lua from `local ROUTINES` to the end of CONTEXT."""
+    def quoted(h, first, width=88):
+        parts = [h[:first]] + [h[k:k + width] for k in range(first, len(h), width)]
+        return '\n      .. '.join('"%s"' % x for x in parts if x)
+    out = 'local ROUTINES = {\n'
+    for at, _, name in ROUTINES:
+        out += '    { 0x%03x, %s },\n' % (at - CAVE, quoted(globals()[name].hex(), 76))
+    out += ('}\n\n-- The places that are changed: name, address, bytes there now, bytes to write. (The\n'
+            '-- number in "years" is YOUNG_YEARS; it is put in below.)\nlocal SITES = {\n')
+    for name, at, old, new in SITES:
+        out += '    { "%s", 0x%08x, "%s", "%s" },\n' % (name, at, old.hex(), new.hex())
+    return (out + '}\n\n-- The code and data those places and the routines rely on: name, address, bytes.\n'
+            + context_lua(exe) + '\n')
+
+
 if __name__ == '__main__':
-    if sys.argv[1:2] == ['context']:
-        print(context_lua(sys.argv[2]))
+    if sys.argv[1:2] == ['lua']:
+        print(lua_block(sys.argv[2]), end='')
         sys.exit(0)
     if sys.argv[1:] == ['build']:
         for name, code in build().items():
@@ -613,11 +631,5 @@ if __name__ == '__main__':
     print('memory   %08x - %08x' % (CAVE, CAVE + CAVE_SIZE - 1))
     for name, at, old, new in SITES:
         print('%-9s %08x: %s -> %s' % (name, at, old.hex(), new.hex()))
-    if sys.argv[1:] == ['lua']:
-        for at, _, name in ROUTINES:
-            print('    { 0x%03x, "%s" },' % (at - CAVE, globals()[name].hex()))
-        for name, at, old, new in SITES:
-            print('    { "%s", 0x%08x, "%s", "%s" },' % (name, at, old.hex(), new.hex()))
-        sys.exit(0)
     for at, _, name in ROUTINES:
         print('%-15s %08x: %s' % (name, at, globals()[name].hex()))

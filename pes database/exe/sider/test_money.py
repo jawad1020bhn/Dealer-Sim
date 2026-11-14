@@ -19,11 +19,17 @@ import sys
 
 from lupa.luajit21 import LuaRuntime
 
+try:
+    import keystone                              # noqa: F401  (only to assemble the routines once more)
+    KEYSTONE = True
+except ImportError:
+    KEYSTONE = False
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', 'tools'))
 import money                                     # noqa: E402
 import money_cave as mc                          # noqa: E402
-from emu import Game, REG, STACK, STACK_SIZE     # noqa: E402
+from emu import Game, REG, RETURN, STACK, STACK_SIZE     # noqa: E402
 from unicorn.x86_const import UC_X86_REG_EBP, UC_X86_REG_ESP    # noqa: E402
 
 MODULE = os.path.join(HERE, 'MLMoney.lua')
@@ -378,6 +384,25 @@ class Harness:
                 case, amount, number, after, before, want)
         self.mode(0x13)
 
+    def bonus_routines(self, n, t):
+        """The two bonus routines on their own: the result, and every other register as it was."""
+        g, frame = self.g, STACK + STACK_SIZE - 0x2000
+        for case in range(n):
+            regs = {k: random.getrandbits(32) for k in REG}
+            regs['esi'] = random.choice([0, 1000, 3000, 7500, 15000, random.randint(0, 20000)])
+            a, b = random.randint(0, 40000), random.randint(0, 400000)
+            g.write(frame - 0x50, struct.pack('<I', a))
+            g.write(frame - 0x34, struct.pack('<I', b))
+            g.write(frame - 0x400, struct.pack('<I', RETURN))
+            want = dict(regs)
+            if case % 2:
+                r, moved = self.piece(mc.BONUS_R_CODE, RETURN, frame, **regs)
+                want['esi'] = regs['esi'] * t.bonus // 100 + a
+            else:
+                r, moved = self.piece(mc.BONUS_END_CODE, RETURN, frame, **regs)
+                want['eax'] = (a + b) * t.bonus // 100
+            assert moved == 4 and r == dict(want, ebp=frame), (case, moved, r, want)
+
     def years_cases(self, t):
         g, v = self.g, self.v
         for age in range(64):
@@ -424,6 +449,8 @@ def main(exe):
         leagues = h.league_cases(t)
         h.prize_cases(max(80, n // 5), t)
         h.years_cases(t)
+        if t is not None and t.bonus is not None:
+            h.bonus_routines(200, t)
         return cups, leagues
 
     def install(source, changed):
@@ -453,6 +480,8 @@ def main(exe):
           'only; the contract limit is 3 years up to age 23' % (cups, leagues))
 
     # 1. the module as it is
+    assert mc.lua_block(exe) in source, 'ROUTINES, SITES or CONTEXT of MLMoney.lua are not what money_cave.py makes'
+    assert mc.build() == {name: getattr(mc, name) for _, _, name in mc.ROUTINES} if KEYSTONE else True
     everything = ('values, salaries, transfer budget, cup prizes, league prizes, prizes into the transfer budget, '
                   'pay gap, salary bonuses, contract years')
     t, lines = install(source, everything)
@@ -471,7 +500,8 @@ def main(exe):
           '40 players; cup_prize for %d cases (competitions 0 to 100, stages 0 to 12, two game modes; mode '
           '0x28 keeps its own table); league_prize for %d cases (every list, place and half); the two places '
           'that pay a prize, in Master League and four other modes: balance, transfer budget, account line, '
-          'registers and stack; the contract limit for every age' % (n, n, cups, leagues))
+          'registers and stack; the two bonus routines leave every other register as it was; the contract '
+          'limit for every age' % (n, n, cups, leagues))
 
     # 3. the switches, and settings at their limits
     optional = ('SALARY', 'BUDGET_TRANSFER', 'BUDGET_SALARY', 'CUP', 'LEAGUE', 'LEAGUE_2', 'PRIZE_TO_BUDGET',

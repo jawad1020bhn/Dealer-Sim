@@ -71,11 +71,15 @@ They need `pip install unicorn capstone` and the exe (`rea-setup.sh` puts it in
 - `MLCheck.lua`, a read-only test that writes the level table of the computer clubs and
   the fee numbers of the running game to `sider.log` (6 of 6 on the user's game).
   `sider/test_module.py <exe>` runs it outside the game against the exe file.
-- `MLMoney.lua`, which changes the running game: player values by rating, age, position
-  and popularity with a fixed spread per player, salaries by rating and age, and the
-  transfer budget of a new career, from tables in the file. `sider/test_money.py <exe>`
-  runs the game's salary, fee and budget code with its changes in the emulator. Not yet
-  run in the game.
+- `MLMoney.lua` (version 3), which changes the running game: player values by rating,
+  age, position and popularity with a fixed spread per player, salaries by rating and
+  age, the transfer budget of a new career, the prize money of cups and leagues, a share
+  of each prize for the transfer budget, the pay gap between clubs, the salary bonuses
+  and the contract limit of young players, from tables in the file.
+  `sider/test_money.py <exe>` runs the game's salary, fee, budget, prize and
+  contract-limit code with its changes in the emulator. Version 2 (values and transfer
+  budget) ran on the user's game with the expected numbers; the parts added in version
+  3 have not run in the game.
 
 ## What the file looks like
 
@@ -150,7 +154,7 @@ read back from the exe; the import slots match the file.
 
 ## Not done
 
-- 141 functions are named (`names.tsv`); the rest is not understood. Of Master League
+- 142 functions are named (`names.tsv`); the rest is not understood. Of Master League
   five pieces are proven and many rules are only located (`MASTER_LEAGUE.md`, section 14). Of the edit data, the
   player, team and manager fields are mapped; five blocks are not read (`NOTES.md`).
 - Virtual calls are not resolved, so `calls.tsv.xz` misses every call through a vtable.
